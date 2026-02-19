@@ -1,0 +1,267 @@
+from pathlib import Path
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# -----------------------------------------------------------------------------
+# المسارات الأساسية للمشروع
+# -----------------------------------------------------------------------------
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+# -----------------------------------------------------------------------------
+# إعدادات التطوير (غير مناسبة للإنتاج)
+# -----------------------------------------------------------------------------
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-change-this-in-production")
+
+DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() == "true"
+
+ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "").split() if not DEBUG else []
+
+
+# -----------------------------------------------------------------------------
+# التطبيقات المثبتة
+# -----------------------------------------------------------------------------
+INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+
+    # REST API
+    "rest_framework",
+    "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
+    # تطبيقات ECR
+    "accounts.apps.AccountsConfig",
+    "usergroups.apps.UsergroupsConfig",
+    "regions.apps.RegionsConfig",
+    "organizations.apps.OrganizationsConfig",
+    "ecr_reports.apps.EcrReportsConfig",
+    "cad_reports.apps.CadReportsConfig",
+    "volunteer_hours.apps.VolunteerHoursConfig",
+    "notifications.apps.NotificationsConfig",
+
+    # تطبيق تتبع المستجيبين
+    "responders.apps.RespondersConfig",
+]
+
+
+# -----------------------------------------------------------------------------
+# الوسطاء (Middleware)
+# -----------------------------------------------------------------------------
+MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+
+    # تمكين التعريب واللغة العربية
+    "django.middleware.locale.LocaleMiddleware",
+
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+]
+
+
+# -----------------------------------------------------------------------------
+# إعداد الروابط والقوالب
+# -----------------------------------------------------------------------------
+ROOT_URLCONF = "ecr.urls"
+
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+
+        # مجلد قوالب عام (اختياري لكن مفيد من البداية)
+        "DIRS": [BASE_DIR / "templates"],
+
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+        },
+    }
+]
+
+WSGI_APPLICATION = "ecr.wsgi.application"
+
+
+# -----------------------------------------------------------------------------
+# قاعدة البيانات (SQLite مؤقتًا)
+# -----------------------------------------------------------------------------
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
+}
+
+
+# -----------------------------------------------------------------------------
+# التحقق من كلمات المرور
+# -----------------------------------------------------------------------------
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+]
+
+
+# -----------------------------------------------------------------------------
+# التعريب والتوقيت
+# -----------------------------------------------------------------------------
+LANGUAGE_CODE = "ar"
+TIME_ZONE = "Asia/Riyadh"  # توقيت السعودية (الرياض)
+
+USE_I18N = True
+USE_TZ = True
+
+LANGUAGES = [
+    ("ar", "العربية"),
+    ("en", "English"),
+]
+
+LOCALE_PATHS = [
+    BASE_DIR / "locale",
+]
+
+
+# -----------------------------------------------------------------------------
+# ملفات static
+# -----------------------------------------------------------------------------
+STATIC_URL = "static/"
+
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
+
+
+# -----------------------------------------------------------------------------
+# نوع المفتاح الأساسي الافتراضي
+# -----------------------------------------------------------------------------
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+AUTH_USER_MODEL = "accounts.User"
+
+
+# -----------------------------------------------------------------------------
+# مسارات تسجيل الدخول/الخروج (Authentication URLs)
+# -----------------------------------------------------------------------------
+LOGIN_URL = "accounts_login"
+LOGIN_REDIRECT_URL = "/accounts/portal/ecr_dashcad/"
+LOGOUT_REDIRECT_URL = "/accounts/login/"
+
+AUTHENTICATION_BACKENDS = [
+    "accounts.auth_backend.NationalIdOrEmailBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "ecr-otp-cache",
+    }
+}
+
+
+# -----------------------------------------------------------------------------
+# REST Framework + JWT
+# -----------------------------------------------------------------------------
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.IsAuthenticated",
+    ),
+    "DEFAULT_THROTTLE_CLASSES": (
+        "rest_framework.throttling.UserRateThrottle",
+        "rest_framework.throttling.AnonRateThrottle",
+    ),
+    "DEFAULT_THROTTLE_RATES": {
+        # تحديث الموقع كل 10 ثواني للمستجيبين = ~6 طلبات بالدقيقة
+        "user": os.getenv("API_THROTTLE_USER", "120/min"),
+        "anon": os.getenv("API_THROTTLE_ANON", "30/min"),
+    },
+}
+
+
+from datetime import timedelta  # noqa: E402
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=int(os.getenv("JWT_ACCESS_MINUTES", "60"))),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=int(os.getenv("JWT_REFRESH_DAYS", "14"))),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
+
+
+# -----------------------------------------------------------------------------
+# إعدادات تتبع المستجيبين (Online/Location)
+# -----------------------------------------------------------------------------
+# يعتبر المستجيب "متصل" إذا كان آخر تحديث خلال هذه المدة (بالثواني)
+RESPONDER_ONLINE_WINDOW_SECONDS = int(os.getenv("RESPONDER_ONLINE_WINDOW_SECONDS", "3500"))
+
+
+
+# -----------------------------------------------------------------------------
+# إعدادات البريد الإلكتروني (SMTP) - Hostinger
+# -----------------------------------------------------------------------------
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.hostinger.com")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+
+# STARTTLS (587) - الموصى به للتطبيقات
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() == "true"
+EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False").lower() == "true"
+
+# حماية من تضارب الإعدادات
+if EMAIL_USE_TLS and EMAIL_USE_SSL:
+    raise ValueError("Invalid email config: Do not enable both EMAIL_USE_TLS and EMAIL_USE_SSL at the same time.")
+
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "support@ecrzone.com")
+
+# كلمة المرور من .env فقط (لا تكتبها في الكود)
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+if not EMAIL_HOST_PASSWORD:
+    raise ValueError("EMAIL_HOST_PASSWORD is missing. Please set it in your .env file.")
+
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", f"ECR <{EMAIL_HOST_USER}>")
+SERVER_EMAIL = os.getenv("SERVER_EMAIL", DEFAULT_FROM_EMAIL)
+
+EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "20"))
+
+
+# -----------------------------------------------------------------------------
+# إعدادات أمان للإنتاج (تُفعّل تلقائيًا عند DEBUG=False)
+# -----------------------------------------------------------------------------
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_BROWSER_XSS_FILTER = True
+    X_FRAME_OPTIONS = "DENY"
+
+    SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "0"))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = os.getenv("SECURE_HSTS_INCLUDE_SUBDOMAINS", "False").lower() == "true"
+    SECURE_HSTS_PRELOAD = os.getenv("SECURE_HSTS_PRELOAD", "False").lower() == "true"
+
+
+
+GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")

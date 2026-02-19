@@ -1,0 +1,750 @@
+{% extends "portal/base_portal.html" %}
+{% load static %}
+
+{% block content %}
+<title>بلاغات ECR</title>
+<div style="padding: 18px 12px 34px; max-width: 100%; margin: 0 auto;">
+
+  <style>
+    :root{
+      /* Light theme */
+      --bg:#f8fafc;
+      --card:#ffffff;
+      --stroke: rgba(15,23,42,.12);
+      --text:#0f172a;
+      --muted:#475569;
+      --shadow: 0 10px 28px rgba(2,6,23,.10);
+      --radius: 16px;
+
+      /* muted status colors (light) */
+      --green: rgba(34,197,94,.12);
+      --green-b: rgba(34,197,94,.22);
+      --green-t: rgba(21,128,61,.95);
+
+      --yellow: rgba(234,179,8,.14);
+      --yellow-b: rgba(234,179,8,.26);
+      --yellow-t: rgba(161,98,7,.95);
+
+      --red: rgba(239,68,68,.12);
+      --red-b: rgba(239,68,68,.22);
+      --red-t: rgba(153,27,27,.95);
+
+      --gray: rgba(100,116,139,.12);
+      --gray-b: rgba(100,116,139,.22);
+      --gray-t: rgba(51,65,85,.95);
+
+      --primary: rgba(56,189,248,.14);
+      --primary-b: rgba(56,189,248,.26);
+      --primary-t: rgba(3,105,161,.95);
+    }
+
+    /* Header */
+    .page-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom: 14px;
+      flex-wrap:wrap;
+    }
+
+    .title{ display:flex; flex-direction:column; gap:6px; }
+    .title h1{ margin:0; font-size: 20px; letter-spacing:.2px; color: var(--text); }
+    .title p{ margin:0; color: var(--muted); font-size: 13px; }
+
+    .toolbar{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:flex-end; }
+    .input{
+      background: #ffffff;
+      border: 1px solid var(--stroke);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 12px;
+      outline: none;
+      min-width: 280px;
+      box-shadow: 0 1px 0 rgba(2,6,23,.03);
+    }
+    .input::placeholder{ color: rgba(71,85,105,.75); }
+
+    .btn{
+      border: 1px solid var(--stroke);
+      background: #ffffff;
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 12px;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      transition: .15s ease;
+      user-select:none;
+      text-decoration:none;
+      white-space:nowrap;
+      box-shadow: 0 1px 0 rgba(2,6,23,.03);
+      font-weight: 600;
+    }
+    .btn:hover{ transform: translateY(-1px); border-color: rgba(15,23,42,.18); }
+    .btn:active{ transform: translateY(0); }
+
+    /* Stats */
+    .stats{
+      display:grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .stat{
+      grid-column: span 3;
+      background: var(--card);
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      min-height: 82px;
+    }
+    .stat .meta{ display:flex; flex-direction:column; gap:6px; }
+    .stat .label{ color: var(--muted); font-size: 12px; }
+    .stat .value{ font-size: 22px; font-weight: 900; letter-spacing:.3px; color: var(--text); }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid;
+      white-space:nowrap;
+      line-height:1;
+      font-weight: 700;
+    }
+    .pill.primary{ background: var(--primary); border-color: var(--primary-b); color: var(--primary-t); }
+    .pill.yellow{ background: var(--yellow); border-color: var(--yellow-b); color: var(--yellow-t); }
+    .pill.red{ background: var(--red); border-color: var(--red-b); color: var(--red-t); }
+    .pill.green{ background: var(--green); border-color: var(--green-b); color: var(--green-t); }
+    .pill.gray{ background: var(--gray); border-color: var(--gray-b); color: var(--gray-t); }
+
+    /* Card + Table */
+    .card{
+      background: var(--card);
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .card-head{
+      padding: 14px 14px 10px;
+      border-bottom: 1px solid var(--stroke);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      background: rgba(248,250,252,.9);
+    }
+    .card-head .left{ display:flex; align-items:center; gap:10px; }
+    .card-head .left h2{ margin:0; font-size: 15px; color: var(--text); font-weight: 900; }
+    .card-head .left span{ color: var(--muted); font-size: 12px; }
+    .table-wrap{
+      overflow-x:auto;
+    }
+
+    /* ✅ جدول يتمدد بكامل الصفحة + خط أكبر */
+    table{
+      width:100%;
+      border-collapse: collapse;
+      border-spacing: 0;
+      table-layout: auto; /* يساعد على احتواء العرض داخل الصفحة */
+    }
+
+    thead th{
+      position: sticky;
+      top: 0;
+      background: rgba(241,245,249,.95);
+      backdrop-filter: blur(6px);
+      border-bottom: 1px solid var(--stroke);
+      color: rgba(15,23,42,.92);
+      font-size: 12px;          /* ⬅️ أكبر */
+      font-weight:1000;
+      text-align: right;
+      padding:10px 8px;       /* ⬅️ أكبر */
+      white-space: normal;
+    }
+
+    tbody td{
+      border-bottom: 1px solid rgba(15,23,42,.08);
+      padding:10px 8px;       /* ⬅️ أكبر */
+      font-size: 10px;          /* ⬅️ أكبر */
+      font-weight: 500;
+      color: rgba(15,23,42,.92);
+      vertical-align: middle;
+      background: #ffffff;
+      line-height:1.4;
+      white-space: normal;      /* ⬅️ يسمح بلف النص حتى ما يوسع الجدول */
+      word-break: break-word;
+    }
+
+    tbody tr:hover td{ background: rgba(2,6,23,.03); }
+    .muted{ color: rgba(71,85,105,.95); font-weight: 600; }
+    .nowrap{ white-space: nowrap !important; }
+
+    .status-badge{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid;
+      font-size: 13px;          /* ⬅️ أكبر */
+      font-weight: 900;
+      line-height: 1;
+      white-space:nowrap;
+      user-select:none;
+    }
+    .status-badge.green{ background: var(--green); border-color: var(--green-b); color: var(--green-t); }
+    .status-badge.yellow{ background: var(--yellow); border-color: var(--yellow-b); color: var(--yellow-t); }
+    .status-badge.red{ background: var(--red); border-color: var(--red-b); color: var(--red-t); }
+    .status-badge.gray{ background: var(--gray); border-color: var(--gray-b); color: var(--gray-t); }
+
+    .actions{ display:flex; gap:8px; justify-content:flex-start; flex-wrap:wrap; }
+    .icon-btn{
+      width: 40px; height: 40px;
+      border-radius: 12px;
+      border: 1px solid var(--stroke);
+      background: #ffffff;
+      color: rgba(15,23,42,.9);
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      transition:.15s ease;
+      box-shadow: 0 1px 0 rgba(2,6,23,.03);
+    }
+    .icon-btn:hover{ transform: translateY(-1px); border-color: rgba(15,23,42,.18); }
+    .icon-btn:active{ transform: translateY(0); }
+
+    /* Modal */
+    .modal{
+      position: fixed;
+      inset: 0;
+      background: rgba(2,6,23,.35);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding: 18px;
+      z-index: 9999;
+    }
+    .modal.open{ display:flex; }
+
+    .modal-card{
+      width: min(1200px, 100%);
+      background: #ffffff;
+      border: 1px solid var(--stroke);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .modal-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      padding: 14px 14px;
+      border-bottom: 1px solid var(--stroke);
+      background: rgba(241,245,249,.95);
+    }
+    .modal-head .h{ display:flex; flex-direction:column; gap:5px; }
+    .modal-head .h strong{ font-size: 14px; color: var(--text); font-weight: 900; }
+    .modal-head .h small{ color: var(--muted); }
+
+    .close-btn{
+      width: 40px; height: 40px;
+      border-radius: 12px;
+      border: 1px solid var(--stroke);
+      background: #ffffff;
+      color: rgba(15,23,42,.9);
+      cursor:pointer;
+    }
+
+    .modal-body{
+      display:grid;
+      grid-template-columns: 1.6fr .9fr;
+      gap: 12px;
+      padding: 14px;
+      background: #ffffff;
+    }
+
+    #map{
+      width: 100%;
+      height: 460px;
+      border-radius: 16px;
+      border: 1px solid rgba(15,23,42,.12);
+      overflow:hidden;
+      background: rgba(2,6,23,.03);
+    }
+
+    .side{
+      background: rgba(2,6,23,.02);
+      border: 1px solid rgba(15,23,42,.10);
+      border-radius: 16px;
+      padding: 12px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      min-height: 460px;
+    }
+
+    .kv{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      padding: 10px 10px;
+      border-radius: 14px;
+      border: 1px solid rgba(15,23,42,.10);
+      background: #ffffff;
+    }
+    .kv .k{ color: var(--muted); font-size: 12px; font-weight: 800; }
+    .kv .v{
+      color: rgba(15,23,42,.92);
+      font-size: 13.5px;
+      text-align:left;
+      max-width: 60%;
+      word-break: break-word;
+      white-space: pre-wrap;
+      font-weight: 700;
+    }
+
+    .note{
+      flex:1;
+      border-radius: 16px;
+      border: 1px solid rgba(15,23,42,.10);
+      background: #ffffff;
+      padding: 10px 10px;
+      overflow:auto;
+    }
+    .note .k{ color: var(--muted); font-size: 12px; margin-bottom: 8px; font-weight: 900; }
+    .note .v{ font-size: 13px; line-height: 1.6; white-space: pre-wrap; color: rgba(15,23,42,.92); font-weight: 700; }
+
+    @media (max-width: 1100px){
+      .stat{ grid-column: span 6; }
+      .modal-body{ grid-template-columns: 1fr; }
+      #map{ height: 380px; }
+      .side{ min-height: unset; }
+    }
+    @media (max-width: 640px){
+      .stat{ grid-column: span 12; }
+      .input{ min-width: unset; width: 100%; }
+      .toolbar{ width:100%; justify-content:stretch; }
+      .btn{ width:100%; justify-content:center; }
+    }
+  </style>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <div class="page-header">
+    <div class="title">
+      <h1><i class="fa-solid fa-clipboard-list"></i> بلاغات ECR (تطبيق الجوال)</h1>
+    </div>
+
+    <div class="toolbar">
+      <input id="q" class="input" type="text"
+             placeholder="بحث سريع: رقم البلاغ، اسم المريض، الهوية، الجوال، المنطقة..."
+             oninput="filterRows()" />
+      <button class="btn" type="button" onclick="resetFilter()">
+        <i class="fa-solid fa-rotate-right"></i> مسح
+      </button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="meta">
+        <div class="label">إجمالي البلاغات</div>
+        <div class="value">{{ stats.total|default_if_none:"0" }}</div>
+      </div>
+      <span class="pill primary"><i class="fa-solid fa-layer-group"></i> Total</span>
+    </div>
+
+    <div class="stat">
+      <div class="meta">
+        <div class="label">تم طلب إسعاف</div>
+        <div class="value">{{ stats.open|default_if_none:"0" }}</div>
+      </div>
+      <span class="pill yellow"><i class="fa-solid fa-truck-medical"></i> Ambulance</span>
+    </div>
+
+    <div class="stat">
+      <div class="meta">
+        <div class="label">توثيق 997</div>
+        <div class="value">{{ stats.urgent|default_if_none:"0" }}</div>
+      </div>
+      <span class="pill red"><i class="fa-solid fa-triangle-exclamation"></i> 997</span>
+    </div>
+
+    <div class="stat">
+      <div class="meta">
+        <div class="label">بلاغات مسجلة</div>
+        <div class="value">{{ stats.closed|default_if_none:"0" }}</div>
+      </div>
+      <span class="pill green"><i class="fa-solid fa-circle-check"></i> Logged</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="left">
+        <h2>قائمة البلاغات</h2>
+        <span class="muted">آخر تحديث: {{ stats.last_updated|default_if_none:"—" }}</span>
+
+    </div>
+
+    <div class="table-wrap">
+      <table id="tbl">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th class="nowrap">رقم البلاغ</th>
+            <th class="nowrap">الحالة</th>
+            <th class="nowrap">اسم المريض</th>
+            <th class="nowrap">رقم الهوية</th>
+            <th class="nowrap">الجوال</th>
+            <th class="nowrap">العمر</th>
+            <th class="nowrap">الجنسية</th>
+            <th class="nowrap">الجنس</th>
+            <th>تفاصيل الحالة</th>
+            <th>الخدمات</th>
+            <th class="nowrap">طلب إسعاف؟</th>
+            <th>من طلب الإسعاف</th>
+            <th class="nowrap">توثيق 997</th>
+            <th class="nowrap">المنطقة</th>
+            <th class="nowrap">المستجيب</th>
+            <th class="nowrap">تاريخ البلاغ</th>
+            <th class="nowrap">الإحداثيات</th>
+            <th class="nowrap">الإجراءات</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for r in reports %}
+          {% with region_label=r.region.name_ar|default_if_none:r.region %}
+          <tr data-search="
+            {{ r.id }}
+            {{ r.patient_name|default_if_none:'' }}
+            {{ r.national_id|default_if_none:'' }}
+            {{ r.patient_phone|default_if_none:'' }}
+            {{ region_label|default_if_none:'' }}
+          ">
+
+            <td class="muted nowrap">{{ forloop.counter }}</td>
+
+            <td class="nowrap"><strong>#{{ r.id }}</strong></td>
+
+            <td class="nowrap">
+              {% if r.ui_status_class == "red" %}
+                <span class="status-badge red"><i class="fa-solid fa-triangle-exclamation"></i> {{ r.ui_status_label }}</span>
+              {% elif r.ui_status_class == "yellow" %}
+                <span class="status-badge yellow"><i class="fa-solid fa-truck-medical"></i> {{ r.ui_status_label }}</span>
+              {% elif r.ui_status_class == "green" %}
+                <span class="status-badge green"><i class="fa-solid fa-circle-check"></i> {{ r.ui_status_label }}</span>
+              {% else %}
+                <span class="status-badge gray"><i class="fa-solid fa-circle"></i> {{ r.ui_status_label }}</span>
+              {% endif %}
+            </td>
+
+            <td class="nowrap">{{ r.patient_name|default_if_none:"—" }}</td>
+            <td class="nowrap">{{ r.national_id|default_if_none:"—" }}</td>
+            <td class="nowrap">{{ r.patient_phone|default_if_none:"—" }}</td>
+            <td class="nowrap">{{ r.age|default_if_none:"—" }}</td>
+            <td class="nowrap">{{ r.get_nationality_display|default_if_none:"—" }}</td>
+            <td class="nowrap">{{ r.get_gender_display|default_if_none:"—" }}</td>
+
+            <td>{{ r.medical_condition.name|default_if_none:"—" }}</td>
+
+            <td>
+              {% for s in r.services.all %}
+                <span class="pill primary" style="padding:6px 8px; font-size:12px; font-weight:900;">{{ s.name }}</span>
+              {% empty %}
+                <span class="muted">—</span>
+              {% endfor %}
+            </td>
+
+            <td class="nowrap">
+              {% if r.called_ambulance %}
+                <span class="pill yellow" style="padding:6px 8px; font-size:12px;"><i class="fa-solid fa-check"></i> نعم</span>
+              {% else %}
+                <span class="pill gray" style="padding:6px 8px; font-size:12px;"><i class="fa-solid fa-xmark"></i> لا</span>
+              {% endif %}
+            </td>
+
+            <td>{{ r.get_ambulance_called_by_display|default_if_none:"—" }}</td>
+
+            <td class="nowrap">
+              {% if r.send_to_997 %}
+                <span class="pill red" style="padding:6px 8px; font-size:12px;"><i class="fa-solid fa-share-nodes"></i> نعم</span>
+              {% else %}
+                <span class="pill gray" style="padding:6px 8px; font-size:12px;"><i class="fa-solid fa-minus"></i> لا</span>
+              {% endif %}
+            </td>
+
+            <td class="nowrap">{{ region_label|default_if_none:"—" }}</td>
+
+            <!-- ✅ المستجيب = منشئ البلاغ -->
+            <td class="nowrap">
+              {% if r.created_by %}
+                  {{ r.created_by.full_name }}
+              {% else %}
+                  —
+              {% endif %}
+            </td>
+
+            <td class="nowrap">{{ r.created_at|date:"Y-m-d H:i" }}</td>
+
+            <td class="nowrap muted">{{ r.latitude }}, {{ r.longitude }}</td>
+
+            <td class="nowrap">
+              <div class="actions">
+                <button type="button"
+                        class="icon-btn"
+                        title="عرض على الخريطة"
+                        onclick="openMapModalFromBtn(this)"
+                        data-id="{{ r.id }}"
+                        data-lat="{{ r.latitude }}"
+                        data-lng="{{ r.longitude }}"
+                        data-region="{{ region_label|default_if_none:"—"|escapejs }}"
+                        data-patient="{{ r.patient_name|default_if_none:"—"|escapejs }}"
+                        data-nid="{{ r.national_id|default_if_none:"—"|escapejs }}"
+                        data-phone="{{ r.patient_phone|default_if_none:"—"|escapejs }}"
+                        data-age="{{ r.age|default_if_none:"—"|escapejs }}"
+                        data-nat="{{ r.get_nationality_display|default_if_none:"—"|escapejs }}"
+                        data-gender="{{ r.get_gender_display|default_if_none:"—"|escapejs }}"
+                        data-type="{{ r.medical_condition.name|default_if_none:"—"|escapejs }}"
+                        data-ambulance="{{ r.called_ambulance|yesno:"نعم,لا" }}"
+                        data-ambulanceby="{{ r.get_ambulance_called_by_display|default_if_none:"—"|escapejs }}"
+                        data-send997="{{ r.send_to_997|yesno:"نعم,لا" }}"
+                        data-created="{{ r.created_at|date:'Y-m-d H:i' }}">
+                  <i class="fa-solid fa-eye"></i>
+                </button>
+              </div>
+            </td>
+
+          </tr>
+          {% endwith %}
+
+          {% empty %}
+          <tr>
+            <td colspan="19" class="muted" style="padding:18px;text-align:center;">
+              لا توجد بلاغات للعرض حالياً.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="modal" class="modal" role="dialog" aria-modal="true" aria-hidden="true" onclick="onBackdrop(event)">
+  <div class="modal-card" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <div class="h">
+        <strong id="mTitle">موقع البلاغ</strong>
+        <small id="mSub" class="muted">—</small>
+      </div>
+      <button class="close-btn" type="button" onclick="closeModal()" aria-label="إغلاق">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div id="map"></div>
+
+      <div class="side">
+        <div class="kv"><div class="k">رقم البلاغ</div><div class="v" id="kvNo">—</div></div>
+        <div class="kv"><div class="k">المنطقة</div><div class="v" id="kvRegion">—</div></div>
+        <div class="kv"><div class="k">اسم المريض</div><div class="v" id="kvPatient">—</div></div>
+        <div class="kv"><div class="k">الهوية</div><div class="v" id="kvNid">—</div></div>
+        <div class="kv"><div class="k">الجوال</div><div class="v" id="kvPhone">—</div></div>
+        <div class="kv"><div class="k">العمر</div><div class="v" id="kvAge">—</div></div>
+        <div class="kv"><div class="k">الجنسية / الجنس</div><div class="v" id="kvNG">—</div></div>
+        <div class="kv"><div class="k">تفاصيل الحالة</div><div class="v" id="kvType">—</div></div>
+        <div class="note">
+          <div class="k"><i class="fa-regular fa-note-sticky"></i> نص توثيق جاهز (مشاركة 997)</div>
+          <div class="v" id="kvDoc">—</div>
+          <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn" type="button" onclick="copyDoc()">
+              <i class="fa-solid fa-copy"></i> نسخ النص
+            </button>
+            <a class="btn" href="#" id="openGmaps" target="_blank" rel="noopener">
+              <i class="fa-solid fa-map-location-dot"></i> فتح في Google Maps
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script
+  src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key|default_if_none:'' }}&callback=initMap"
+  async defer>
+</script>
+
+<script>
+  function filterRows(){
+    const q = (document.getElementById('q').value || '').trim().toLowerCase();
+    const rows = document.querySelectorAll('#tbl tbody tr');
+    rows.forEach(r => {
+      const hay = (r.getAttribute('data-search') || '').toLowerCase();
+      r.style.display = hay.includes(q) ? '' : 'none';
+    });
+  }
+
+  function resetFilter(){
+    document.getElementById('q').value = '';
+    filterRows();
+  }
+
+  let map, marker, lastLatLng = null;
+  let lastDocText = "";
+
+  function initMap(){
+    const center = {
+      lat: parseFloat('{{ map_center_lat }}') || 23.8859,
+      lng: parseFloat('{{ map_center_lng }}') || 45.0792
+    };
+    const zoom = parseInt('{{ map_zoom }}') || 5;
+
+    map = new google.maps.Map(document.getElementById('map'), {
+      center,
+      zoom,
+      mapTypeControl: false,
+      streetViewControl: false,
+      fullscreenControl: true
+    });
+
+    marker = new google.maps.Marker({ map });
+    marker.setVisible(false);
+  }
+
+  function openMapModalFromBtn(btn){
+    const d = btn.dataset || {};
+    openMapModal(
+      d.id || '',
+      d.lat || '',
+      d.lng || '',
+      d.region || '—',
+      d.patient || '—',
+      d.nid || '—',
+      d.phone || '—',
+      d.age || '—',
+      d.nat || '—',
+      d.gender || '—',
+      d.type || '—',
+      d.ambulance || '—',
+      d.ambulanceby || '—',
+      d.send997 || '—',
+      d.created || ''
+    );
+  }
+
+  function openMapModal(id, lat, lng, region, patient, nid, phone, age, nat, gender, type, ambulance, ambulanceBy, send997, createdAt){
+    document.getElementById('kvNo').textContent = `#${id || '—'}`;
+    document.getElementById('kvRegion').textContent = region || '—';
+    document.getElementById('kvPatient').textContent = patient || '—';
+    document.getElementById('kvNid').textContent = nid || '—';
+    document.getElementById('kvPhone').textContent = phone || '—';
+    document.getElementById('kvAge').textContent = age || '—';
+    document.getElementById('kvNG').textContent = `${nat || '—'} / ${gender || '—'}`;
+    document.getElementById('kvType').textContent = type || '—';
+
+    document.getElementById('mTitle').textContent = `موقع البلاغ #${id || '—'}`;
+    document.getElementById('mSub').textContent = `${region || '—'}${createdAt ? ' • ' + createdAt : ''}`;
+
+    const docText =
+`بلاغ تطبيق ECR
+اسم المريض: ${patient || '-'}
+رقم الهوية: ${nid || '-'}
+الجوال: ${phone || '-'}
+العمر: ${age || '-'}
+الجنسية: ${nat || '-'}
+الجنس: ${gender || '-'}
+تفاصيل الحالة: ${type || '-'}
+هل تم طلب إسعاف؟: ${ambulance || '-'}
+من طلب الإسعاف: ${ambulanceBy || '-'}
+إرسال توثيق إلى 997: ${send997 || '-'}
+الموقع: ${lat}, ${lng}
+المنطقة: ${region || '-'}
+وقت البلاغ: ${createdAt || '-'}
+`;
+    lastDocText = docText;
+    document.getElementById('kvDoc').textContent = docText;
+
+    const modal = document.getElementById('modal');
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+
+    const latNum = parseFloat(String(lat).replace(',', '.'));
+    const lngNum = parseFloat(String(lng).replace(',', '.'));
+
+    const gmaps = document.getElementById('openGmaps');
+    if (Number.isFinite(latNum) && Number.isFinite(lngNum)){
+      lastLatLng = { lat: latNum, lng: lngNum };
+      gmaps.href = `https://www.google.com/maps?q=${latNum},${lngNum}`;
+
+      safeMapResize();
+      if (map){
+        marker.setVisible(true);
+        marker.setPosition(lastLatLng);
+        map.setCenter(lastLatLng);
+        map.setZoom(16);
+      }
+    } else {
+      lastLatLng = null;
+      gmaps.href = "#";
+      safeMapResize();
+      if (map){
+        marker.setVisible(false);
+      }
+    }
+  }
+
+  function copyDoc(){
+    if (!lastDocText) return;
+    navigator.clipboard.writeText(lastDocText).catch(() => {});
+  }
+
+  function closeModal(){
+    const modal = document.getElementById('modal');
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+
+  function onBackdrop(e){
+    if (e.target && e.target.id === 'modal') closeModal();
+  }
+
+  function safeMapResize(){
+    setTimeout(() => {
+      if (map && window.google && google.maps){
+        google.maps.event.trigger(map, 'resize');
+        if (lastLatLng) map.setCenter(lastLatLng);
+      }
+    }, 220);
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape'){
+      const modal = document.getElementById('modal');
+      if (modal.classList.contains('open')) closeModal();
+    }
+  });
+</script>
+
+{% endblock %}

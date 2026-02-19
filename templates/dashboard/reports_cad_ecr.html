@@ -1,0 +1,831 @@
+{% extends "portal/base_portal.html" %}
+{% load static %}
+{% load l10n %}
+{% block content %}
+<title>تقارير CAD + ECR</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+  :root{
+    --bg:#f8fafc;
+    --card:#ffffff;
+    --line:#e2e8f0;
+    --txt:#0f172a;
+    --muted:#64748b;
+    --my-yellow: #f59e0b;
+    --my-red: #ef4444;
+    --my-blue: #2563eb;
+    --my-dark: #334155;
+    --shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+    --radius: 12px;
+  }
+
+  .rc-wrap{ width:100%; min-height: calc(100vh - 80px); background: var(--bg); padding: 15px; direction: rtl; font-family: sans-serif; }
+
+  /* الإحصائيات العلوي */
+  .rc-top{ display:grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 15px; }
+  @media (max-width: 1200px){ .rc-top{ grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 700px){ .rc-top{ grid-template-columns: 1fr; } }
+
+  .rc-stat{ background: var(--card); border:1px solid var(--line); border-radius: 10px; padding: 12px; display:flex; align-items:center; justify-content:space-between; box-shadow: var(--shadow); }
+  .rc-stat .v{ font-size:22px; font-weight:900; color: var(--txt); }
+  .rc-stat .t{ font-size:12px; color: var(--muted); font-weight:800; }
+
+  /* ✅ الشبكة: خريطة يسار + جدول يمين (مع RTL بدون لخبطة) */
+  .rc-grid{
+    display:grid;
+    grid-template-columns: 1fr 920px; /* map left, table right */
+    gap: 15px;
+    direction: ltr; /* ✅ يخلي ترتيب الأعمدة ثابت */
+    align-items: stretch;
+  }
+  @media (max-width: 1100px){ .rc-grid{ grid-template-columns: 1fr; } }
+
+  .rc-card{ background: var(--card); border:1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow:hidden; display:flex; flex-direction:column; direction: rtl; }
+
+  /* الخريطة */
+  #map-canvas{ width:100%; height: 600px; background:#e5e7eb; }
+
+  .card-head{ padding: 12px 15px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; background: #fff; }
+  .card-title{ font-weight:900; font-size:14px; color: var(--my-dark); }
+
+  /* الأزرار بالألوان المطلوبة */
+  .btn-yellow { background: var(--my-yellow); color: #fff; }
+  .btn-red { background: var(--my-red); color: #fff; }
+  .btn-blue { background: var(--my-blue); color: #fff; }
+  .btn-dark { background: var(--my-dark); color: #fff; }
+
+  .rc-btn{ border:none; padding: 8px 15px; border-radius: 8px; font-size: 12px; font-weight: 800; cursor: pointer; transition: 0.2s; display: inline-flex; align-items:center; gap:5px; }
+  .rc-btn:hover{ opacity: 0.92; transform: scale(0.99); }
+
+  /* التبويبات والجدول */
+  .rc-tabs{ display:flex; gap:8px; }
+  .rc-tab{
+    padding: 8px 20px; border-radius: 8px; font-size:13px; font-weight:900;
+    cursor:pointer; background:#f1f5f9; border:1px solid var(--line); color: var(--muted);
+    display:flex; align-items:center; gap:8px;
+  }
+  .rc-tab.active{ background: var(--my-dark); color:#fff; border-color: var(--my-dark); }
+  .rc-tab span{ font-weight:900; }
+
+  /* ✅ سكرول أفقي + رأس ثابت + سكرول عمودي */
+  .rc-table-wrap{
+    overflow: hidden;
+    flex: 1;
+    display:flex;
+    flex-direction:column;
+  }
+  .rc-table-scroll{
+    overflow:auto;              /* ✅ يمين/يسار + فوق/تحت */
+    height: 100%;
+    max-height: 600px;
+  }
+
+  .rc-table{
+    width:100%;
+    border-collapse: collapse;
+    min-width: 1450px;          /* ✅ يعرض كل الحقول بدون قص */
+  }
+  .rc-table thead th{
+    background:#f8fafc;
+    position: sticky;
+    top:0;
+    z-index: 3;
+    padding: 12px 10px;
+    font-size:11px;
+    color: var(--my-dark);
+    text-align:right;
+    border-bottom: 2px solid var(--line);
+    white-space:nowrap;
+  }
+  .rc-table td{
+    padding: 10px;
+    font-size:12px;
+    border-bottom:1px solid #f1f5f9;
+    color: var(--txt);
+    vertical-align: middle;
+    white-space:nowrap;
+  }
+
+  /* أيقونات الإجراءات */
+  .action-icon{
+    width: 32px; height: 32px; border-radius: 6px;
+    display: inline-flex; align-items:center; justify-content:center;
+    cursor:pointer; color:#fff; transition: 0.2s; border:none;
+  }
+  .action-icon:hover{ transform: translateY(-2px); }
+
+  .status-pill{ font-size:10px; padding: 3px 8px; border-radius: 5px; font-weight:900; display:inline-block; }
+  .status-open{ background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+  .status-closed{ background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+
+  /* ===== Modal (Edit) ===== */
+  .rc-modal-backdrop{
+    position: fixed;
+    inset: 0;
+    background: rgba(15,23,42,.45);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index: 9999;
+    padding: 18px;
+  }
+  .rc-modal-backdrop.open{ display:flex; }
+
+  .rc-modal{
+    width: min(980px, 100%);
+    max-height: 90vh;
+    background: #fff;
+    border:1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: 0 30px 80px rgba(0,0,0,.18);
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    direction: rtl;
+  }
+  .rc-modal-head{
+    padding: 12px 14px;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap: 12px;
+    background:#fff;
+  }
+  .rc-modal-title{
+    font-weight: 950;
+    color: var(--my-dark);
+    display:flex;
+    gap:10px;
+    align-items:center;
+  }
+  .rc-modal-body{
+    padding: 12px 14px;
+    overflow:auto;
+    background:#fbfdff;
+  }
+
+  .rc-form-grid{
+    display:grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  @media (max-width: 900px){ .rc-form-grid{ grid-template-columns: 1fr; } }
+
+  .rc-field{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px;
+  }
+  .rc-field .k{
+    font-size:12px;
+    font-weight:900;
+    color: var(--muted);
+    margin-bottom: 6px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow: ellipsis;
+  }
+  .rc-field input, .rc-field textarea{
+    width:100%;
+    border:1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 10px;
+    outline:none;
+    font-size: 13px;
+    color: var(--txt);
+    background:#fff;
+  }
+  .rc-field textarea{ min-height: 80px; resize: vertical; }
+
+  .rc-modal-foot{
+    padding: 12px 14px;
+    border-top:1px solid var(--line);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap: 10px;
+    background:#fff;
+  }
+  .rc-hint{
+    font-size: 12px;
+    font-weight: 900;
+    color: var(--muted);
+  }
+  .rc-toast{
+    position: fixed;
+    bottom: 16px;
+    left: 16px;
+    background: #0f172a;
+    color: #fff;
+    padding: 10px 12px;
+    border-radius: 12px;
+    font-weight: 900;
+    font-size: 12px;
+    display:none;
+    z-index: 10000;
+  }
+  .rc-toast.show{ display:block; }
+</style>
+
+<div class="rc-wrap"
+     data-cad-update-url="{{ cad_update_url|default:'' }}"
+     data-ecr-update-url="{{ ecr_update_url|default:'' }}">
+  {{ cases_json|json_script:"ecr-cases-data" }}
+  {{ responders_json|json_script:"responders-data" }}
+
+  <div class="rc-top">
+    <div class="rc-stat">
+      <div><div class="t">CAD مفتوح</div><div class="v" id="stat-cad-open">0</div></div>
+      <i class="fa-solid fa-tower-broadcast" style="color:var(--my-blue)"></i>
+    </div>
+    <div class="rc-stat">
+      <div><div class="t">إجمالي ECR</div><div class="v" id="stat-ecr-total">0</div></div>
+      <i class="fa-solid fa-mobile-screen-button" style="color:var(--my-yellow)"></i>
+    </div>
+    <div class="rc-stat">
+      <div><div class="t">المستجيبين Online</div><div class="v" id="stat-responders">0</div></div>
+      <i class="fa-solid fa-user-check" style="color:var(--my-red)"></i>
+    </div>
+    <div class="rc-stat">
+      <div><div class="t">تحديث تلقائي</div><div class="v" id="stat-last-refresh" style="font-size:16px">—</div></div>
+      <div id="silent-dot" style="width:10px; height:10px; border-radius:50%; background:#ccc;"></div>
+    </div>
+  </div>
+
+  <div class="rc-grid">
+    <!-- ✅ الخريطة يسار -->
+    <div class="rc-card">
+      <div class="card-head">
+        <div class="card-title"><i class="fa-solid fa-map-location-dot"></i> تتبع المواقع</div>
+        <div style="display:flex; gap:5px;">
+          <button class="rc-btn btn-dark" type="button" onclick="fitAllVisible()"><i class="fa-solid fa-compress"></i> ملاءمة</button>
+          <button class="rc-btn btn-yellow" type="button" onclick="manualRefresh()"><i class="fa-solid fa-sync-alt"></i></button>
+        </div>
+      </div>
+      <div id="map-canvas"></div>
+    </div>
+
+    <!-- ✅ الجدول يمين -->
+    <div class="rc-card">
+      <div class="card-head" style="flex-wrap: wrap; gap:10px;">
+        <div class="rc-tabs">
+          <div class="rc-tab active" id="tab-cad" onclick="switchTab('CAD')">CAD <span id="badge-cad">0</span></div>
+          <div class="rc-tab" id="tab-ecr" onclick="switchTab('ECR')">ECR <span id="badge-ecr">0</span></div>
+        </div>
+        <div style="flex:1; min-width:200px; position:relative;">
+          <i class="fa-solid fa-search" style="position:absolute; right:10px; top:10px; color:#94a3b8;"></i>
+          <input id="tab-search" type="text" placeholder="بحث سريع..." oninput="renderActiveTab()"
+                 style="width:100%; padding:8px 35px 8px 10px; border:1px solid var(--line); border-radius:8px; outline:none;">
+        </div>
+      </div>
+
+      <div class="rc-table-wrap" id="table-wrap">
+        <div style="padding:40px; text-align:center; color:var(--muted);">
+          <i class="fa-solid fa-circle-notch fa-spin fa-2x"></i><br>جارِ معالجة البيانات...
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ✅ Modal -->
+<div class="rc-modal-backdrop" id="edit-backdrop" role="dialog" aria-modal="true">
+  <div class="rc-modal">
+    <div class="rc-modal-head">
+      <div class="rc-modal-title">
+        <i class="fa-solid fa-pen-to-square" style="color:var(--my-red)"></i>
+        <span id="edit-title">تعديل</span>
+      </div>
+      <button class="rc-btn btn-dark" type="button" onclick="closeEditModal()">
+        <i class="fa-solid fa-xmark"></i> إغلاق
+      </button>
+    </div>
+
+    <div class="rc-modal-body">
+      <div class="rc-hint" id="edit-hint" style="margin-bottom:10px"></div>
+      <div class="rc-form-grid" id="edit-form"></div>
+    </div>
+
+    <div class="rc-modal-foot">
+      <div class="rc-hint" id="edit-status">—</div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap">
+        <button class="rc-btn btn-yellow" type="button" onclick="resetEditForm()">
+          <i class="fa-solid fa-rotate-left"></i> تراجع
+        </button>
+        <button class="rc-btn btn-blue" type="button" onclick="saveEditForm()">
+          <i class="fa-solid fa-floppy-disk"></i> حفظ
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="rc-toast" id="rc-toast"></div>
+
+<script>
+  // ==========
+  // Endpoints + Context
+  // ==========
+  const URL_CAD_REPORTS = "{% url 'cad_reports:assigned_reports_json' %}";
+  const URL_ECR_REPORTS = "/api/ecr/mobile-reports/";
+
+  let ECR_CASES = JSON.parse(document.getElementById("ecr-cases-data").textContent || "[]");
+  const RESPONDERS = JSON.parse(document.getElementById("responders-data").textContent || "[]");
+
+  const MAP_CENTER = { lat: Number("{{ map_center_lat|default:23.8859 }}"), lng: Number("{{ map_center_lng|default:45.0792 }}") };
+  const MAP_ZOOM = Number("{{ map_zoom|default:5 }}");
+
+  const WRAP_EL = document.querySelector(".rc-wrap");
+  const CAD_UPDATE_URL_BASE = WRAP_EL?.dataset?.cadUpdateUrl || "";
+  const ECR_UPDATE_URL_BASE = WRAP_EL?.dataset?.ecrUpdateUrl || "";
+
+  // ==========
+  // State
+  // ==========
+  let map = null;
+  let cadReportsRaw = [];
+  let activeTab = "CAD";
+  let markers = { ecr: [], cad: [] };
+  let refreshTimer = null;
+
+  // Edit state
+  let editKind = null;
+  let editOriginal = null;
+  let editCurrent = null;
+
+  // ==========
+  // Helpers
+  // ==========
+  function toast(msg){
+    const el = document.getElementById("rc-toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    setTimeout(()=> el.classList.remove("show"), 2200);
+  }
+
+  function escapeHtml(s){
+    if(s === null || s === undefined) return "";
+    return String(s)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  function safeStr(x){
+    if(x === null || x === undefined) return "";
+    return String(x);
+  }
+
+  function isCadOpen(r){
+    if(!r || r.closed === true) return false;
+    if((r.status||"").toString().includes("مفتوح") || (!r.closed_at && !r.closedAt)) return true;
+    return false;
+  }
+
+  function setStats(){
+    document.getElementById("stat-ecr-total").textContent = Array.isArray(ECR_CASES) ? ECR_CASES.length : 0;
+    document.getElementById("stat-responders").textContent = Array.isArray(RESPONDERS) ? RESPONDERS.length : 0;
+    document.getElementById("stat-cad-open").textContent = Array.isArray(cadReportsRaw) ? cadReportsRaw.filter(isCadOpen).length : 0;
+    document.getElementById("badge-cad").textContent = Array.isArray(cadReportsRaw) ? cadReportsRaw.length : 0;
+    document.getElementById("badge-ecr").textContent = Array.isArray(ECR_CASES) ? ECR_CASES.length : 0;
+  }
+
+  function updateLastRefresh(){
+    const d = new Date();
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mm = String(d.getMinutes()).padStart(2,'0');
+    const ss = String(d.getSeconds()).padStart(2,'0');
+    document.getElementById("stat-last-refresh").textContent = `${hh}:${mm}:${ss}`;
+  }
+
+  function setSilent(on){
+    document.getElementById("silent-dot").style.background = on ? "var(--my-yellow)" : "#ccc";
+  }
+
+  // ==========
+  // Tabs
+  // ==========
+  function switchTab(k){
+    activeTab = k;
+    document.getElementById("tab-cad").classList.toggle("active", k==="CAD");
+    document.getElementById("tab-ecr").classList.toggle("active", k==="ECR");
+    renderActiveTab();
+  }
+  function renderActiveTab(){
+    activeTab === "CAD" ? renderCadTable() : renderEcrTable();
+  }
+
+  // ==========
+  // Tables (ALL fields) + scroll
+  // ==========
+  function renderCadTable(){
+    const q = (document.getElementById("tab-search").value || "").toLowerCase();
+    const rows = (Array.isArray(cadReportsRaw) ? cadReportsRaw : []).filter(r => JSON.stringify(r||{}).toLowerCase().includes(q));
+    const wrap = document.getElementById("table-wrap");
+
+    if(rows.length === 0){
+      wrap.innerHTML = `<div style="padding:40px; text-align:center; color:var(--muted);">لا توجد نتائج داخل CAD</div>`;
+      return;
+    }
+
+    wrap.innerHTML = `
+      <div class="rc-table-scroll">
+        <table class="rc-table">
+          <thead>
+            <tr>
+              <th>رقم البلاغ</th>
+              <th>نوع الحالة</th>
+              <th>درجة الخطورة</th>
+              <th>تاريخ البلاغ</th>
+              <th>وقت البلاغ</th>
+              <th>رقم الجوال</th>
+              <th>المنطقة</th>
+              <th>الوصف</th>
+              <th>خط العرض</th>
+              <th>خط الطول</th>
+              <th>وقت الإنشاء</th>
+              <th>وقت الإغلاق</th>
+              <th>حالة البلاغ</th>
+              <th style="width:120px">الإجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(r => {
+              const payload = encodeURIComponent(JSON.stringify(r||{}));
+              const open = isCadOpen(r);
+              const statusHtml = open
+                ? '<span class="status-pill status-open">مفتوح</span>'
+                : '<span class="status-pill status-closed">مغلق</span>';
+
+              return `
+                <tr>
+                    <td><b>${escapeHtml(r.cad_number)}</b></td>
+                    <td>${escapeHtml(r.case_type)}</td>
+                    <td>${escapeHtml(r.severity)}</td>
+                    <td>${escapeHtml(r.report_date)}</td>
+                    <td>${escapeHtml(r.report_time)}</td>
+                    <td>${escapeHtml(r.phone_number)}</td>
+                    <td>${escapeHtml(r.region)}</td>
+                    <td title="${escapeHtml(r.location_text)}">${escapeHtml(r.location_text)}</td>
+                    <td>${escapeHtml(r.latitude)}</td>
+                    <td>${escapeHtml(r.longitude)}</td>
+                    <td>${escapeHtml(r.created_at)}</td>
+                    <td>${escapeHtml(r.closed_at || r.closedAt)}</td>
+                    <td>${statusHtml}</td>
+                    <td>
+                      <button class="action-icon btn-blue" title="عرض بالخريطة" onclick="openCadOnMapEncoded('${payload}')">
+                        <i class="fa-solid fa-location-crosshairs"></i>
+                      </button>
+                      <button class="action-icon btn-red" title="تعديل" onclick="openEditModalEncoded('CAD','${payload}')">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                      </button>
+                    </td>
+                </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  function renderEcrTable(){
+    const q = (document.getElementById("tab-search").value || "").toLowerCase();
+    const rows = (Array.isArray(ECR_CASES) ? ECR_CASES : []).filter(r => JSON.stringify(r||{}).toLowerCase().includes(q));
+    const wrap = document.getElementById("table-wrap");
+
+    if(rows.length === 0){
+      wrap.innerHTML = `<div style="padding:40px; text-align:center; color:var(--muted);">لا توجد نتائج داخل ECR</div>`;
+      return;
+    }
+
+    wrap.innerHTML = `
+      <div class="rc-table-scroll">
+        <table class="rc-table">
+          <thead>
+            <tr>
+                <th>رقم الحالة</th>
+                <th>المنطقة</th>
+                <th>إسم المريض</th>
+                <th>رقم الجوال</th>
+                <th>نوع الحالة</th>
+                <th>مستجيب الحالة</th>
+                <th>وقت التبليغ</th>
+                <th>خط الطول</th>
+                <th>خط العرض</th>
+                <th style="width:120px">الإجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(r => {
+              const payload = encodeURIComponent(JSON.stringify(r||{}));
+              return `
+                <tr>
+                    <td><b>${escapeHtml(r.case_number || r.id)}</b></td>
+                    <td>${escapeHtml(r.region)}</td>
+                    <td>${escapeHtml(r.patient_name)}</td>
+                    <td>${escapeHtml(r.phone_number || r.phone)}</td>
+                    <td>${escapeHtml(r.case_type)}</td>
+                    <td>${escapeHtml(r.responder)}</td>
+                    <td>${escapeHtml(r.created || r.created_at)}</td>
+                    <td>${escapeHtml(r.lat)}</td>
+                    <td>${escapeHtml(r.lng)}</td>
+                    <td>
+                      <button class="action-icon btn-blue" title="عرض بالخريطة" onclick="openEcrOnMapEncoded('${payload}')">
+                        <i class="fa-solid fa-street-view"></i>
+                      </button>
+                      <button class="action-icon btn-red" title="تعديل" onclick="openEditModalEncoded('ECR','${payload}')">
+                        <i class="fa-solid fa-file-signature"></i>
+                      </button>
+                    </td>
+                </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  // ==========
+  // Map
+  // ==========
+  function clearMarkers(){
+    [...markers.cad, ...markers.ecr].forEach(m => { try{ m.setMap(null); }catch(e){} });
+    markers.cad = [];
+    markers.ecr = [];
+  }
+
+  function drawMarkers(){
+    if(!map) return;
+    clearMarkers();
+
+    // CAD open only
+    (Array.isArray(cadReportsRaw) ? cadReportsRaw.filter(isCadOpen) : []).forEach(r => {
+      const lat = parseFloat(r.latitude);
+      const lng = parseFloat(r.longitude);
+      if(Number.isNaN(lat) || Number.isNaN(lng)) return;
+      markers.cad.push(new google.maps.Marker({
+        map,
+        position: {lat, lng},
+        title: "CAD " + (r.cad_number || r.report_number || r.id || "")
+      }));
+    });
+
+    // ECR
+    const iconEcr = { url: "{% static 'icons/ecrmobile.png' %}", scaledSize: new google.maps.Size(30,30) };
+    (Array.isArray(ECR_CASES) ? ECR_CASES : []).forEach(r => {
+      const lat = parseFloat(r.lat);
+      const lng = parseFloat(r.lng);
+      if(Number.isNaN(lat) || Number.isNaN(lng)) return;
+      markers.ecr.push(new google.maps.Marker({
+        map,
+        position: {lat, lng},
+        title: "ECR " + (r.case_number || r.id || ""),
+        icon: iconEcr
+      }));
+    });
+  }
+
+  function fitAllVisible(){
+    if(!map) return;
+    const b = new google.maps.LatLngBounds();
+    let c = 0;
+    [...markers.cad, ...markers.ecr].forEach(m => {
+      try{ b.extend(m.getPosition()); c++; }catch(e){}
+    });
+    if(c > 0) map.fitBounds(b);
+  }
+
+  function openCadOnMapEncoded(payload){
+    try{
+      const r = JSON.parse(decodeURIComponent(payload));
+      const lat = parseFloat(r.latitude);
+      const lng = parseFloat(r.longitude);
+      if(map && !Number.isNaN(lat) && !Number.isNaN(lng)){
+        map.panTo({lat, lng});
+        map.setZoom(15);
+      }
+    }catch(e){}
+  }
+
+  function openEcrOnMapEncoded(payload){
+    try{
+      const r = JSON.parse(decodeURIComponent(payload));
+      const lat = parseFloat(r.lat);
+      const lng = parseFloat(r.lng);
+      if(map && !Number.isNaN(lat) && !Number.isNaN(lng)){
+        map.panTo({lat, lng});
+        map.setZoom(15);
+      }
+    }catch(e){}
+  }
+
+  // ==========
+  // Edit Modal (enabled)
+  // ==========
+  function openEditModalEncoded(kind, payload){
+    try{
+      const obj = JSON.parse(decodeURIComponent(payload));
+      openEditModal(kind, obj);
+    }catch(e){
+      toast("تعذر فتح التعديل");
+    }
+  }
+
+  function openEditModal(kind, obj){
+    editKind = kind;
+    editOriginal = JSON.parse(JSON.stringify(obj || {}));
+    editCurrent = JSON.parse(JSON.stringify(obj || {}));
+
+    document.getElementById("edit-title").textContent = `تعديل ${kind} # ${(obj.case_number || obj.cad_number || obj.report_number || obj.id || "")}`;
+    const hint = document.getElementById("edit-hint");
+    const status = document.getElementById("edit-status");
+
+    const base = (kind === "CAD") ? CAD_UPDATE_URL_BASE : ECR_UPDATE_URL_BASE;
+    if(!base){
+      hint.textContent = "⚠️ رابط التعديل غير مفعّل من الباك-إند (ضع cad_update_url / ecr_update_url في context).";
+      status.textContent = "وضع العرض/التعديل محلي داخل المودال فقط.";
+    }else{
+      hint.textContent = "عدّل القيم ثم اضغط حفظ.";
+      status.textContent = "جاهز للحفظ.";
+    }
+
+    const keys = Object.keys(editCurrent || {}).sort((a,b)=> a.localeCompare(b));
+    const form = document.getElementById("edit-form");
+    form.innerHTML = keys.map(k => {
+      const v = editCurrent[k];
+      const isLong = typeof v === "string" && v.length > 80;
+      if(isLong){
+        return `
+          <div class="rc-field">
+            <div class="k">${escapeHtml(k)}</div>
+            <textarea data-k="${escapeHtml(k)}">${escapeHtml(v)}</textarea>
+          </div>`;
+      }
+      return `
+        <div class="rc-field">
+          <div class="k">${escapeHtml(k)}</div>
+          <input data-k="${escapeHtml(k)}" value="${escapeHtml(safeStr(v))}">
+        </div>`;
+    }).join("");
+
+    // bind change
+    form.querySelectorAll("[data-k]").forEach(el => {
+      el.addEventListener("input", () => {
+        const key = el.getAttribute("data-k");
+        editCurrent[key] = el.value;
+        document.getElementById("edit-status").textContent = "تم تعديل بيانات (غير محفوظ).";
+      });
+    });
+
+    document.getElementById("edit-backdrop").classList.add("open");
+  }
+
+  function closeEditModal(){
+    document.getElementById("edit-backdrop").classList.remove("open");
+    editKind = null; editOriginal = null; editCurrent = null;
+  }
+
+  function resetEditForm(){
+    if(!editOriginal) return;
+    openEditModal(editKind, editOriginal);
+    toast("تم التراجع عن التعديلات");
+  }
+
+  function getCsrfToken(){
+    // Django CSRF from cookie
+    const name = "csrftoken=";
+    const parts = (document.cookie || "").split(";");
+    for(const p of parts){
+      const t = p.trim();
+      if(t.startsWith(name)) return decodeURIComponent(t.substring(name.length));
+    }
+    return "";
+  }
+
+  async function saveEditForm(){
+    if(!editKind || !editCurrent) return;
+
+    const base = (editKind === "CAD") ? CAD_UPDATE_URL_BASE : ECR_UPDATE_URL_BASE;
+    if(!base){
+      toast("رابط التعديل غير مفعّل من الباك-إند");
+      return;
+    }
+
+    // ✅ توقع: base يكون مثل /api/cad/update/ أو /api/ecr/update/
+    // سنرسل payload كامل + id داخل body
+    const csrf = getCsrfToken();
+    document.getElementById("edit-status").textContent = "جاري الحفظ...";
+
+    try{
+      const res = await fetch(base, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          ...(csrf ? {"X-CSRFToken": csrf} : {})
+        },
+        body: JSON.stringify({
+          kind: editKind,
+          id: editCurrent.id || editCurrent.case_number || editCurrent.cad_number || editCurrent.report_number,
+          data: editCurrent
+        })
+      });
+
+      if(!res.ok){
+        const txt = await res.text();
+        document.getElementById("edit-status").textContent = "فشل الحفظ";
+        toast("فشل الحفظ: " + (txt || res.status));
+        return;
+      }
+
+      toast("تم الحفظ بنجاح");
+      document.getElementById("edit-status").textContent = "تم الحفظ ✅";
+      closeEditModal();
+      // تحديث صامت
+      manualRefresh();
+    }catch(e){
+      document.getElementById("edit-status").textContent = "فشل الحفظ";
+      toast("تعذر الاتصال بالحفظ");
+    }
+  }
+
+  // ==========
+  // Fetch data
+  // ==========
+  async function fetchCadReports(){
+    const res = await fetch(URL_CAD_REPORTS, { headers: {"Accept":"application/json"} });
+    if(!res.ok) throw new Error("CAD fetch failed");
+    const data = await res.json();
+    cadReportsRaw = Array.isArray(data) ? data : [];
+  }
+
+  async function fetchEcrReports(){
+    try{
+      const res = await fetch(URL_ECR_REPORTS, { headers: {"Accept":"application/json"} });
+      if(!res.ok) throw new Error("ECR fetch failed");
+      const data = await res.json();
+      const next = Array.isArray(data) ? data : (Array.isArray(data.results) ? data.results : []);
+      ECR_CASES = (next || []).map(r => ({
+        id: r.id,
+        case_number: r.case_number || r.id,
+        created: r.created || r.created_at || r.createdAt,
+        region: r.region_name || r.region || r.region_display || r.region_text,
+        patient_name: r.patient_name || r.patient || r.name,
+        phone_number: r.phone_number || r.phone || r.mobile,
+        case_type: r.case_type || r.medical_condition || r.condition_name,
+        responder: r.responder_name || r.created_by_name || r.created_by || r.responder,
+        lat: r.lat || r.latitude,
+        lng: r.lng || r.longitude
+      }));
+    }catch(e){
+      // صامت
+    }
+  }
+
+  async function silentRefreshOnce(){
+    setSilent(true);
+    try{
+      await Promise.allSettled([fetchCadReports(), fetchEcrReports()]);
+      drawMarkers();
+      setStats();
+      renderActiveTab();
+      updateLastRefresh();
+    }finally{
+      setSilent(false);
+    }
+  }
+
+  function manualRefresh(){
+    silentRefreshOnce().then(() => fitAllVisible());
+  }
+
+  // ==========
+  // Init map
+  // ==========
+  window.initMap = function(){
+    map = new google.maps.Map(document.getElementById("map-canvas"), { center: MAP_CENTER, zoom: MAP_ZOOM, mapTypeId:"roadmap", gestureHandling:"greedy" });
+    silentRefreshOnce().then(() => {
+      fitAllVisible();
+      if(refreshTimer) clearInterval(refreshTimer);
+      refreshTimer = setInterval(silentRefreshOnce, 15000);
+    });
+  };
+
+  document.addEventListener("DOMContentLoaded", () => {
+    setStats();
+    switchTab("CAD");
+  });
+
+  // اغلاق المودال عند الضغط بالخلف
+  document.getElementById("edit-backdrop").addEventListener("click", (e)=>{
+    if(e.target && e.target.id === "edit-backdrop") closeEditModal();
+  });
+</script>
+
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap" async defer></script>
+
+{% endblock %}

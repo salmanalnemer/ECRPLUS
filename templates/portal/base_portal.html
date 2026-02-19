@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <!-- ✅ Font Awesome مع fallback إذا انحجب cdnjs -->
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+          onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css';">
+
+    <link rel="icon" href="/static/favicon.ico">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- ✅ أي CSS إضافي خاص بالصفحات الفرعية (مثل Bootstrap Icons) -->
+    {% block extra_head %}{% endblock %}
+
+    <style>
+        
+        :root {
+            --srca-red: #E31E24;
+            --srca-bg: #F4F7F9;
+            --srca-text-main: #333333;
+            --srca-text-muted: #64748b;
+            
+            /* تم تصغير عرض السايدبار هنا */
+            --sidebar-width: 240px; 
+            --transition: all 0.25s ease-in-out;
+            
+            --ui-scale: .85; /* القيمة الافتراضية للتكبير/التصغير (85%) */
+        }
+
+        body {
+            background-color: var(--srca-bg);
+            color: var(--srca-text-main);
+            font-family: 'Tajawal', sans-serif;
+            margin: 0; 
+            display: flex; 
+            min-height: 100vh;
+            zoom: var(--ui-scale);
+        }
+
+          /* 2) Fallback لو متصفح ما يدعم zoom */
+    @supports not (zoom: 1){
+        body{
+        transform: scale(var(--ui-scale));
+        transform-origin: top right; /* RTL */
+        width: calc(100% / var(--ui-scale));
+        height: calc(100% / var(--ui-scale));
+        }
+    }
+        /* --- السايدبار المصغر --- */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: #FFFFFF;
+            transition: var(--transition);
+            position: fixed;
+            right: 0; top: 0; bottom: 0;
+            z-index: 2000;
+            box-shadow: -1px 0 5px rgba(0,0,0,0.03);
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid #e2e8f0;
+        }
+        .sidebar.closed { width: 0; overflow: hidden; transform: translateX(100%); }
+
+        .sidebar-brand { 
+            padding: 20px 15px; 
+            text-align: center;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .sidebar-brand span { 
+            font-size: 1.2rem; /* تصغير الخط */
+            font-weight: 800; 
+            color: var(--srca-red); 
+        }
+        .sidebar-brand small {
+            font-size: 0.60rem; /* تصغير الخط */
+            color: var(--srca-text-muted);
+            display: block;
+        }
+
+        .nav-menu { padding: 15px 10px; flex-grow: 1; }
+        
+        .nav-item { 
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 15px; /* تقليل المسافات الداخلية */
+            color: var(--srca-text-muted); /* لون النص الافتراضي */
+            text-decoration: none; /* إزالة الخط السفلي */
+            border-radius: 6px;  /* تقليل انحناء الزوايا */
+            margin-bottom: 4px; /* تقليل المسافة بين الروابط */
+            transition: var(--transition);
+            font-weight: 500; /* تقليل سمك الخط */
+            font-size: 0.70rem; /* تصغير خط الروابط */
+        }
+        /* تصغير أيقونات الفونت أوسم داخل الروابط */
+        .nav-item i { width: 18px; font-size: 0.95rem; text-align: center; }
+        /* تأثير hover */
+        .nav-item:hover { 
+            background: #fef2f2;
+            color: var(--srca-red);
+        }
+        
+        .nav-item.active { 
+            background: #d6000eb7; 
+            color: #ffffff; 
+            font-weight: 700;
+        }
+
+        .sidebar-footer { 
+            padding: 12px; 
+            border-top: 1px solid #f1f5f9;
+            font-size: 0.7rem; /* تصغير خط التذييل */
+            color: #94a3b8; 
+            text-align: center; 
+        }
+
+        /* --- المحتوى الرئيسي --- */
+        .main-wrapper { 
+            flex: 1; padding: 20px; 
+            margin-right: var(--sidebar-width); 
+            transition: var(--transition); 
+        }
+        .main-wrapper.full-width { margin-right: 0; }
+
+        .header-section {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 20px; /* تقليل حجم الهيدر */
+            background: #FFFFFF;
+            border-radius: 8px; 
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+        }
+
+        .user-profile { display: flex; align-items: center; gap: 10px; }
+        
+        .user-avatar { 
+            width: 32px; height: 32px; /* تصغير صورة المستخدم */
+            background: #f1f5f9; 
+            border-radius: 6px; 
+            display: flex; align-items: center; 
+            justify-content: center; color: var(--srca-red); 
+            font-size: 0.9rem;
+        }
+
+        .logout-btn {
+            background: transparent; 
+            color: var(--srca-text-muted);
+            border: 1px solid #e2e8f0;
+            padding: 6px 12px; 
+            border-radius: 6px;
+            cursor: pointer; 
+            font-size: 0.8rem; /* تصغير خط زر الخروج */
+            transition: var(--transition);
+            font-family: 'Tajawal';
+        }
+
+        .logout-btn:hover {
+            background: var(--srca-red);
+            color: white;
+            border-color: var(--srca-red);
+        }
+
+        .toggle-btn { 
+            background: none; border: none;
+            width: 30px; height: 30px; 
+            cursor: pointer; color: var(--srca-text-muted);
+            font-size: 1rem;
+        }
+        
+        .toggle-btn:hover { color: var(--srca-red); }
+
+        h2.page-title { margin:0; font-size: 1rem; font-weight: 700; color: #334155; }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <span>E.C.R</span>
+        <small>مستجيب الحالات الإسعافية ( القطاع الثالث )</small>
+    </div>
+    
+    <nav class="nav-menu" id="navMenu">
+        <div style="margin: 15px 10px 5px 10px; font-size: 0.65rem; color: #cbd5e1; font-weight: 700; text-transform: uppercase;">
+            لوحة التحكم
+        </div>
+        <a href="{% url 'cad_reports:main_dashboard_page' %}" class="nav-item">
+            <i class="fas fa-chart"></i> الداشبورد
+        </a>
+        <a href="{% url 'cad_reports:page' %}" class="nav-item">
+            <i class="fas fa-location-dot"></i> إنشاء بلاغ (مرتبط بـ CAD)
+        </a>
+
+        </li>
+        {% if can_see_cad_dashboard_link %}
+        <a href="/cad/dashboard/cad/" class="nav-item">
+            <i class="fas fa-chart-line"></i> لوحة CAD
+        </a>
+        {% endif %}
+
+        <a href="/cad/dashboard/cad/" class="nav-item">
+            <i class="fas fa-ambulance text-danger"></i>
+            بلاغات مرتبطة بـ CAD
+        </a>
+        <!--<a href="/cad/reports/" class="nav-item">
+            <i class="fas fa-ambulance text-danger"></i>
+            بلاغات مرتبطة بـ CAD
+        </a>-->
+        <a href="/api/ecr/dashboard/ecr/" class="nav-item">
+            <i class="fas fa-mobile-alt text-primary"></i>
+            بلاغات ECR
+        </a>
+        <a href="{% url 'cad_reports:reports_cad_ecr' %}" class="nav-item">
+            <i class="fas fa-triangle-exclamation"></i> الخريطة الحية 
+        </a>
+        <a href="{% url 'responders:show_all_responders' %}" class="nav-item">
+            <i class="fas fa-user-md"></i> المستجيبون
+        </a>
+        <div style="margin: 15px 10px 5px 10px; font-size: 0.65rem; color: #cbd5e1; font-weight: 700; text-transform: uppercase;">
+        التحليلات والبيانات
+        </div>
+        </a>
+         <a href="{% url 'cad_reports:cad_ai_hotspots_page' %}" class="nav-item">
+            <i class="fa-solid fa-fire-flame-curved"></i>  تحليل البلاغات
+        </a>
+        <a href="/portal/analytics/" class="nav-item">
+            <i class="fas fa-chart-pie"></i> مؤشرات الأداء (KPIs)
+        </a>
+
+        <a href="/portal/reports/" class="nav-item">
+            <i class="fas fa-file-invoice"></i> التقارير الدورية
+        </a>
+        <a href="/portal/notifications/" class="nav-item">
+            <i class="fas fa-bell"></i> الإشعارات 
+        </a>
+
+        <div style="margin: 15px 10px; border-top: 1px solid #f1f5f9;"></div>
+        
+        <a href="/portal/settings/" class="nav-item">
+            <i class="fas fa-sliders"></i> الإعدادات
+        </a>
+    </nav>
+
+    <div class="sidebar-footer">
+        v1.0.0.1
+    </div>
+</aside>
+
+<main class="main-wrapper" id="mainWrapper">
+    <header class="header-section">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <button class="toggle-btn" onclick="toggleSidebar()"><i class="fas fa-bars-staggered"></i></button>
+        </div>
+        
+        <div class="user-profile">
+            <div style="text-align: left; line-height: 1.1;">
+                <strong style="color: var(--srca-text-main); font-size: 0.8rem; display: block;">{{ request.user.full_name }}</strong>
+                <span style="font-size: 0.65rem; color: var(--srca-text-muted);">{{ request.user.region|default:"هيئة الهلال الأحمر السعودي (إداري)" }}</span>
+            </div>
+            <div class="user-avatar">
+                <i class="fas fa-user"></i>
+            </div>
+            <form method="post" action="{% url 'logout' %}" style="margin-right: 5px; margin-bottom: 0;">
+                {% csrf_token %}
+                <button type="submit" class="logout-btn">
+                    خروج
+                </button>
+            </form>
+        </div>
+    </header>
+
+    <section class="content-area">
+        {% block content %}
+        <div style="background: white; padding: 40px; text-align: center; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <p style="color: #94a3b8; font-size: 0.9rem;">محتوى الصفحة سيظهر هنا...</p>
+        </div>
+        {% endblock %}
+    </section>
+</main>
+
+<script>
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const wrapper = document.getElementById('mainWrapper');
+        sidebar.classList.toggle('closed');
+        wrapper.classList.toggle('full-width');
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const currentPath = window.location.pathname;
+        const navItems = document.querySelectorAll('.nav-item');
+        navItems.forEach(item => {
+            if (currentPath.includes(item.getAttribute('href'))) {
+                item.classList.add('active');
+            }
+        });
+    });
+</script>
+</body>
+</html>

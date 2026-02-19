@@ -1,0 +1,154 @@
+{% extends "accounts/base_auth.html" %}
+{% block title %}تسجيل الدخول - ECR{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <header class="auth-header text-center">
+        <div class="brand-logo mb-4">ECR</div>
+        <h2 class="auth-title">مرحباً بك مجدداً</h2>
+        <p class="auth-subtitle">سجل دخولك للمتابعة إلى لوحة التحكم</p>
+    </header>
+
+    <div class="auth-card">
+        <form method="post" novalidate class="modern-form">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next }}"/>
+
+            <div class="form-group mb-4">
+                <label class="form-label fw-bold">{{ form.identifier.label }}</label>
+                {{ form.identifier }}
+                {% if form.identifier.errors %}
+                <div class="error-msg text-danger small mt-1">
+                    {{ form.identifier.errors|striptags }}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group mb-2">
+                <div class="d-flex justify-content-between">
+                    <label class="form-label fw-bold">{{ form.password.label }}</label>
+                    <a href="{% url 'accounts_forgot_password' %}" class="forgot-link">نسيت كلمة المرور؟</a>
+                </div>
+                {{ form.password }}
+                {% if form.password.errors %}
+                <div class="error-msg text-danger small mt-1">
+                    {{ form.password.errors|striptags }}
+                </div>
+                {% endif %}
+            </div>
+
+            {% if form.non_field_errors %}
+            <div class="global-error mb-4">
+                {{ form.non_field_errors|striptags }}
+            </div>
+            {% endif %}
+
+            <button class="btn btn-dark w-100 py-3 mt-4 main-btn" type="submit">
+                متابعة
+            </button>
+        </form>
+    </div>
+
+    <footer class="auth-footer text-center mt-4">
+        <p class="text-muted small">ليس لديك حساب؟ <a href="{% url 'accounts_register' %}" class="register-link">إنشاء حساب جديد</a></p>
+    </footer>
+</div>
+
+<style>
+    /* الخطوط والألوان العامة */
+    :root {
+        --primary-dark: #1a1a1a;
+        --soft-gray: #f9f9fb;
+        --border-color: #e2e8f0;
+        --text-main: #2d3748;
+        --text-muted: #718096;
+    }
+
+    .auth-container {
+        max-width: 420px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+    }
+
+    .brand-logo {
+        font-size: 2rem;
+        font-weight: 900;
+        letter-spacing: -1px;
+        color: var(--primary-dark);
+    }
+
+    .auth-title {
+        font-weight: 800;
+        color: var(--text-main);
+        letter-spacing: -0.5px;
+        margin-bottom: 8px;
+    }
+
+    .auth-subtitle {
+        color: var(--text-muted);
+        font-size: 0.95rem;
+    }
+
+    /* تصميم الكارد */
+    .auth-card {
+        background: #fff;
+        padding: 2.5rem;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    /* تنسيق المدخلات - Logic intact, just styling classes */
+    input[type="text"], input[type="email"], input[type="password"], .form-control {
+        width: 100%;
+        padding: 12px 16px;
+        border-radius: 8px;
+        border: 1.5px solid var(--border-color);
+        background-color: var(--soft-gray);
+        transition: all 0.2s ease;
+        font-size: 0.95rem;
+    }
+
+    input:focus {
+        outline: none;
+        border-color: var(--primary-dark) !important;
+        background-color: #fff !important;
+        box-shadow: 0 0 0 4px rgba(26, 26, 26, 0.05);
+    }
+
+    /* الأزرار */
+    .main-btn {
+        background-color: var(--primary-dark);
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: transform 0.1s active;
+    }
+
+    .main-btn:hover {
+        background-color: #000;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    /* الروابط */
+    .forgot-link, .register-link {
+        color: var(--primary-dark);
+        text-decoration: none;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .forgot-link:hover, .register-link:hover {
+        text-decoration: underline;
+    }
+
+    .global-error {
+        background-color: #fff5f5;
+        color: #c53030;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        border: 1px solid #feb2b2;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,290 @@
+{% extends "portal/base_portal.html" %}
+{% load static %}
+
+{% block content %}
+<style>
+    /* إعادة صياغة التصميم بالكامل - Modern Enterprise UI */
+    :root {
+        --primary: #4f46e5;
+        --bg-main: #f3f4f6;
+        --text-dark: #111827;
+        --border-color: #e5e7eb;
+    }
+
+    .r-wrap {
+        direction: rtl;
+        padding: 25px;
+        background: var(--bg-main);
+        min-height: 100vh;
+    }
+
+    /* الكرت الرئيسي بتصميم عائم */
+    .r-card {
+        background: #ffffff;
+        border-radius: 20px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        border: none;
+        overflow: hidden;
+    }
+
+    /* هيدر عصري ومميز */
+    .r-head {
+        background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+        padding: 30px 25px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: white;
+    }
+
+    .r-title {
+        font-size: 24px;
+        font-weight: 900;
+        margin: 0;
+        color: #f8fafc;
+        border-right: 4px solid var(--primary);
+        padding-right: 15px;
+    }
+
+    .r-sub {
+        margin-top: 8px;
+        color: #cbd5e1;
+        font-size: 14px;
+    }
+
+    .r-count {
+        color: #fff;
+        background: rgba(255,255,255,0.2);
+        padding: 4px 12px;
+        border-radius: 50px;
+        font-weight: bold;
+    }
+
+    /* شريط الفلاتر بشكل منفصل */
+    .r-filters {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr;
+        gap: 20px;
+        padding: 25px;
+        background: #fff;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .r-in, .r-sel {
+        height: 48px;
+        background: #f9fafb;
+        border: 1px solid #d1d5db;
+        border-radius: 12px;
+        padding: 0 15px;
+        font-size: 14px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .r-in:focus, .r-sel:focus {
+        background: #fff;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+        outline: none;
+    }
+
+    /* الجدول بتصميم نظيف جداً */
+    .r-scroll {
+        max-height: 600px;
+        overflow-x: auto;
+    }
+
+    .r-table {
+        width: 100%;
+        border-collapse: collapse;
+        white-space: nowrap;
+    }
+
+    .r-table th {
+        background: #f8fafc;
+        padding: 15px 20px;
+        text-align: right;
+        font-size: 12px;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        border-bottom: 2px solid #f1f5f9;
+        position: sticky;
+        top: 0;
+        z-index: 5;
+    }
+
+    .r-table td {
+        padding: 16px 20px;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 14px;
+        color: #334155;
+    }
+
+    .r-table tr:hover td {
+        background-color: #f5f3ff;
+    }
+
+    /* الأوسمة (Badges) */
+    .badge {
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 700;
+        display: inline-block;
+    }
+
+    .b-on { background: #ecfdf5; color: #059669; } /* Online */
+    .b-off { background: #fef2f2; color: #dc2626; } /* Offline */
+    .b-yes { background: #eff6ff; color: #2563eb; } /* Health */
+
+    .mono {
+        font-family: 'JetBrains Mono', 'Consolas', monospace;
+        background: #f1f5f9;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 12px;
+    }
+
+    .r-empty { padding: 50px; text-align: center; color: #94a3b8; font-size: 18px; }
+
+    /* تحسين العرض على الجوال */
+    @media (max-width: 900px) {
+        .r-filters { grid-template-columns: 1fr; }
+        .r-head { flex-direction: column; text-align: center; }
+        .r-title { border-right: none; border-bottom: 4px solid var(--primary); padding: 0 0 10px 0; }
+    }
+</style>
+
+<div class="r-wrap">
+    <div class="r-card">
+        <div class="r-head">
+            <div>
+                <h3 class="r-title">لوحة بيانات المستجيبين</h3>
+                <div class="r-sub">
+                    النظام يحتوي على <span class="r-count" id="countAll">{{ responders|length }}</span> مستجيب
+                    (المطابق للبحث حالياً: <span class="r-count" id="countShown" style="background:var(--primary)">{{ responders|length }}</span>)
+                </div>
+            </div>
+        </div>
+
+        <div class="r-filters">
+            <input id="searchAll" class="r-in" placeholder="🔎 ابحث عن اسم، جوال، بريد، أو رقم هوية..." />
+
+            <select id="filterRegion" class="r-sel">
+                <option value="">🗺️ كل المناطق</option>
+                {% for r in regions %}
+                    <option value="{{ r.name_ar|default:r }}">{{ r.name_ar|default:r }}</option>
+                {% endfor %}
+            </select>
+
+            <select id="filterStatus" class="r-sel">
+                <option value="">📡 الحالة</option>
+                <option value="متصل">متصل الآن</option>
+                <option value="غير متصل">غير متصل</option>
+            </select>
+
+            <select id="filterHealth" class="r-sel">
+                <option value="">🩺 ممارس صحي؟</option>
+                <option value="نعم">نعم</option>
+                <option value="لا">لا</option>
+            </select>
+        </div>
+
+        <div class="r-scroll">
+            <table class="r-table" id="respondersTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>المعرف</th>
+                        <th>الاسم</th>
+                        <th>الهوية</th>
+                        <th>الجوال</th>
+                        <th>المنطقة</th>
+                        <th>الحالة</th>
+                        <th>ممارس</th>
+                        <th>آخر ظهور</th>
+                        <th>الموقع (Lat, Lng)</th>
+                        <th>التطبيق</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for r in responders %}
+                    <tr>
+                        <td class="mono">{{ forloop.counter }}</td>
+                        <td class="mono" style="color:#6366f1">{{ r.id }}</td>
+                        <td style="font-weight:700">{{ r.full_name|default:"-" }}</td>
+                        <td class="mono">{{ r.national_id|default:"-" }}</td>
+                        <td class="mono">{{ r.phone|default:"-" }}</td>
+                        <td>{{ r.region|default:"-" }}</td>
+                        <td>
+                            {% if r.is_online %}
+                                <span class="badge b-on">متصل</span>
+                            {% else %}
+                                <span class="badge b-off">غير متصل</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if r.is_health_practitioner %}
+                                <span class="badge b-yes">نعم</span>
+                            {% else %}
+                                <span class="badge b-off">لا</span>
+                            {% endif %}
+                        </td>
+                        <td class="mono">{% if r.last_seen %}{{ r.last_seen|date:"H:i - Y/m/d" }}{% else %}-{% endif %}</td>
+                        <td class="mono">
+                            <span title="Accuracy: {{ r.accuracy }}">{{ r.lat|default:"-" }}, {{ r.lng|default:"-" }}</span>
+                        </td>
+                        <td><span class="badge" style="background:#f1f5f9">{{ r.platform|default:"-" }} (v{{ r.app_version|default:"0" }})</span></td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="11" class="r-empty">لا توجد سجلات لعرضها أو لا توجد لديكم صلاحية المتابعة لجميع المستجيبين بكافة المناطق</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+/* المنطق البرمجي (دون أي تغيير كما طلبت) */
+(function(){
+  const searchAll = document.getElementById("searchAll");
+  const filterRegion = document.getElementById("filterRegion");
+  const filterStatus = document.getElementById("filterStatus");
+  const filterHealth = document.getElementById("filterHealth");
+  const tbody = document.querySelector("#respondersTable tbody");
+  const rows = () => Array.from(tbody.querySelectorAll("tr"));
+  const countAll = document.getElementById("countAll");
+  const countShown = document.getElementById("countShown");
+
+  function applyFilter(){
+    let shown = 0;
+    rows().forEach(tr => {
+      if (tr.children.length < 5) return;
+      const text = tr.innerText.toLowerCase();
+      const region = (tr.children[5]?.innerText || "").trim(); // تعديل الاندكس ليناسب الجدول الجديد
+      const status = (tr.children[6]?.innerText || "").trim();
+      const health = (tr.children[7]?.innerText || "").trim();
+
+      let ok = true;
+      if (searchAll.value && !text.includes(searchAll.value.toLowerCase())) ok = false;
+      if (filterRegion.value && region !== filterRegion.value) ok = false;
+      if (filterStatus.value && !status.includes(filterStatus.value)) ok = false;
+      if (filterHealth.value && health !== filterHealth.value) ok = false;
+
+      tr.style.display = ok ? "" : "none";
+      if (ok) shown++;
+    });
+    countShown.textContent = String(shown);
+  }
+
+  ["keyup","change"].forEach(evt=>{
+    searchAll.addEventListener(evt, applyFilter);
+  });
+  filterRegion.addEventListener("change", applyFilter);
+  filterStatus.addEventListener("change", applyFilter);
+  filterHealth.addEventListener("change", applyFilter);
+  applyFilter();
+})();
+</script>
+{% endblock %}

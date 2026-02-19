@@ -1,0 +1,230 @@
+{% extends "portal/base_portal.html" %}
+
+{% block content %}
+<title>ECR | Dashboard</title>
+
+<style>
+    .dashboard-wrapper {
+        background: #f4f7fe;
+        padding: 20px;
+        direction: rtl;
+    }
+
+    /* كروت الإحصائيات بألوان منفصلة */
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .stat-card {
+        padding: 20px;
+        border-radius: 20px;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content:间-between;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-card i {
+        font-size: 3rem;
+        opacity: 0.3;
+        position: absolute;
+        left: 10px;
+        bottom: 5px;
+    }
+
+    .card-1 { background: linear-gradient(135deg, #4e73df 0%, #224abe 100%); } /* أزرق */
+    .card-2 { background: linear-gradient(135deg, #1cc88a 0%, #13855c 100%); } /* أخضر */
+    .card-3 { background: linear-gradient(135deg, #f6c23e 0%, #dda20a 100%); } /* أصفر */
+    .card-4 { background: linear-gradient(135deg, #e74a3b 0%, #be2617 100%); } /* أحمر */
+
+    .stat-info h3 { font-size: 2rem; margin: 0; font-weight: bold; }
+    .stat-info p { margin: 0; font-size: 1rem; opacity: 0.9; }
+
+    /* حاويات الشارتات */
+    .charts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 25px;
+    }
+
+    .chart-card {
+        background: white;
+        padding: 20px;
+        border-radius: 20px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        border: 1px solid #edf2f9;
+    }
+
+    .chart-card h4 {
+        margin-bottom: 20px;
+        color: #333;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    /* منع التمطيط */
+    .chart-wrapper {
+        position: relative;
+        height: 250px; /* طول ثابت ومناسب للجوال والكمبيوتر */
+        width: 100%;
+    }
+
+    @media (max-width: 480px) {
+        .stats-row { grid-template-columns: 1fr; }
+        .chart-wrapper { height: 220px; }
+    }
+</style>
+
+<div class="dashboard-wrapper">
+    <h2 style="margin-bottom: 25px; color: #2d3436;">الإحصائيات التحليلية</h2>
+
+    <div class="stats-row">
+        <div class="stat-card card-1">
+            <div class="stat-info">
+                <p>إجمالي الحالات</p>
+                <h3 id="cases">6</h3>
+            </div>
+            <i class="bi bi-clipboard-pulse"></i>
+        </div>
+        <div class="stat-card card-2">
+            <div class="stat-info">
+                <p>المستجيبين</p>
+                <h3 id="responders">7</h3>
+            </div>
+            <i class="bi bi-phone-vibrate"></i>
+        </div>
+        <div class="stat-card card-3">
+            <div class="stat-info">
+                <p>الممارسون</p>
+                <h3 id="health">3</h3>
+            </div>
+            <i class="bi bi-person-badge"></i>
+        </div>
+        <div class="stat-card card-4">
+            <div class="stat-info">
+                <p>أكثر عمر إصابة</p>
+                <h3 id="topAge">46</h3>
+            </div>
+            <i class="bi bi-graph-up-arrow"></i>
+        </div>
+    </div>
+
+    <div class="charts-grid">
+        <div class="chart-card">
+            <h4><i class="bi bi-pie-chart-fill" style="color:#4e73df"></i> توزيع الجنس</h4>
+            <div class="chart-wrapper">
+                <canvas id="genderChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <h4><i class="bi bi-bar-chart-steps" style="color:#1cc88a"></i> أنواع الحالات</h4>
+            <div class="chart-wrapper">
+                <canvas id="caseTypeChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <h4><i class="bi bi-calendar-range" style="color:#f6c23e"></i> الأعمار</h4>
+            <div class="chart-wrapper">
+                <canvas id="ageChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <h4><i class="bi bi-trophy" style="color:#e74a3b"></i> المستجيبين الأعلى</h4>
+            <div class="chart-wrapper">
+                <canvas id="respondersChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+fetch("/api/ecrdash/stats/")
+.then(res => res.json())
+.then(data => {
+    // الأرقام
+    document.getElementById("cases").innerText = data.total_cases || 0;
+    document.getElementById("responders").innerText = data.mobile_users || 0;
+    document.getElementById("health").innerText = data.health_practitioners || 0;
+    if(data.age_stats?.length) document.getElementById("topAge").innerText = data.age_stats[0].age;
+
+    // إعدادات عامة لمنع التمطيط
+    const globalOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' } }
+    };
+
+    // 1. Doughnut
+    new Chart(document.getElementById("genderChart"), {
+        type: 'doughnut',
+        data: {
+            labels: (data.gender_stats||[]).map(g => g.gender),
+            datasets: [{
+                data: (data.gender_stats||[]).map(g => g.total),
+                backgroundColor: ['#4e73df', '#f6c23e', '#e74a3b']
+            }]
+        },
+        options: globalOptions
+    });
+
+    // 2. Radar (تغيير النوع عشان الاختلاف)
+    new Chart(document.getElementById("caseTypeChart"), {
+        type: 'radar',
+        data: {
+            labels: (data.case_types||[]).map(c => c.case_type),
+            datasets: [{
+                label: 'الحالات',
+                data: (data.case_types||[]).map(c => c.total),
+                fill: true,
+                backgroundColor: 'rgba(28, 200, 138, 0.2)',
+                borderColor: '#1cc88a'
+            }]
+        },
+        options: globalOptions
+    });
+
+    // 3. Bar
+    new Chart(document.getElementById("ageChart"), {
+        type: 'bar',
+        data: {
+            labels: (data.age_stats||[]).map(a => a.age),
+            datasets: [{
+                label: 'العدد',
+                data: (data.age_stats||[]).map(a => a.total),
+                backgroundColor: '#f6c23e'
+            }]
+        },
+        options: globalOptions
+    });
+
+    // 4. Horizontal Bar
+    new Chart(document.getElementById("respondersChart"), {
+        type: 'bar',
+        data: {
+            labels: (data.top_responders||[]).map(r => r.responder__full_name),
+            datasets: [{
+                label: 'الحالات',
+                data: (data.top_responders||[]).map(r => r.total_cases),
+                backgroundColor: '#e74a3b'
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,1558 @@
+{% extends "portal/base_portal.html" %}
+{% load static %}
+{% load l10n %}
+{% block content %}
+<title>بلاغات CAD</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+  :root{
+    --bg:#f8fafc;
+    --card:#ffffff;
+    --line:#e2e8f0;
+    --txt:#0f172a;
+    --muted:#64748b;
+    --my-yellow:#f59e0b;
+    --my-red:#ef4444;
+    --my-green:#16a34a;
+    --my-blue:#2563eb;
+    --my-dark:#334155;
+    --shadow:0 10px 15px -3px rgba(0,0,0,0.1);
+    --radius:12px;
+  }
+
+  /* ✅ وراثة الخط من base template */
+  *, input, select, textarea, button{
+    font: inherit;
+  }
+
+  .wrap{ width:98%; min-height: calc(100vh - 80px); background:var(--bg); padding: 12px; }
+
+  .topbar{
+    display:flex; gap:10px; align-items:center; justify-content:space-between;
+    margin-bottom: 10px; flex-wrap: wrap;
+  }
+  .title{
+    display:flex; gap:10px; align-items:center;
+    font-weight:800; color:var(--txt); font-size: 18px;
+  }
+  .title i{ color:var(--my-blue); }
+
+  .filters{
+    display:flex; gap:8px; align-items:center; flex-wrap: wrap;
+  }
+  .inp, .sel{
+    background:var(--card);
+    border:1px solid var(--line);
+    padding:10px 12px;
+    border-radius:10px;
+    color:var(--txt);
+    outline:none;
+    min-width: 210px;
+  }
+  .btn{
+    border:none; cursor:pointer;
+    padding:10px 12px; border-radius:10px;
+    display:inline-flex; gap:8px; align-items:center;
+    font-weight:700;
+  }
+  .btn-primary{ background:var(--my-blue); color:#fff; }
+  .btn-ghost{ background:var(--card); color:var(--txt); border:1px solid var(--line); }
+  .btn-danger{ background:var(--my-red); color:#fff; }
+  .btn-ok{ background:var(--my-green); color:#fff; }
+  .btn-warn{ background:var(--my-yellow); color:#111; }
+  .btn:disabled{ opacity:.55; cursor:not-allowed; }
+
+  .stats{
+    display:grid;
+    grid-template-columns: repeat(4, minmax(160px, 1fr));
+    gap:10px;
+    margin-bottom: 10px;
+  }
+  .stat{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding:12px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .stat .k{ color:var(--muted); font-weight:700; font-size:12px; }
+  .stat .v{ color:var(--txt); font-weight:900; font-size:20px; margin-top:3px; }
+  .stat i{ font-size:22px; color:var(--my-dark); opacity:.9; }
+
+  .grid{
+    display:grid;
+    grid-template-columns: .9fr 1.1fr;
+    grid-template-areas: "map table";
+    direction: ltr;
+    gap:10px;
+    height: calc(100vh - 210px);
+    min-height: 520px;
+  }
+
+  .panel{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+  }
+  .panel-h{
+    padding:10px 12px;
+    border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between;
+    background:#fff;
+    direction: rtl;
+  }
+  .panel-b{ padding: 10px 12px; overflow:auto; flex:1; direction: rtl; }
+
+  #panelMap{ grid-area: map; }
+  #panelTable{ grid-area: table; }
+
+  #map{
+    width:100%;
+    height: 100%;
+    min-height: 420px;
+  }
+
+  /* ✅ جدول العرض (مثل المثال) */
+table{
+  width:100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12px;
+}
+thead th{
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  text-align:right;
+  font-weight:950;
+  color: var(--muted);
+  background: #fff;
+  border-bottom:1px solid var(--line);
+  padding: 10px 10px;
+  white-space: nowrap;
+}
+tbody td{
+  border-bottom:1px solid var(--line);
+  padding: 12px 10px;
+  vertical-align: middle;
+  color:var(--txt);
+  background:#fff;
+}
+tbody tr:hover td{ background:#f8fafc; }
+
+.time-pill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight:950;
+  font-size: 11px;
+  line-height: 1;
+  border: 1px solid rgba(239,68,68,.35);
+  background: rgba(239,68,68,.12);
+  color: var(--my-red);
+  min-width: 58px;
+}
+
+/* ✅ مدة الحالة (عداد مباشر) */
+.dur-pill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight:950;
+  font-size: 11px;
+  line-height: 1;
+  border: 1px solid rgba(148,163,184,.55);
+  background: rgba(148,163,184,.14);
+  color: #0f172a;
+  min-width: 86px;
+  font-variant-numeric: tabular-nums;
+}
+.dur-pill.warn{
+  border-color: rgba(245,158,11,.45);
+  background: rgba(245,158,11,.22);
+  color:#111827;
+}
+.dur-pill.danger{
+  border-color: rgba(239,68,68,.45);
+  background: rgba(239,68,68,.22);
+  color:#111827;
+}
+
+.dot{
+  width:10px; height:10px; border-radius:999px;
+  background: #cbd5e1;
+  display:inline-block;
+}
+
+  .pill{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:4px 8px;
+    border-radius:999px;
+    font-weight:800;
+    font-size:11px;
+    border:1px solid var(--line);
+    background:#fff;
+    white-space:nowrap;
+  }
+  .pill.open{ border-color: rgba(22,163,74,.35); color: var(--my-green); background: rgba(22,163,74,.10); }
+.pill.closed{ border-color: rgba(148,163,184,.55); color: #475569; background: rgba(148,163,184,.16); }
+.pill.ready{ border-color: rgba(22,163,74,.35); color: var(--my-green); background: rgba(22,163,74,.10); }
+.pill.time{ border-color: rgba(239,68,68,.35); color: var(--my-red); background: rgba(239,68,68,.12); }
+
+  /* Modal */
+  .modal{
+    position: fixed; inset: 0;
+    background: rgba(15,23,42,.55);
+    display:none;
+    align-items:center; justify-content:center;
+    z-index: 9999;
+    padding: 14px;
+  }
+  .modal.show{ display:flex; }
+  .mcard{
+    width: min(1260px, 98vw);
+    max-height: 92vh;
+    overflow:auto;
+    background:#fff;
+    border-radius: 18px;
+    box-shadow: 0 30px 80px rgba(0,0,0,.28);
+    border: 1px solid rgba(226,232,240,.95);
+  }
+  .mhead{
+    padding:12px 14px;
+    border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between;
+    gap:10px;
+    position: sticky; top:0; background:#fff; z-index:5;
+    direction: rtl;
+  }
+  .mhead .ttl{
+    font-weight:950;
+    color:var(--txt);
+    display:flex;
+    gap:10px;
+    align-items:center;
+    font-size: 15px;
+  }
+  .mclose{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:9px 11px;
+    cursor:pointer;
+  }
+  .mbody{
+    padding: 12px 14px 16px;
+    direction: rtl;
+  }
+
+  /* ✅ مودل رايق: عمودين للحقول + عمود للخريطة */
+  .modalLayout{
+    display:grid;
+    grid-template-columns: 1fr 1fr 1.1fr;
+    gap: 12px;
+    align-items: start;
+  }
+  .fieldsPane{
+    grid-column: 1 / span 2;
+  }
+  .mapPane{
+    grid-column: 3;
+    position: sticky;
+    top: 70px; /* تحت الهيدر */
+  }
+
+  .sectionCard{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: 0 10px 20px rgba(0,0,0,.08);
+    overflow:hidden;
+  }
+  .sectionHead{
+    padding:10px 12px;
+    border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between;
+    direction: rtl;
+    background: #fff;
+  }
+  .sectionHead .h{
+    font-weight:950;
+    color:var(--txt);
+    display:flex;
+    gap:8px;
+    align-items:center;
+  }
+  .sectionBody{
+    padding: 10px 12px 12px;
+  }
+
+
+  .row{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+  .actionsWrap{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    align-items:center;
+    justify-content:flex-start;
+  }
+  .actionsWrap #actionRow,
+  .actionsWrap #editRow{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+  .actionsSep{
+    width:1px;
+    height: 28px;
+    background: var(--line);
+    margin: 0 4px;
+  }
+
+
+  /* ✅ حقول (بطاقات) */
+  .mTable{
+    width:100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+  }
+  .mTable tbody{
+    display:grid;
+    grid-template-columns: repeat(2, minmax(240px, 1fr));
+    gap: 10px;
+  }
+  .mTable tr{
+    display:flex;
+    flex-direction: column;
+    gap: 6px;
+    border:1px solid rgba(226,232,240,.95);
+    border-radius: 16px;
+    padding: 10px 12px;
+    background:#fff;
+  }
+  .mTable td{
+    border: none;
+    padding: 0;
+    display:block;
+  }
+  .mLabel{
+    color: var(--muted);
+    font-weight: 950;
+    white-space: nowrap;
+    font-size: 12px;
+  }
+  .mValue{
+    color: var(--txt);
+    font-weight: 950;
+    word-break: break-word;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .mInput{
+    width:100%;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:10px 12px;
+    outline:none;
+    font-weight:900;
+    color: var(--txt);
+    transition: box-shadow .15s ease, border-color .15s ease;
+  }
+  .mInput:focus{
+    border-color: rgba(37,99,235,.55);
+    box-shadow: 0 0 0 4px rgba(37,99,235,.12);
+  }
+  textarea.mInput{ min-height: 96px; resize: vertical; }
+
+  /* ✅ الأزمنة داخل المودل (بطاقات ألوان فاتحة متناسقة) */
+  .timeGrid{
+    display:grid;
+    grid-template-columns: repeat(3, minmax(180px, 1fr));
+    gap: 10px;
+  }
+  .timeItem{
+    border:1px solid rgba(226,232,240,.95);
+    border-radius: 16px;
+    padding: 10px 12px;
+    box-shadow: 0 6px 14px rgba(0,0,0,.05);
+    background:#fff;
+  }
+  .timeItem .tLabel{
+    color: var(--muted);
+    font-weight: 950;
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+  .timeItem .tValue{
+    color: var(--txt);
+    font-weight: 950;
+    font-size: 13px;
+    direction:ltr;
+    text-align:right;
+    font-variant-numeric: tabular-nums;
+  }
+  .t-created{ background: rgba(37,99,235,.06); border-color: rgba(37,99,235,.18); }
+  .t-dispatch{ background: rgba(100,116,139,.08); border-color: rgba(100,116,139,.20); }
+  .t-accept{ background: rgba(22,163,74,.08); border-color: rgba(22,163,74,.20); }
+  .t-arrive{ background: rgba(245,158,11,.10); border-color: rgba(245,158,11,.22); }
+  .t-duration{ background: rgba(14,165,233,.08); border-color: rgba(14,165,233,.20); }
+  .t-close{ background: rgba(148,163,184,.12); border-color: rgba(148,163,184,.25); }
+
+
+
+  /* موجودة سابقاً - نخليها بدون عرض */
+  .sep{ display:none; height:1px; background:var(--line); margin: 12px 0; }
+
+  /* ✅ خريطة داخل المودل */
+  #modalMapWrap{
+    border:1px solid var(--line);
+    border-radius: 16px;
+    overflow:hidden;
+    box-shadow: 0 10px 22px rgba(0,0,0,.10);
+    background:#fff;
+  }
+  #modalMapHead{
+    padding:10px 12px;
+    border-bottom:1px solid var(--line);
+    display:flex; justify-content:space-between; align-items:center;
+    direction: rtl;
+    background:#fff;
+  }
+  #modalMap{
+    width:100%;
+    height: 520px;
+  }
+
+
+  @media (max-width: 1050px){
+    .grid{
+      grid-template-columns: 1fr;
+      grid-template-areas:
+        "map"
+        "table";
+      height:auto;
+    }
+    .stats{ grid-template-columns: repeat(2, minmax(160px, 1fr)); }
+    #map{ min-height: 420px; height: 420px; }
+    
+    .modalLayout{ grid-template-columns: 1fr; }
+    .fieldsPane{ grid-column: auto; }
+    .mapPane{ grid-column: auto; position: static; }
+    .mTable tbody{ grid-template-columns: 1fr; }
+    #modalMap{ height: 320px; }
+    .timeGrid{ grid-template-columns: 1fr; }
+
+  }
+</style>
+
+<div class="wrap">
+
+  <div class="topbar" style="direction:rtl;">
+    <div class="title">
+      <i class="fa-solid fa-truck-medical"></i>
+      <div>بلاغات CAD</div>
+    </div>
+
+    <div class="filters">
+      <input id="q" class="inp" placeholder="بحث: رقم البلاغ / الموقع / التفاصيل..." />
+
+      <select id="status" class="sel" style="min-width:170px">
+        <option value="open">مفتوح</option>
+        <option value="closed">مغلق</option>
+        <option value="">الكل</option>
+      </select>
+
+      <select id="caseType" class="sel" style="min-width:220px">
+        <option value="">كل أنواع الحالات</option>
+      </select>
+
+      {% if show_region_filter %}
+      {{ regions_json|json_script:"regions-data" }}
+      <select id="regionFilter" class="sel" style="min-width:220px">
+        <option value="">كل المناطق</option>
+      </select>
+      {% endif %}
+
+      <button class="btn btn-ghost" id="btnRefresh">
+        <i class="fa-solid fa-rotate"></i> تحديث
+      </button>
+    </div>
+  </div>
+
+  <div class="stats" style="direction:rtl;">
+    <div class="stat">
+      <div>
+        <div class="k">إجمالي البلاغات</div>
+        <div class="v" id="stTotal">0</div>
+      </div>
+      <i class="fa-solid fa-layer-group"></i>
+    </div>
+
+    <div class="stat">
+      <div>
+        <div class="k">مفتوحة</div>
+        <div class="v" id="stOpen">0</div>
+      </div>
+      <i class="fa-solid fa-circle-exclamation"></i>
+    </div>
+
+    <div class="stat">
+      <div>
+        <div class="k">مغلقة</div>
+        <div class="v" id="stClosed">0</div>
+      </div>
+      <i class="fa-solid fa-circle-check"></i>
+    </div>
+
+    <div class="stat">
+      <div>
+        <div class="k">آخر تحديث</div>
+        <div class="v" id="stUpdated" style="font-size:14px">—</div>
+      </div>
+      <i class="fa-regular fa-clock"></i>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="panel" id="panelMap">
+      <div class="panel-h">
+        <div class="h"><i class="fa-solid fa-map-location-dot" style="color:var(--my-blue)"></i> الخريطة</div>
+        <div class="row">
+          <span class="pill" id="mapHint">
+            <i class="fa-solid fa-location-dot"></i>
+            انقر على ماركر البلاغ لفتح التفاصيل
+          </span>
+        </div>
+      </div>
+      <div class="panel-b" style="padding:0;">
+        <div id="map"></div>
+      </div>
+    </div>
+
+    <div class="panel" id="panelTable">
+      <div class="panel-h">
+        <div class="h"><i class="fa-solid fa-table" style="color:var(--my-dark)"></i>  بلاغات مرتبطة CAD </div>
+        <div class="row">
+          <span class="pill open" id="tblCount">0</span>
+        </div>
+      </div>
+      <div class="panel-b">
+        <div style="padding:8px 12px; border-bottom:1px solid var(--line); direction:rtl; background:#fff;">
+          <span class="pill" style="font-weight:900;">
+            <i class="fa-solid fa-user-shield"></i>
+            المستجيبين المتصلين:
+            <span id="respCount" style="margin-inline-start:6px;">0</span>
+          </span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>رقم CAD</th>
+              <th>نوع الحالة</th>
+              <th>حالة البلاغ</th>
+              <th>المنطقة</th>
+              <th>المستجيب</th>
+              <th>وقت البلاغ</th>
+              <th>مدة الحالة</th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr><td colspan="7" style="color:var(--muted); font-weight:800;">تحميل البيانات...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal" id="modal">
+  <div class="mcard">
+    <div class="mhead">
+      <div class="ttl">
+        <i class="fa-solid fa-file-lines" style="color:var(--my-blue)"></i>
+        <span id="mTitle">تفاصيل بلاغ CAD</span>
+      </div>
+      <div class="row">
+        <button class="mclose" id="mClose"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+    </div>
+
+    <div class="mbody">
+
+      <div class="modalLayout">
+
+        <!-- ✅ الحقول (عمودين) -->
+        <div class="fieldsPane">
+
+          <div class="sectionCard">
+            <div class="sectionHead">
+              <div class="h"><i class="fa-solid fa-list-check" style="color:var(--my-dark)"></i> بيانات البلاغ</div>
+              <span class="pill" id="editStatePill"><i class="fa-solid fa-pen"></i> عرض</span>
+            </div>
+            <div class="sectionBody">
+              <table class="mTable">
+                <tbody>
+                  <tr>
+                    <td class="mLabel">رقم البلاغ</td>
+                    <td class="mValue"><span id="fCad">—</span></td>
+                  </tr>
+
+                  <tr>
+                    <td class="mLabel">نوع الحالة</td>
+                    <td class="mValue">
+                      <span class="view" id="fType">—</span>
+                      <select class="mInput edit" id="eCaseType" style="display:none;"></select>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td class="mLabel">حالة البلاغ</td>
+                    <td class="mValue"><span id="fStatus">—</span></td>
+                  </tr>
+
+                  <tr>
+                    <td class="mLabel">المنطقة</td>
+                    <td class="mValue"><span id="fRegion">—</span></td>
+                  </tr>
+
+                  <tr>
+                    <td class="mLabel">الموقع</td>
+                    <td class="mValue">
+                      <span class="view" id="fLoc">—</span>
+                      <input class="mInput edit" id="eLoc" style="display:none;" />
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td class="mLabel">التفاصيل</td>
+                    <td class="mValue">
+                      <span class="view" id="fDetails">—</span>
+                      <textarea class="mInput edit" id="eDetails" style="display:none;"></textarea>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td class="mLabel">عدد الإصابات</td>
+                    <td class="mValue">
+                      <span class="view" id="fInj">—</span>
+                      <input class="mInput edit" id="eInj" type="number" min="0" step="1" style="display:none;" />
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td class="mLabel">العمر</td>
+                    <td class="mValue">
+                      <span class="view" id="fAge">—</span>
+                      <input class="mInput edit" id="eAge" type="number" min="0" step="1" style="display:none;" />
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td class="mLabel">درجة الخطورة</td>
+                    <td class="mValue">
+                      <span class="view" id="fSev">—</span>
+                      <select class="mInput edit" id="eSev" style="display:none;">
+                <option value="">—</option>
+                <option value="simple">بسيطة</option>
+                <option value="moderate">متوسطة</option>
+                <option value="severe">خطيرة</option>
+                <option value="critical">حرجة</option>
+              </select>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td class="mLabel">الوعي</td>
+                    <td class="mValue">
+                      <span class="view" id="fCon">—</span>
+                      <select class="mInput edit" id="eCon" style="display:none;">
+                        <option value="">—</option>
+                        <option value="true">واعي</option>
+                        <option value="false">غير واعي</option>
+                      </select>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td class="mLabel">المستجيب</td>
+                    <td class="mValue"><span id="fResp">—</span></td>
+                  </tr>
+
+                  <tr>
+                    <td class="mLabel">الإحداثيات</td>
+                    <td class="mValue">
+                      <span id="fCoords">—</span>
+                      <span style="color:var(--muted); font-weight:800; margin-right:10px;">(للتعديل استخدم الخريطة)</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ✅ الأزمنة: بجوار بعض + ألوان فاتحة -->
+          <div class="sectionCard" style="margin-top:12px;">
+            <div class="sectionHead">
+              <div class="h"><i class="fa-regular fa-clock" style="color:var(--my-blue)"></i> الأزمنة</div>
+              <span class="pill" id="statusPillModal"><i class="fa-solid fa-circle-info"></i> —</span>
+            </div>
+            <div class="sectionBody">
+              <div class="timeGrid">
+                <div class="timeItem t-created">
+                  <div class="tLabel">وقت البلاغ</div>
+                  <div class="tValue" id="fCreated">—</div>
+                </div>
+                <div class="timeItem t-dispatch">
+                  <div class="tLabel">وقت الترحيل</div>
+                  <div class="tValue" id="fDisp">—</div>
+                </div>
+                <div class="timeItem t-accept">
+                  <div class="tLabel">وقت القبول</div>
+                  <div class="tValue" id="fAcc">—</div>
+                </div>
+                <div class="timeItem t-arrive">
+                  <div class="tLabel">وقت الوصول</div>
+                  <div class="tValue" id="fArr">—</div>
+                </div>
+                <div class="timeItem t-duration">
+                  <div class="tLabel">زمن الاستجابة</div>
+                  <div class="tValue" id="fDur">—</div>
+                </div>
+                <div class="timeItem t-close">
+                  <div class="tLabel">وقت الإغلاق</div>
+                  <div class="tValue" id="fClosedAt">—</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ✅ الخريطة + الأزرار تحتها -->
+        <div class="mapPane">
+
+          <div id="modalMapWrap">
+            <div id="modalMapHead">
+              <div style="font-weight:950; color:var(--txt); display:flex; gap:8px; align-items:center;">
+                <i class="fa-solid fa-location-dot" style="color:var(--my-blue)"></i>
+                <span>تعديل موقع البلاغ</span>
+              </div>
+              <div class="row">
+                <span class="pill" id="modalMapHint"><i class="fa-solid fa-hand-pointer"></i> اضغط على الخريطة لتحديد موقع جديد</span>
+              </div>
+            </div>
+            <div id="modalMap"></div>
+          </div>
+
+          <div class="sectionCard" style="margin-top:12px;">
+            <div class="sectionHead">
+              <div class="h"><i class="fa-solid fa-bolt" style="color:var(--my-yellow)"></i> الإجراءات</div>
+              <div class="row">
+                <button class="btn btn-ghost" id="btnCenter"><i class="fa-solid fa-crosshairs"></i> توسيط</button>
+              </div>
+            </div>
+            <div class="sectionBody">
+              <div class="actionsWrap">
+                <div class="row" id="actionRow">
+                  <button class="btn btn-ok" id="btnAccept"><i class="fa-solid fa-check"></i> قبول</button>
+                  <button class="btn btn-warn" id="btnArrive"><i class="fa-solid fa-location-crosshairs"></i> وصول</button>
+                  <button class="btn btn-danger" id="btnCloseCase"><i class="fa-solid fa-lock"></i> إغلاق</button>
+                </div>
+                <span class="actionsSep" aria-hidden="true"></span>
+
+                <div class="row" id="editRow">
+                  <button class="btn btn-primary" id="btnEdit"><i class="fa-solid fa-pen-to-square"></i> تعديل</button>
+                  <button class="btn btn-ok" id="btnSave" style="display:none;"><i class="fa-solid fa-floppy-disk"></i> حفظ</button>
+                  <button class="btn btn-ghost" id="btnCancelEdit" style="display:none;"><i class="fa-solid fa-ban"></i> إلغاء</button>
+                </div>
+              </div>
+
+              <div id="msg" style="margin-top:10px; color:var(--muted); font-weight:900;"></div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{{ case_types_json|json_script:"case-types-data" }}
+
+<script>
+  // Endpoints
+  const URL_CAD_REPORTS = "{% url 'cad_reports:assigned_reports_json' %}";
+  const URL_API_ACCEPT_TPL = "{% url 'cad_reports:api_assigned_accept' cad_number='__CAD__' %}";
+  const URL_API_ARRIVE_TPL = "{% url 'cad_reports:api_assigned_arrive' cad_number='__CAD__' %}";
+  const URL_API_CLOSE_TPL  = "{% url 'cad_reports:api_assigned_close'  cad_number='__CAD__' %}";
+  const URL_API_UPDATE_TPL = "{% url 'cad_reports:api_assigned_update' cad_number='__CAD__' %}";
+  const URL_RESPONDERS_ONLINE = "{% url 'cad_reports:responders_online_json' %}";
+
+  // Marker Icons
+  const ICON_CAD = "{% static 'icons/ecrb.png' %}";
+  const ICON_RESPONDER = "{% static 'icons/responlive.png' %}";
+
+  const MAP_CENTER = {
+    lat: parseFloat("{{ map_center_lat|default:23.8859 }}"),
+    lng: parseFloat("{{ map_center_lng|default:45.0792 }}"),
+    zoom: parseInt("{{ map_zoom|default:5 }}", 10)
+  };
+
+  const SHOW_REGION_FILTER = {{ show_region_filter|yesno:"true,false" }};
+
+  function safeParseJsonFromScriptTag(id, fallback){
+    try{
+      const el = document.getElementById(id);
+      if(!el) return fallback;
+      return JSON.parse(el.textContent || "null") ?? fallback;
+    }catch(e){
+      return fallback;
+    }
+  }
+
+  const CASE_TYPES = safeParseJsonFromScriptTag("case-types-data", []);
+  let REGIONS = [];
+  if (SHOW_REGION_FILTER) {
+    REGIONS = safeParseJsonFromScriptTag("regions-data", []);
+  }
+
+  // State
+  let map = null;
+
+  let cadMarkers = [];
+  let responderMarkers = [];
+
+  let reportsRaw = [];
+  let respondersRaw = [];
+
+  let currentReport = null;
+
+  // modal map
+  let modalMap = null;
+  let modalMarker = null;
+  let modalLatLng = null;
+
+  let modalResponderMarkers = [];
+  let modalSelectedResponderId = null;
+  let modalSelectedResponderName = null;
+
+  // editing state
+  let isEditing = false;
+
+  function escapeHtml(s){
+    return String(s ?? "")
+      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  }
+
+  // ✅ مدة الحالة: من وقت القبول حتى الإغلاق (أو الآن إذا لم يُغلق)
+  function parseAnyDate(v){
+    if(!v) return null;
+    const s = String(v).trim();
+    if(!s || s === "-" || s === "—") return null;
+
+    // ISO / full datetime
+    if(/[0-9]{4}-[0-9]{2}-[0-9]{2}/.test(s) || s.includes("T")){
+      const d = new Date(s.replace(" ", "T"));
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    // HH:MM or HH:MM:SS (assume today, local time)
+    const m = s.match(/^([01]?\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/);
+    if(m){
+      const now = new Date();
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(),
+                         Number(m[1]), Number(m[2]), Number(m[3] || 0));
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    // fallback
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function pad2(n){ return String(n).padStart(2, "0"); }
+
+  function formatHMS(totalSec){
+    totalSec = Math.max(0, Math.floor(totalSec));
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    return `${pad2(h)}:${pad2(m)}:${pad2(s)}`;
+  }
+
+  function updateDurations(){
+    const nodes = document.querySelectorAll(".dur-pill");
+    if(!nodes.length) return;
+
+    const now = new Date();
+
+    nodes.forEach(el => {
+      const acc = parseAnyDate(el.getAttribute("data-acc") || "");
+      if(!acc){
+        el.textContent = "—";
+        el.classList.remove("warn","danger");
+        return;
+      }
+
+      const closeRaw = el.getAttribute("data-close") || "";
+      const close = parseAnyDate(closeRaw);
+      const end = close || now;
+
+      const diffSec = (end.getTime() - acc.getTime()) / 1000;
+      const mins = diffSec / 60;
+
+      el.textContent = formatHMS(diffSec);
+
+      // thresholds: >15 min => warn (yellow), >25 min => danger (red)
+      el.classList.remove("warn","danger");
+      if(mins > 25){
+        el.classList.add("danger");
+      } else if(mins > 15){
+        el.classList.add("warn");
+      }
+    });
+  }
+
+  function getCookie(name) {
+    const v = document.cookie ? document.cookie.split("; ") : [];
+    for (const c of v) {
+      const [k, ...rest] = c.split("=");
+      if (k === name) return decodeURIComponent(rest.join("="));
+    }
+    return null;
+  }
+
+  function apiUrl(tpl, cadNumber){
+    return tpl.replace("__CAD__", encodeURIComponent(String(cadNumber || "")));
+  }
+
+  function setMsg(text, isError=false){
+    const el = document.getElementById("msg");
+    el.textContent = text || "";
+    el.style.color = isError ? "var(--my-red)" : "var(--muted)";
+  }
+
+  function fillCaseTypes(){
+    const sel = document.getElementById("caseType");
+    sel.innerHTML = `<option value="">كل أنواع الحالات</option>`;
+    for(const ct of CASE_TYPES){
+      const o = document.createElement("option");
+      o.value = String(ct.id);
+      o.textContent = ct.name;
+      sel.appendChild(o);
+    }
+
+    // modal edit select
+    const eSel = document.getElementById("eCaseType");
+    eSel.innerHTML = `<option value="">—</option>`;
+    for(const ct of CASE_TYPES){
+      const o = document.createElement("option");
+      o.value = String(ct.id);
+      o.textContent = ct.name;
+      eSel.appendChild(o);
+    }
+  }
+
+  function fillRegions(){
+    if(!SHOW_REGION_FILTER) return;
+    const sel = document.getElementById("regionFilter");
+    sel.innerHTML = `<option value="">كل المناطق</option>`;
+    for(const r of REGIONS){
+      const o = document.createElement("option");
+      o.value = String(r.id);
+      o.textContent = r.name;
+      sel.appendChild(o);
+    }
+  }
+
+  function getRegionFilterQS(){
+    if(!SHOW_REGION_FILTER) return "";
+    const rf = document.getElementById("regionFilter")?.value || "";
+    if(!rf) return "";
+    return "region_id=" + encodeURIComponent(rf);
+  }
+
+  function updateStats(items){
+    const total = items.length;
+    const closed = items.filter(x => x.is_closed || x.closed).length;
+    const open = total - closed;
+
+    document.getElementById("stTotal").textContent = total;
+    document.getElementById("stOpen").textContent = open;
+    document.getElementById("stClosed").textContent = closed;
+    document.getElementById("stUpdated").textContent = (new Date()).toLocaleString("ar-SA");
+  }
+
+  function passesFilters(r){
+    const q = document.getElementById("q").value.trim().toLowerCase();
+    const st = document.getElementById("status").value;
+    const ct = document.getElementById("caseType").value;
+
+    if(st === "open" && (r.is_closed || r.closed)) return false;
+    if(st === "closed" && !(r.is_closed || r.closed)) return false;
+    if(ct && String(r.case_type_id) !== String(ct)) return false;
+
+    if(SHOW_REGION_FILTER){
+      const rf = document.getElementById("regionFilter")?.value || "";
+      if(rf && String(r.region_id) !== String(rf)) return false;
+    }
+
+    if(q){
+      const blob = [
+        r.cad_number, r.location_text, r.details,
+        r.case_type, r.type, r.region, r.responder
+      ].join(" ").toLowerCase();
+      if(!blob.includes(q)) return false;
+    }
+    return true;
+  }
+
+  function openModal(){
+    document.getElementById("modal").classList.add("show");
+  }
+  function closeModal(){
+    document.getElementById("modal").classList.remove("show");
+    setEditing(false);
+    setMsg("");
+  }
+
+  function severityLabel(v){
+    const key = (v == null) ? "" : String(v).trim().toLowerCase();
+    const map = {
+      "simple": "بسيطة",
+      "moderate": "متوسطة",
+      "severe": "خطيرة",
+      "critical": "حرجة",
+      "slimpe": "بسيطة", // احتياط لأخطاء قديمة
+    };
+    return map[key] || (v ?? "-");
+  }
+
+function setField(id, val){
+    const el = document.getElementById(id);
+    if(el) el.textContent = (val === null || val === undefined || val === "") ? "—" : String(val);
+  }
+
+  function toBoolOrNull(v){
+    if(v === "" || v === null || v === undefined) return null;
+    if(v === true || v === "true") return true;
+    if(v === false || v === "false") return false;
+    return null;
+  }
+
+  function setEditing(flag){
+    isEditing = !!flag;
+
+    document.querySelectorAll(".edit").forEach(el => el.style.display = isEditing ? "" : "none");
+    document.querySelectorAll(".view").forEach(el => el.style.display = isEditing ? "none" : "");
+
+    document.getElementById("btnSave").style.display = isEditing ? "" : "none";
+    document.getElementById("btnCancelEdit").style.display = isEditing ? "" : "none";
+    document.getElementById("btnEdit").style.display = isEditing ? "none" : "";
+
+    const h = document.getElementById("modalMapHint");
+    h.style.opacity = isEditing ? "1" : ".55";
+  }
+
+  function canEditCurrent(){
+    if(!currentReport) return false;
+    const isClosed = !!(currentReport.is_closed || currentReport.closed);
+    return !isClosed;
+  }
+
+  function syncEditFieldsFromReport(r){
+    document.getElementById("eCaseType").value = (r.case_type_id != null) ? String(r.case_type_id) : "";
+    document.getElementById("eLoc").value = r.location_text || r.location_description || "";
+    document.getElementById("eDetails").value = r.details || "";
+    document.getElementById("eInj").value = (r.injured_count ?? "") === null ? "" : String(r.injured_count ?? "");
+    document.getElementById("eAge").value = (r.age ?? "") === null ? "" : String(r.age ?? "");
+    document.getElementById("eSev").value = r.severity ?? "";
+    document.getElementById("eCon").value =
+      (r.is_conscious === true) ? "true" : ((r.is_conscious === false) ? "false" : "");
+  }
+
+  function populateModal(r){
+    currentReport = r;
+    setMsg("");
+
+    setField("fCad", r.cad_number);
+    setField("fType", r.case_type || r.type || "-");
+    setField("fStatus", (r.is_closed || r.closed) ? "مغلق" : "مفتوح");
+    setField("fRegion", r.region || "-");
+    setField("fLoc", r.location_text || r.location_description || "-");
+    setField("fDetails", r.details || "-");
+    setField("fInj", r.injured_count ?? "-");
+    setField("fAge", r.age ?? "-");
+    setField("fSev", severityLabel(r.severity));
+    setField("fCon", (r.is_conscious === true) ? "واعي" : (r.is_conscious === false ? "غير واعي" : "-"));
+    setField("fResp", r.responder_name || r.responder || "-");
+    modalSelectedResponderId = (r.responder_id != null) ? String(r.responder_id) : null;
+    modalSelectedResponderName = (r.responder_name || r.responder || null);
+    setField("fCreated", r.created_at || "-");
+    setField("fDisp", r.dispatched_at || "-");
+    setField("fAcc", r.accepted_at || "-");
+    setField("fArr", r.arrival_time || "-");
+    setField("fDur", r.response_duration || "-");
+    setField("fClosedAt", r.closed_at || "-");
+
+    const coords = (r.latitude != null && r.longitude != null) ? `${r.latitude}, ${r.longitude}` : "—";
+    setField("fCoords", coords);
+
+    const isClosed = !!(r.is_closed || r.closed);
+    document.getElementById("actionRow").style.display = isClosed ? "none" : "";
+    document.getElementById("editRow").style.display = isClosed ? "none" : "";
+
+    setEditing(false);
+    syncEditFieldsFromReport(r);
+
+    openModal();
+    ensureModalMap(r);
+  }
+
+  function ensureModalMap(r){
+    if(!(window.google && google.maps)) return;
+
+    const has = (r.latitude != null && r.longitude != null);
+    const center = has ? { lat: Number(r.latitude), lng: Number(r.longitude) } : { lat: MAP_CENTER.lat, lng: MAP_CENTER.lng };
+    modalLatLng = has ? center : null;
+
+    if(!modalMap){
+      modalMap = new google.maps.Map(document.getElementById("modalMap"), {
+        center,
+        zoom: has ? 14 : Math.max(MAP_CENTER.zoom, 6),
+        mapTypeId: "roadmap",
+        gestureHandling: "greedy",
+      });
+
+      modalMap.addListener("click", (e) => {
+        if(!isEditing) return;
+        if(!canEditCurrent()) return;
+        modalLatLng = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+        placeOrMoveModalMarker(modalLatLng);
+        setField("fCoords", `${modalLatLng.lat.toFixed(6)}, ${modalLatLng.lng.toFixed(6)}`);
+      });
+    } else {
+      google.maps.event.trigger(modalMap, "resize");
+      modalMap.setCenter(center);
+      modalMap.setZoom(has ? 14 : Math.max(MAP_CENTER.zoom, 6));
+    }
+
+    if(has){
+      placeOrMoveModalMarker(center);
+    } else {
+      if(modalMarker) { modalMarker.setMap(null); modalMarker = null; }
+    }
+
+    // ✅ إظهار المستجيبين المتصلين داخل خريطة المودل (للتعديل)
+    renderModalResponders();
+  }
+
+  function placeOrMoveModalMarker(latlng){
+    if(!(window.google && google.maps && modalMap)) return;
+    if(!modalMarker){
+      modalMarker = new google.maps.Marker({
+        map: modalMap,
+        position: latlng,
+        draggable: false,
+        icon: { url: ICON_CAD, scaledSize: new google.maps.Size(34, 34) }
+      });
+    }else{
+      modalMarker.setPosition(latlng);
+      modalMarker.setMap(modalMap);
+    }
+  }
+  function clearModalResponderMarkers(){
+    for(const m of modalResponderMarkers){ try{ m.setMap(null);}catch(_e){} }
+    modalResponderMarkers = [];
+  }
+
+  function renderModalResponders(){
+    if(!(window.google && google.maps && modalMap)) return;
+    clearModalResponderMarkers();
+
+    const list = Array.isArray(respondersRaw) ? respondersRaw : [];
+    for(const r of list){
+      const lat = (r.latitude ?? r.lat);
+      const lng = (r.longitude ?? r.lng);
+      if(lat == null || lng == null) continue;
+
+      const pos = { lat: Number(lat), lng: Number(lng) };
+      if(Number.isNaN(pos.lat) || Number.isNaN(pos.lng)) continue;
+
+      const name = r.name || r.full_name || r.display_name || r.responder || r.username || "مستجيب";
+      const rid = r.id ?? r.responder_id ?? r.pk ?? r.user_id ?? null;
+
+      const mk = new google.maps.Marker({
+        map: modalMap,
+        position: pos,
+        clickable: true,
+        icon: { url: ICON_RESPONDER, scaledSize: new google.maps.Size(28, 28) },
+        title: String(name),
+      });
+
+      mk.addListener("click", async () => {
+        // اختيار مستجيب للتعديل من الخريطة داخل المودل
+        if(!isEditing) return;
+        if(!canEditCurrent()) return;
+        if(rid == null){
+          setMsg("لا يمكن تحديد المستجيب (معرف غير متوفر).", true);
+          return;
+        }
+        modalSelectedResponderId = String(rid);
+        modalSelectedResponderName = String(name);
+        setField("fResp", modalSelectedResponderName);
+        setMsg("تم اختيار المستجيب: " + modalSelectedResponderName);
+      });
+
+      modalResponderMarkers.push(mk);
+    }
+  }
+
+
+  function findReportByCad(cad){
+    return reportsRaw.find(x => String(x.cad_number) === String(cad)) || null;
+  }
+
+  function renderTable(items){
+    const tb = document.getElementById("tbody");
+    tb.innerHTML = "";
+    document.getElementById("tblCount").textContent = items.length;
+
+    if(items.length === 0){
+      tb.innerHTML = `<tr><td colspan="7" style="color:var(--muted); font-weight:800;">لا يوجد نتائج حسب الفلاتر الحالية</td></tr>`;
+      return;
+    }
+
+    for(const r of items){
+      const tr = document.createElement("tr");
+      tr.style.cursor = "pointer";
+      tr.dataset.cad = String(r.cad_number || "");
+      tr.innerHTML = `
+        <td style="font-weight:950; color:var(--my-blue)">${escapeHtml(r.cad_number)}</td>
+        <td>${escapeHtml(r.case_type || r.type || "-")}</td>
+        <td>
+          <span class="pill ${(r.is_closed || r.closed) ? "closed" : "ready"}">
+            ${(r.is_closed || r.closed) ? "مغلق" : "قائم"}
+          </span>
+        </td>
+        <td>${escapeHtml(r.region || "-")}</td>
+        <td>${escapeHtml(r.responder_name || r.responder || r.responder_display || "-")}</td>
+        <td><span class="time-pill">${escapeHtml(r.created_at || "-")}</span></td>
+        <td><span class="dur-pill" data-acc="${escapeHtml(r.accepted_at || "")}" data-close="${escapeHtml(r.closed_at || "")}" data-isclosed="${(r.is_closed || r.closed) ? "1" : "0"}">—</span></td>
+      `;
+tr.addEventListener("click", () => {
+        const rep = findReportByCad(tr.dataset.cad);
+        if(rep) populateModal(rep);
+      });
+      tb.appendChild(tr);
+    }
+
+    // ✅ حدث العدادات مباشرة بعد الرسم
+    updateDurations();
+  }
+
+  function mapsReady(){ return !!(map && window.google && google.maps); }
+
+  function clearCadMarkers(){
+    if(!mapsReady()) return;
+    for(const m of cadMarkers){ m.setMap(null); }
+    cadMarkers = [];
+  }
+
+  function clearResponderMarkers(){
+    if(!mapsReady()) return;
+    for(const m of responderMarkers){ m.setMap(null); }
+    responderMarkers = [];
+  }
+
+  function addCadMarker(r){
+    if(!mapsReady()) return;
+    if(r.latitude == null || r.longitude == null) return;
+
+    const marker = new google.maps.Marker({
+      map,
+      position: { lat: Number(r.latitude), lng: Number(r.longitude) },
+      title: String(r.cad_number || ""),
+      icon: { url: ICON_CAD, scaledSize: new google.maps.Size(36, 36) }
+    });
+
+    marker.addListener("click", () => populateModal(r));
+    cadMarkers.push(marker);
+  }
+
+  function addResponderMarker(resp){
+    if(!mapsReady()) return;
+    if(resp.lat == null || resp.lng == null) return;
+
+    const marker = new google.maps.Marker({
+      map,
+      position: { lat: Number(resp.lat), lng: Number(resp.lng) },
+      title: String(resp.name || "Responder"),
+      icon: { url: ICON_RESPONDER, scaledSize: new google.maps.Size(40, 40) }
+    });
+
+    responderMarkers.push(marker);
+  }
+
+  function applyAll(){
+    const items = reportsRaw.filter(passesFilters);
+    updateStats(items);
+    renderTable(items);
+    updateDurations();
+
+    if(mapsReady()){
+      clearCadMarkers();
+      for(const r of items){ addCadMarker(r); }
+
+      clearResponderMarkers();
+      for(const u of respondersRaw){ addResponderMarker(u); }
+    }
+  }
+
+  async function loadCad(keepOpenedCad=null){
+    document.getElementById("tbody").innerHTML = `<tr><td colspan="7" style="color:var(--muted); font-weight:800;">تحميل البيانات...</td></tr>`;
+    try{
+      const qs = getRegionFilterQS();
+      const url = qs ? (URL_CAD_REPORTS + "?" + qs) : URL_CAD_REPORTS;
+
+      const res = await fetch(url, { credentials:"same-origin" });
+      if(!res.ok) throw new Error("HTTP " + res.status);
+
+      const data = await res.json();
+      reportsRaw = Array.isArray(data) ? data : [];
+      applyAll();
+
+      if(keepOpenedCad){
+        const rep = findReportByCad(keepOpenedCad);
+        if(rep) populateModal(rep);
+      }
+    }catch(e){
+      reportsRaw = [];
+      applyAll();
+      document.getElementById("tbody").innerHTML =
+        `<tr><td colspan="7" style="color:var(--my-red); font-weight:900;">تعذر تحميل البيانات: ${escapeHtml(e.message || e)}</td></tr>`;
+    }
+  }
+
+  async function loadResponders(){
+    try{
+      const qs = getRegionFilterQS();
+      const url = qs ? (URL_RESPONDERS_ONLINE + "?" + qs) : URL_RESPONDERS_ONLINE;
+
+      const res = await fetch(url, { credentials:"same-origin" });
+      if(!res.ok) throw new Error("HTTP " + res.status);
+
+      const data = await res.json();
+      const arr = Array.isArray(data) ? data : (data.results || []);
+      respondersRaw = Array.isArray(arr) ? arr : [];
+
+      document.getElementById("respCount").textContent = String(respondersRaw.length);
+      applyAll();
+      if(modalMap) renderModalResponders();
+    }catch(e){
+      respondersRaw = [];
+      document.getElementById("respCount").textContent = "0";
+      applyAll();
+    }
+  }
+
+  async function sendJson(url, method="POST", payload={}){
+    const csrftoken = getCookie("csrftoken");
+    const res = await fetch(url, {
+      method,
+      credentials: "same-origin",
+      headers: {
+        "X-CSRFToken": csrftoken || "",
+        "X-Requested-With": "XMLHttpRequest",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload || {})
+    });
+    const data = await res.json().catch(() => ({}));
+    if(!res.ok || data.ok === false){
+      const msg = data.detail || data.error || ("HTTP " + res.status);
+      throw new Error(msg);
+    }
+    return data;
+  }
+
+  window.initMap = function initMap(){
+    map = new google.maps.Map(document.getElementById("map"), {
+      center: { lat: MAP_CENTER.lat, lng: MAP_CENTER.lng },
+      zoom: MAP_CENTER.zoom,
+      mapTypeId: "roadmap",
+      gestureHandling: "greedy",
+    });
+
+    applyAll();
+  };
+
+  document.addEventListener("DOMContentLoaded", () => {
+    fillCaseTypes();
+    fillRegions();
+
+    document.getElementById("status").value = "open";
+
+    loadCad();
+    loadResponders();
+
+    document.getElementById("btnRefresh").addEventListener("click", () => {
+      loadCad();
+      loadResponders();
+    });
+
+    document.getElementById("q").addEventListener("input", applyAll);
+    document.getElementById("status").addEventListener("change", applyAll);
+    document.getElementById("caseType").addEventListener("change", applyAll);
+
+    if(SHOW_REGION_FILTER){
+      document.getElementById("regionFilter").addEventListener("change", () => {
+        loadCad();
+        loadResponders();
+      });
+    }
+
+    document.getElementById("mClose").addEventListener("click", closeModal);
+    document.getElementById("modal").addEventListener("click", (e) => {
+      if(e.target && e.target.id === "modal") closeModal();
+    });
+
+    document.getElementById("btnCenter").addEventListener("click", () => {
+      if(!currentReport || !mapsReady()) return;
+      if(currentReport.latitude == null || currentReport.longitude == null) return;
+      map.panTo({ lat: Number(currentReport.latitude), lng: Number(currentReport.longitude) });
+      map.setZoom(Math.max(map.getZoom() || 8, 13));
+    });
+
+    document.getElementById("btnAccept").addEventListener("click", async () => {
+      if(!currentReport) return;
+      try{
+        setMsg("جاري تنفيذ القبول...");
+        await sendJson(apiUrl(URL_API_ACCEPT_TPL, currentReport.cad_number), "POST", {});
+        setMsg("تم قبول البلاغ ✅");
+        await loadCad(currentReport.cad_number);
+      }catch(e){
+        setMsg("فشل القبول: " + (e.message || e), true);
+      }
+    });
+
+    document.getElementById("btnArrive").addEventListener("click", async () => {
+      if(!currentReport) return;
+      try{
+        setMsg("جاري تسجيل الوصول...");
+        await sendJson(apiUrl(URL_API_ARRIVE_TPL, currentReport.cad_number), "POST", {});
+        setMsg("تم تسجيل الوصول ✅");
+        await loadCad(currentReport.cad_number);
+      }catch(e){
+        setMsg("فشل الوصول: " + (e.message || e), true);
+      }
+    });
+
+    document.getElementById("btnCloseCase").addEventListener("click", async () => {
+      if(!currentReport) return;
+      if(!confirm("تأكيد إغلاق البلاغ؟")) return;
+      try{
+        setMsg("جاري إغلاق البلاغ...");
+        await sendJson(apiUrl(URL_API_CLOSE_TPL, currentReport.cad_number), "POST", {});
+        setMsg("تم إغلاق البلاغ ✅");
+        await loadCad(currentReport.cad_number);
+      }catch(e){
+        setMsg("فشل الإغلاق: " + (e.message || e), true);
+      }
+    });
+
+    document.getElementById("btnEdit").addEventListener("click", () => {
+      if(!currentReport) return;
+      if(!canEditCurrent()){
+        setMsg("لا يمكن تعديل بلاغ مغلق.", true);
+        return;
+      }
+      setEditing(true);
+      setMsg("وضع التعديل: عدّل الحقول ثم اضغط حفظ.");
+      ensureModalMap(currentReport);
+    });
+
+    document.getElementById("btnCancelEdit").addEventListener("click", () => {
+      if(!currentReport) return;
+      syncEditFieldsFromReport(currentReport);
+      setEditing(false);
+      setMsg("");
+      ensureModalMap(currentReport);
+    });
+
+    document.getElementById("btnSave").addEventListener("click", async () => {
+      if(!currentReport) return;
+      if(!canEditCurrent()){
+        setMsg("لا يمكن تعديل بلاغ مغلق.", true);
+        return;
+      }
+
+      // ✅ نرسل 6 منازل فقط (ومع ذلك نقبل أي قيمة من الخريطة)
+      const lat6 = (modalLatLng && typeof modalLatLng.lat === "number") ? Number(modalLatLng.lat.toFixed(6)) : null;
+      const lng6 = (modalLatLng && typeof modalLatLng.lng === "number") ? Number(modalLatLng.lng.toFixed(6)) : null;
+
+      const payload = {
+        case_type_id: document.getElementById("eCaseType").value || null,
+        location_text: document.getElementById("eLoc").value.trim() || null,
+        details: document.getElementById("eDetails").value.trim() || null,
+        injured_count: (document.getElementById("eInj").value === "") ? null : Number(document.getElementById("eInj").value),
+        age: (document.getElementById("eAge").value === "") ? null : Number(document.getElementById("eAge").value),
+        severity: document.getElementById("eSev").value || null,
+        is_conscious: toBoolOrNull(document.getElementById("eCon").value),
+        latitude: lat6,
+        longitude: lng6,
+        responder_id: modalSelectedResponderId || null,
+      };
+
+      if(payload.latitude !== null && (payload.latitude < -90 || payload.latitude > 90)){
+        setMsg("خطأ: خط العرض غير صحيح.", true); return;
+      }
+      if(payload.longitude !== null && (payload.longitude < -180 || payload.longitude > 180)){
+        setMsg("خطأ: خط الطول غير صحيح.", true); return;
+      }
+
+      try{
+        setMsg("جاري حفظ التعديلات...");
+        await sendJson(apiUrl(URL_API_UPDATE_TPL, currentReport.cad_number), "PATCH", payload);
+        setMsg("تم حفظ التعديلات ✅");
+        setEditing(false);
+        await loadCad(currentReport.cad_number);
+      }catch(e){
+        setMsg("فشل الحفظ: " + (e.message || e), true);
+      }
+    });
+
+    // ✅ تحديث مباشر لمدة الحالة كل ثانية
+    setInterval(updateDurations, 1000);
+
+    // ✅ تحديث تلقائي للمستجيبين كل 10 ثواني
+    setInterval(loadResponders, 10000);
+  });
+</script>
+
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap&language=ar&region=SA" async defer></script>
+{% endblock %}

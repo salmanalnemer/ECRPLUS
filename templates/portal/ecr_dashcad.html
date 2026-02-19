@@ -1,0 +1,129 @@
+{% extends "portal/base_portal.html" %}
+
+{% block content %}
+
+<!-- KPI CARDS -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px;margin-bottom:25px">
+
+    <div style="background:#0f172a;color:white;padding:20px;border-radius:10px">
+        <h4>بلاغات اليوم</h4>
+        <h2 id="kpi_today">--</h2>
+    </div>
+
+    <div style="background:#16a34a;color:white;padding:20px;border-radius:10px">
+        <h4>الحالات النشطة</h4>
+        <h2 id="kpi_active">--</h2>
+    </div>
+
+    <div style="background:#ea580c;color:white;padding:20px;border-radius:10px">
+        <h4>تمت المعالجة</h4>
+        <h2 id="kpi_closed">--</h2>
+    </div>
+
+    <div style="background:#0284c7;color:white;padding:20px;border-radius:10px">
+        <h4>عدد المستجيبين</h4>
+        <h2 id="kpi_responders">--</h2>
+    </div>
+
+</div>
+
+
+<!-- CHARTS -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(450px,1fr));gap:20px">
+
+    <div style="background:white;padding:20px;border-radius:10px;border:1px solid #e2e8f0">
+        <canvas id="casesChart"></canvas>
+    </div>
+
+    <div style="background:white;padding:20px;border-radius:10px;border:1px solid #e2e8f0">
+        <canvas id="typesChart"></canvas>
+    </div>
+
+    <div style="background:white;padding:20px;border-radius:10px;border:1px solid #e2e8f0">
+        <canvas id="regionChart"></canvas>
+    </div>
+
+</div>
+
+
+<!-- ChartJS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+
+//////////////////////////////
+// KPI SAMPLE DATA
+//////////////////////////////
+
+document.getElementById("kpi_today").innerText = 42;
+document.getElementById("kpi_active").innerText = 15;
+document.getElementById("kpi_closed").innerText = 120;
+document.getElementById("kpi_responders").innerText = 63;
+
+
+//////////////////////////////
+// 1️⃣ البلاغات خلال الأسبوع
+//////////////////////////////
+
+new Chart(document.getElementById('casesChart'), {
+    type: 'line',
+    data: {
+        labels: ['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'],
+        datasets: [{
+            label: 'عدد البلاغات',
+            data: [5, 8, 6, 12, 9, 7, 10],
+            borderColor: '#0ea5e9',
+            backgroundColor: 'rgba(14,165,233,0.15)',
+            tension: .4,
+            fill: true
+        }]
+    }
+});
+
+
+//////////////////////////////
+// 2️⃣ أنواع الحالات
+//////////////////////////////
+
+new Chart(document.getElementById('typesChart'), {
+    type: 'doughnut',
+    data: {
+        labels: ['حوادث','مرضية','حرجة','بلاغات أخرى'],
+        datasets: [{
+            data: [35, 25, 15, 10],
+            backgroundColor: [
+                '#ef4444',
+                '#22c55e',
+                '#f59e0b',
+                '#6366f1'
+            ]
+        }]
+    }
+});
+
+
+//////////////////////////////
+// 3️⃣ توزيع المناطق
+//////////////////////////////
+
+new Chart(document.getElementById('regionChart'), {
+    type: 'bar',
+    data: {
+        labels: ['الرياض','مكة','الشرقية','المدينة','عسير'],
+        datasets: [{
+            label: 'عدد البلاغات',
+            data: [20, 18, 12, 10, 8],
+            backgroundColor: [
+                '#0ea5e9',
+                '#22c55e',
+                '#f97316',
+                '#e11d48',
+                '#6366f1'
+            ]
+        }]
+    }
+});
+
+</script>
+
+{% endblock %}

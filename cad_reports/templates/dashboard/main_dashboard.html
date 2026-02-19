@@ -1,0 +1,170 @@
+{% extends "portal/base_portal.html" %}
+
+{% block content %}
+<title>الداشبورد الرئيسي</title>
+<div style="background:white;padding:25px;border-radius:8px;border:1px solid #e2e8f0;margin-bottom:18px">
+    <h2 style="margin-bottom:10px">لوحة التحكم الرئيسية</h2>
+    <p style="color:#64748b;margin:0">مرحباً بك في نظام ECR — لوحة إدارة البلاغات والاستجابة الإسعافية.</p>
+</div>
+
+<!-- KPIs -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px;margin-bottom:18px">
+    <div style="background:#0f172a;color:white;padding:18px;border-radius:10px">
+        <div style="opacity:.9;font-size:14px">بلاغات CAD اليوم</div>
+        <div id="kpi_cad_today" style="font-size:32px;font-weight:800;margin-top:6px">—</div>
+    </div>
+    <div style="background:#16a34a;color:white;padding:18px;border-radius:10px">
+        <div style="opacity:.9;font-size:14px">بلاغات ECR اليوم</div>
+        <div id="kpi_ecr_today" style="font-size:32px;font-weight:800;margin-top:6px">—</div>
+    </div>
+    <div style="background:#ea580c;color:white;padding:18px;border-radius:10px">
+        <div style="opacity:.9;font-size:14px">الحالات النشطة (CAD)</div>
+        <div id="kpi_active_cad" style="font-size:32px;font-weight:800;margin-top:6px">—</div>
+    </div>
+    <div style="background:#0284c7;color:white;padding:18px;border-radius:10px">
+        <div style="opacity:.9;font-size:14px">مغلق خلال 30 يوم</div>
+        <div id="kpi_closed_30d" style="font-size:32px;font-weight:800;margin-top:6px">—</div>
+    </div>
+    <div style="background:#7c3aed;color:white;padding:18px;border-radius:10px">
+        <div style="opacity:.9;font-size:14px">المستجيبين Online</div>
+        <div id="kpi_responders_online" style="font-size:32px;font-weight:800;margin-top:6px">—</div>
+    </div>
+</div>
+
+<div id="dash_error" style="display:none;background:#fff1f2;border:1px solid #fecdd3;color:#9f1239;padding:12px;border-radius:10px;margin-bottom:18px"></div>
+
+<!-- Charts -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:18px">
+    <div style="background:white;padding:18px;border-radius:10px;border:1px solid #e2e8f0">
+        <div style="font-weight:700;margin-bottom:10px">بلاغات CAD (آخر 7 أيام)</div>
+        <canvas id="casesChart" height="140"></canvas>
+    </div>
+    <div style="background:white;padding:18px;border-radius:10px;border:1px solid #e2e8f0">
+        <div style="font-weight:700;margin-bottom:10px">توزيع أنواع الحالات (آخر 30 يوم)</div>
+        <canvas id="typesChart" height="140"></canvas>
+    </div>
+    <div style="background:white;padding:18px;border-radius:10px;border:1px solid #e2e8f0">
+        <div style="font-weight:700;margin-bottom:10px">توزيع البلاغات حسب المنطقة (آخر 30 يوم)</div>
+        <canvas id="regionChart" height="140"></canvas>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    const DASH_URL = "{% url 'cad_reports:api_dashboard_summary' %}";
+
+    const COLORS = {
+        lineBorder: "#0ea5e9",
+        lineFill: "rgba(14,165,233,0.15)",
+        donut: ["#ef4444", "#22c55e", "#f59e0b", "#6366f1", "#06b6d4", "#a855f7", "#84cc16", "#e11d48", "#f43f5e", "#0ea5e9", "#fb7185", "#14b8a6"],
+        bars: ["#0ea5e9", "#22c55e", "#f97316", "#e11d48", "#6366f1", "#06b6d4", "#a855f7", "#84cc16", "#f59e0b", "#14b8a6", "#fb7185", "#1d4ed8", "#0f766e"],
+    };
+
+    let casesChart, typesChart, regionChart;
+
+    function setText(id, val) {
+        const el = document.getElementById(id);
+        if (el) el.innerText = (val === null || val === undefined) ? "—" : String(val);
+    }
+
+    function showError(msg) {
+        const box = document.getElementById("dash_error");
+        if (!box) return;
+        box.style.display = "block";
+        box.innerText = msg;
+    }
+
+    function hideError() {
+        const box = document.getElementById("dash_error");
+        if (!box) return;
+        box.style.display = "none";
+        box.innerText = "";
+    }
+
+    function renderCharts(payload) {
+        const cad7 = payload.charts.cad_7d;
+        const types = payload.charts.types_30d;
+        const regions = payload.charts.regions_30d;
+
+        // Line
+        if (casesChart) casesChart.destroy();
+        casesChart = new Chart(document.getElementById("casesChart"), {
+            type: "line",
+            data: {
+                labels: cad7.labels,
+                datasets: [{
+                    label: "عدد البلاغات",
+                    data: cad7.data,
+                    borderColor: COLORS.lineBorder,
+                    backgroundColor: COLORS.lineFill,
+                    tension: 0.4,
+                    fill: true,
+                }]
+            }
+        });
+
+        // Doughnut
+        if (typesChart) typesChart.destroy();
+        typesChart = new Chart(document.getElementById("typesChart"), {
+            type: "doughnut",
+            data: {
+                labels: types.labels,
+                datasets: [{
+                    data: types.data,
+                    backgroundColor: COLORS.donut.slice(0, types.data.length),
+                }]
+            }
+        });
+
+        // Bar
+        if (regionChart) regionChart.destroy();
+        regionChart = new Chart(document.getElementById("regionChart"), {
+            type: "bar",
+            data: {
+                labels: regions.labels,
+                datasets: [{
+                    label: "عدد البلاغات",
+                    data: regions.data,
+                    backgroundColor: COLORS.bars.slice(0, regions.data.length),
+                }]
+            }
+        });
+    }
+
+    async function loadDashboard() {
+        hideError();
+        try {
+            const res = await fetch(DASH_URL, {
+                method: "GET",
+                headers: {
+                    "Accept": "application/json",
+                },
+                credentials: "same-origin",
+            });
+
+            if (!res.ok) {
+                const txt = await res.text();
+                throw new Error("تعذر جلب البيانات من API (" + res.status + ")" + (txt ? ("\n" + txt) : ""));
+            }
+
+            const payload = await res.json();
+
+            setText("kpi_cad_today", payload.kpi.cad_today);
+            setText("kpi_ecr_today", payload.kpi.ecr_today);
+            setText("kpi_active_cad", payload.kpi.active_cad);
+            setText("kpi_closed_30d", payload.kpi.closed_30d);
+            setText("kpi_responders_online", payload.kpi.responders_online);
+
+            renderCharts(payload);
+        } catch (e) {
+            showError(e && e.message ? e.message : "تعذر جلب البيانات من API");
+        }
+    }
+
+    // Initial load + refresh كل 60 ثانية (بدون تحديث الصفحة)
+    loadDashboard();
+    setInterval(loadDashboard, 60000);
+</script>
+
+{% endblock %}

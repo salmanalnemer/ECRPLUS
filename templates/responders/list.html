@@ -1,0 +1,236 @@
+{% extends "portal/base_portal.html" %}
+{% block content %}
+<title>ECR | Responders Users</title>
+<style>
+    /* تحسينات الحاويات - كما هي في تصميمك */
+    .table-container {
+        background: white; 
+        border-radius: 20px;
+        overflow: hidden; 
+        box-shadow: 0 15px 40px rgba(0,0,0,0.05);
+        border: 1px solid rgba(0,0,0,0.03);
+        margin-top: 20px;
+    }
+    .scroll-wrapper { overflow-x: auto; }
+    
+    /* تنسيق الجدول - كما هو في تصميمك */
+    table { width: 100%; border-collapse: collapse; min-width: 1100px; }
+    th { 
+        background: #fcfcfc; 
+        color: #888; 
+        padding: 20px 15px; 
+        font-size: 0.85rem; 
+        text-transform: uppercase; 
+        letter-spacing: 1px;
+        border-bottom: 1px solid #eee; 
+        text-align: center;
+    }
+    td { 
+        padding: 18px 15px; 
+        border-bottom: 1px solid #f7f7f7; 
+        text-align: center; 
+        font-size: 0.80rem; 
+        color: #444;
+    }
+    tr:hover { background: #fafafa; transition: 0.3s; }
+
+    /* الأزرار التفاعلية - كما هي */
+    .action-btn {
+        width: 32px; height: 32px;
+        display: inline-flex; align-items: center; justify-content: center;
+        border-radius: 8px; text-decoration: none; transition: all 0.3s ease;
+        margin-left: 8px; color: white;
+    }
+    .call-btn { background: #27ae60; }
+    .call-btn:hover { background: #1e8449; transform: rotate(15deg) scale(1.1); }
+    .email-btn { background: #3498db; }
+    .email-btn:hover { background: #2980b9; transform: translateY(-3px) scale(1.1); }
+
+    .status-pill { padding: 6px 14px; border-radius: 10px; font-size: 0.8rem; font-weight: 700; }
+    .pill-yes { background: #e8f5e9; color: #2e7d32; }
+    .pill-no { background: #ffebee; color: #c62828; }
+
+    .id-style { font-family: 'monospace'; color: #666; background: #f9f9f9; padding: 4px 8px; border-radius: 6px; }
+
+    .page-title {
+        color: #0F0F0F; font-weight: 700;
+        border-right: 5px solid #BC1823;
+        padding-right: 15px; margin-bottom: 25px;
+    }
+
+    /* --- قسم التصفية والعداد --- */
+    .filter-section {
+        display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;
+        justify-content: space-between;
+    }
+    .search-input {
+        min-width: 350px;
+        padding: 12px 20px; border-radius: 12px;
+        border: 1.5px solid #eee; outline: none; transition: 0.3s;
+        font-family: 'Tajawal', sans-serif;
+    }
+    .search-input:focus { border-color: #BC1823; box-shadow: 0 5px 15px rgba(188, 24, 35, 0.05); }
+
+    /* العداد المضاف حديثاً بشكل جمالي بسيط */
+    .responder-counter {
+        background: #c20909;
+        padding: 10px 20px;
+        border-radius: 12px;
+        border: 1px solid #c20909;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .counter-value {
+        color: #ffffff;
+        font-weight: 800;
+        font-size: 1.2rem;
+    }
+    .counter-label {
+        color: #ffffff;
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+
+    /* --- قسم الترقيم (Pagination) --- */
+    .pagination-controls {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 20px; background: #fff; border-top: 1px solid #f5f5f5;
+    }
+    .page-btn {
+        padding: 8px 18px; border-radius: 8px; border: 1px solid #eee;
+        background: #fff; cursor: pointer; transition: 0.3s; font-weight: 700;
+        color: #555; font-family: 'Tajawal', sans-serif;
+    }
+    .page-btn:hover:not(:disabled) { background: #BC1823; color: #fff; border-color: #BC1823; }
+    .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .page-info { font-size: 0.9rem; color: #888; font-weight: 500; }
+</style>
+
+<div class="container-fluid">
+    <h3 class="page-title">قائمة (المستجيبين)</h3>
+
+    <div class="filter-section">
+        <input type="text" id="customSearch" class="search-input" placeholder="بحث بالإسم، رقم الهوية، الجوال، أو الجهة...">
+        
+        <div class="responder-counter">
+            <i class="fas fa-users" style="color: #ffffff;"></i>
+            <span class="counter-label"> إجمالي المستجيبين:</span>
+            <span class="counter-value" id="totalResponders">0</span>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <div class="scroll-wrapper">
+            <table id="myTable">
+                <thead>
+                    <tr>
+                        <th>الاسم الكامل</th>
+                        <th>رقم الهوية</th>
+                        <th>رقم الجوال</th>
+                        <th>البريد الإلكتروني</th>
+                        <th>الجهة / المنظمة</th>
+                        <th>ممارس صحي</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    {% for user in responders %}
+                    <tr class="table-row">
+                        <td><strong>{{ user.full_name }}</strong></td>
+                        <td><span class="id-style">{{ user.national_id }}</span></td>
+                        <td dir="ltr">
+                            {% if user.phone_number %}
+                            <a href="tel:{{ user.phone_number }}" class="action-btn call-btn"><i class="fas fa-phone-alt"></i></a>
+                            <span style="font-weight: 500;">{{ user.phone_number }}</span>
+                            {% else %}<span style="color: #ccc;">—</span>{% endif %}
+                        </td>
+                        <td dir="ltr">
+                            {% if user.email %}
+                            <a href="mailto:{{ user.email }}" class="action-btn email-btn"><i class="fas fa-envelope"></i></a>
+                            <span style="font-weight: 500;">{{ user.email }}</span>
+                            {% else %}<span style="color: #ccc;">—</span>{% endif %}
+                        </td>
+                        <td style="font-weight: 500; color: #75500a;">{{ user.organization|default:"—" }}</td>
+                        <td>
+                            {% if user.is_health_practitioner %}
+                            <span class="status-pill pill-yes"><i class="fas fa-check-circle"></i> نعم</span>
+                            {% else %}
+                            <span class="status-pill pill-no"><i class="fas fa-times-circle"></i> لا</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination-controls">
+            <button class="page-btn" id="prevBtn" onclick="prevPage()">السابق</button>
+            <div class="page-info" id="pageInfo">صفحة 1 من 1</div>
+            <button class="page-btn" id="nextBtn" onclick="nextPage()">التالي</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentPage = 1;
+    const recordsPerPage = 7;
+    let filteredRows = [];
+
+    function updateTable() {
+        const rows = Array.from(document.querySelectorAll('.table-row'));
+        const searchVal = document.getElementById('customSearch').value.toLowerCase();
+
+        // التصفية الحقيقية
+        filteredRows = rows.filter(row => {
+            const text = row.innerText.toLowerCase();
+            return text.includes(searchVal);
+        });
+
+        // تحديث العداد بناءً على التصفية
+        document.getElementById('totalResponders').innerText = filteredRows.length;
+
+        // إخفاء الكل أولاً
+        rows.forEach(row => row.style.display = 'none');
+
+        // حساب عدد الصفحات
+        const totalPages = Math.ceil(filteredRows.length / recordsPerPage) || 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+
+        // إظهار صفوف الصفحة الحالية فقط (7 صفوف)
+        const start = (currentPage - 1) * recordsPerPage;
+        const end = start + recordsPerPage;
+        
+        filteredRows.slice(start, end).forEach(row => row.style.display = '');
+
+        // تحديث معلومات الصفحة والأزرار
+        document.getElementById('pageInfo').innerText = `صفحة ${currentPage} من ${totalPages}`;
+        document.getElementById('prevBtn').disabled = (currentPage === 1);
+        document.getElementById('nextBtn').disabled = (currentPage === totalPages);
+        
+        if(filteredRows.length === 0) {
+            document.getElementById('pageInfo').innerText = "لا توجد نتائج";
+        }
+    }
+
+    function nextPage() {
+        currentPage++;
+        updateTable();
+    }
+
+    function prevPage() {
+        currentPage--;
+        updateTable();
+    }
+
+    // الاستماع لمدخلات البحث
+    document.getElementById('customSearch').addEventListener('input', () => {
+        currentPage = 1;
+        updateTable();
+    });
+
+    // التشغيل عند التحميل
+    window.onload = updateTable;
+</script>
+
+{% endblock %}

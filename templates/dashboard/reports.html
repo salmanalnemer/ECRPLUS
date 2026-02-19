@@ -1,0 +1,271 @@
+{% extends "portal/base_portal.html" %}
+{% load static %}
+
+{% block content %}
+<title>إدارة التقارير الموحدة</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+  :root{
+    --bg: #eef2f7;
+    --panel: #ffffff;
+    --border: #d1d5db;
+    --primary: #0b61c8;
+    --text: #1e293b;
+    --muted: #64748b;
+    --danger: #ef4444;
+    --success: #22c55e;
+    --header-bg: #f8fafc;
+  }
+
+  .classic-wrap { background: var(--bg); padding: 15px; direction: rtl; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+  /* شريط الأدوات */
+  .classic-toolbar {
+    background: #fff; border: 1px solid var(--border); padding: 10px;
+    display: flex; justify-content: space-between; align-items: center; border-radius: 4px; margin-bottom: 10px;
+  }
+  .btn-classic {
+    background: #fff; border: 1px solid var(--border); padding: 8px 16px;
+    font-weight: bold; font-size: 13px; cursor: pointer; border-radius: 4px;
+    display: inline-flex; align-items: center; gap: 8px; transition: 0.2s;
+  }
+  .btn-classic:hover { background: #f3f4f6; }
+  .btn-classic.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .btn-classic.primary:hover { opacity: 0.9; }
+
+  /* صندوق البحث */
+  .search-box { background: #fff; border: 1px solid var(--border); padding: 15px; border-radius: 4px; margin-bottom: 15px; }
+  .filters-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+  .lbl { display: block; font-size: 12px; font-weight: 800; color: var(--text); margin-bottom: 5px; }
+  .inp, .sel { width: 100%; border: 1px solid var(--border); padding: 8px; border-radius: 4px; font-size: 13px; }
+
+  /* تصميم الجسم: كتالوج يمين وجدول يسار */
+  .classic-body { display: grid; grid-template-columns: 280px 1fr; gap: 15px; align-items: start; }
+  @media (max-width: 1024px) { .classic-body { grid-template-columns: 1fr; } }
+
+  .side-panel, .main-panel { background: #fff; border: 1px solid var(--border); border-radius: 4px; display: flex; flex-direction: column; min-height: 550px; }
+
+  /* الكتالوج */
+  .panel-hdr { background: var(--primary); color: #fff; padding: 10px; font-weight: 900; font-size: 14px; display: flex; justify-content: space-between; }
+  .types-list { overflow-y: auto; flex-grow: 1; padding: 10px; max-height: 450px; }
+  .type-item { display: flex; align-items: center; gap: 10px; padding: 8px; border-bottom: 1px solid #f1f5f9; font-size: 13px; cursor: pointer; }
+  .type-item:hover { background: #f8fafc; }
+
+  /* الجدول */
+  .table-scroll { overflow-x: auto; flex-grow: 1; }
+  table { width: 100%; border-collapse: collapse; min-width: 900px; }
+  thead th { background: var(--header-bg); padding: 12px; border-bottom: 2px solid var(--border); font-size: 12px; color: var(--muted); text-align: center; position: sticky; top: 0; }
+  tbody td { padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: center; font-size: 13px; color: var(--text); }
+  tbody tr:hover { background: #fcfdfe; }
+
+  /* الروابط والأزرار داخل الجدول */
+  .id-link { color: var(--primary); font-weight: 900; cursor: pointer; text-decoration: none; border-bottom: 1px dashed var(--primary); }
+  .status-pill { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+  .status-open { background: #dcfce7; color: #15803d; }
+  .status-closed { background: #fee2e2; color: #b91c1c; }
+
+  /* المودل والجماليات */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 9999; }
+  .modal-card { width: 900px; background: #fff; border-radius: 8px; overflow: hidden; max-height: 90vh; display: flex; flex-direction: column; }
+  .modal-body { padding: 20px; overflow-y: auto; }
+  #modalMap { height: 300px; width: 100%; background: #eee; border-radius: 8px; margin-top: 15px; }
+</style>
+
+<div class="classic-wrap">
+  
+  <div class="classic-toolbar">
+    <div style="display:flex; gap:10px;">
+      <button class="btn-classic primary" onclick="runSearch()"><i class="fa-solid fa-magnifying-glass"></i> بحث مفصل (F3)</button>
+      <button class="btn-classic" onclick="resetAll()"><i class="fa-solid fa-eraser"></i> مسح</button>
+      <button class="btn-classic" onclick="exportExcel()"><i class="fa-solid fa-file-excel"></i> تصدير</button>
+    </div>
+  </div>
+
+  <div class="search-box">
+    <div class="filters-grid">
+      <div>
+        <label class="lbl">مصدر البلاغ</label>
+        <select id="srcSelect" class="sel" onchange="onSourceChange()">
+          <option value="">-- اختر المصدر --</option>
+          <option value="ecr">نظام ECR</option>
+          <option value="cad">نظام CAD</option>
+        </select>
+      </div>
+      <div>
+        <label class="lbl">رقم البلاغ</label>
+        <input id="reportNo" class="inp" type="text" placeholder="رقم البلاغ...">
+      </div>
+      <div>
+        <label class="lbl">المنطقة</label>
+        <input id="region" class="inp" type="text" placeholder="مثال: الرياض">
+      </div>
+      <div>
+        <label class="lbl">من تاريخ</label>
+        <input id="fromDT" class="inp" type="date">
+      </div>
+      <div>
+        <label class="lbl">إلى تاريخ</label>
+        <input id="toDT" class="inp" type="date">
+      </div>
+    </div>
+  </div>
+
+  <div class="classic-body">
+    <div class="side-panel">
+      <div class="panel-hdr">
+        <span><i class="fa-solid fa-list-check"></i> التصنيفات</span>
+        <span id="typesCount">0</span>
+      </div>
+      <div style="padding:10px;">
+        <input id="typesSearch" class="inp" type="text" placeholder="تصفية الأنواع..." oninput="filterTypesList()">
+      </div>
+      <div class="types-list" id="typesList">
+        <div style="text-align:center; color:var(--muted); padding:20px; font-size:12px;">اختر المصدر لتحميل الأنواع</div>
+      </div>
+    </div>
+
+    <div class="main-panel">
+      <div class="panel-hdr" style="background:#f1f5f9; color:var(--text); border-bottom:1px solid var(--border);">
+        <span><i class="fa-solid fa-table"></i> قائمة النتائج</span>
+        <span id="resultCount" style="font-size:12px;"></span>
+      </div>
+      
+      <div class="table-scroll">
+        <table id="mainTable">
+          <thead id="thead">
+            <tr>
+              <th>رقم البلاغ</th>
+              <th>النوع</th>
+              <th>المنطقة</th>
+              <th>المستجيب</th>
+              <th>التاريخ والوقت</th>
+              <th>الحالة</th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr><td colspan="6" style="padding:100px; color:var(--muted);">لا توجد بيانات، ابدأ البحث..</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="detailsModal">
+  <div class="modal-card">
+    <div class="panel-hdr">
+      <span id="modalTitle">تفاصيل البلاغ</span>
+      <button onclick="closeDetailsModal()" style="background:none; border:none; color:#fff; cursor:pointer;"><i class="fa-solid fa-xmark fa-xl"></i></button>
+    </div>
+    <div class="modal-body">
+      <div id="modalDataGrid" style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+        </div>
+      <div id="modalMap"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentSource = "";
+  let rawData = [];
+  let selectedTypes = new Set();
+
+  // تغيير المصدر
+  async function onSourceChange() {
+    currentSource = document.getElementById("srcSelect").value;
+    const list = document.getElementById("typesList");
+    list.innerHTML = "جاري التحميل...";
+
+    if (currentSource === "ecr") {
+      // محاكاة أو جلب أنواع الـ ECR
+      renderTypes([{id:1, name:"حالة مرضية"}, {id:2, name:"حادث مروري"}, {id:3, name:"حريق"}]);
+    } else {
+      renderTypes([{id:10, name:"إصابة عمل"}, {id:11, name:"أزمة قلبية"}]);
+    }
+  }
+
+  function renderTypes(arr) {
+    const list = document.getElementById("typesList");
+    list.innerHTML = arr.map(t => `
+      <label class="type-item">
+        <input type="checkbox" onchange="toggleType('${t.name}', this.checked)">
+        ${t.name}
+      </label>
+    `).join('');
+    document.getElementById("typesCount").textContent = arr.length;
+  }
+
+  function toggleType(name, isChecked) {
+    isChecked ? selectedTypes.add(name) : selectedTypes.delete(name);
+  }
+
+  // البحث
+  function runSearch() {
+    const tbody = document.getElementById("tbody");
+    tbody.innerHTML = `<tr><td colspan="6"><i class="fa-solid fa-spinner fa-spin"></i> جاري جلب البيانات...</td></tr>`;
+    
+    // محاكاة جلب البيانات بناءً على المصدر مع كافة الحقول
+    setTimeout(() => {
+      const mockData = currentSource === 'ecr' ? [
+        {id: 'ECR-552', type: 'حالة مرضية', region: 'الرياض', responder: 'أحمد علي', time: '2026-02-18 14:00', status: 'مفتوح', patient: 'محمد خالد'},
+        {id: 'ECR-990', type: 'حادث مروري', region: 'جدة', responder: 'سعد محمد', time: '2026-02-18 15:30', status: 'مغلق', patient: 'فهد عبدالله'}
+      ] : [
+        {id: 'CAD-102', type: 'أزمة قلبية', region: 'الدمام', responder: 'فرقة 5', time: '2026-02-18 10:00', status: 'مفتوح'}
+      ];
+
+      rawData = mockData;
+      renderTable(mockData);
+    }, 500);
+  }
+
+  function renderTable(data) {
+    const tbody = document.getElementById("tbody");
+    if (data.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6">لا توجد نتائج</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = data.map((r, idx) => `
+      <tr>
+        <td><span class="id-link" onclick="openDetails(${idx})">${r.id}</span></td>
+        <td><i class="fa-solid fa-tag" style="color:#94a3b8"></i> ${r.type}</td>
+        <td><i class="fa-solid fa-location-dot" style="color:var(--danger)"></i> ${r.region}</td>
+        <td><i class="fa-solid fa-user-nurse" style="color:var(--primary)"></i> ${r.responder}</td>
+        <td>${r.time}</td>
+        <td><span class="status-pill ${r.status === 'مفتوح' ? 'status-open' : 'status-closed'}">${r.status}</span></td>
+      </tr>
+    `).join('');
+    document.getElementById("resultCount").textContent = `إجمالي: ${data.length}`;
+  }
+
+  // تفاصيل المودل
+  function openDetails(idx) {
+    const item = rawData[idx];
+    document.getElementById("modalTitle").textContent = "تفاصيل البlaغ: " + item.id;
+    
+    const grid = document.getElementById("modalDataGrid");
+    grid.innerHTML = `
+      <div><strong>اسم المريض:</strong> ${item.patient || '---'}</div>
+      <div><strong>نوع الحالة:</strong> ${item.type}</div>
+      <div><strong>المنطقة:</strong> ${item.region}</div>
+      <div><strong>المستجيب:</strong> ${item.responder}</div>
+      <div><strong>وقت البلاغ:</strong> ${item.time}</div>
+      <div><strong>الحالة:</strong> ${item.status}</div>
+    `;
+
+    document.getElementById("detailsModal").style.display = "flex";
+    // هنا يتم تشغيل الخريطة المصغرة إذا أردت
+  }
+
+  function closeDetailsModal() {
+    document.getElementById("detailsModal").style.display = "none";
+  }
+
+  function resetAll() {
+    location.reload();
+  }
+</script>
+
+{% endblock %}

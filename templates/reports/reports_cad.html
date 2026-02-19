@@ -1,0 +1,514 @@
+{% extends "portal/base_portal.html" %}
+{% load static %}
+{% block content %}
+
+<style>
+  .page-wrapper {
+    display: flex;
+    gap: 15px;
+    padding: 15px;
+    background: #f1f5f9;
+    height: calc(100vh - 100px);
+  }
+
+  .form-column {
+    flex: 1.1; 
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .map-column {
+    flex: 1; 
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .column-header {
+    background: #1e293b;
+    color: #fff;
+    padding: 12px 18px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .scroll-content { padding: 20px; overflow-y: auto; flex: 1; }
+  #map-canvas { width: 100%; flex: 1; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .field-group { display: flex; flex-direction: column; gap: 5px; }
+  .field-group label { font-size: 0.8rem; font-weight: 700; color: #475569; }
+
+  input, select, textarea {
+    padding: 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-family: 'Tajawal';
+  }
+
+  .input-readonly { background: #f8fafc; color: #e31e24; font-weight: bold; border-color: #fca5a5; }
+
+  .btn-submit {
+    background: #e31e24;
+    color: white;
+    padding: 14px;
+    border-radius: 8px;
+    font-weight: bold;
+    width: 100%;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: 0.3s;
+  }
+  .btn-submit:hover { background: #b91c1c; }
+
+  .btn-row { display:flex; gap:10px; margin-top:12px; }
+  .btn-action{
+    flex:1;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: 800;
+    border: none;
+    cursor:pointer;
+    transition: .2s;
+  }
+  .btn-action:disabled{ opacity:.5; cursor:not-allowed; }
+  .btn-dispatch{ background:#0f766e; color:#fff; }
+  .btn-accept{ background:#2563eb; color:#fff; }
+  .btn-arrive{ background:#7c3aed; color:#fff; }
+
+  .map-toolbar {
+    padding: 8px;
+    background: #fffbeb;
+    color: #92400e;
+    font-size: 0.75rem;
+    text-align: center;
+    border-bottom: 1px solid #fef3c7;
+  }
+
+  .time-panel{
+    margin-top:14px;
+    background:#f8fafc;
+    border:1px solid #e2e8f0;
+    border-radius:12px;
+    padding:12px;
+  }
+  .time-panel .title{ font-weight:900; color:#0f172a; margin-bottom:8px; }
+  .time-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .time-box{
+    background:#fff;
+    border:1px solid #e2e8f0;
+    border-radius:10px;
+    padding:10px;
+  }
+  .time-box .k{ font-size:.75rem; color:#64748b; font-weight:800; }
+  .time-box .v{ margin-top:4px; font-size:.9rem; color:#0f172a; font-weight:900; }
+  .time-total{
+    margin-top:10px;
+    background:#fff7ed;
+    border:1px solid #fed7aa;
+    border-radius:10px;
+    padding:10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .time-total .k{ font-size:.8rem; color:#9a3412; font-weight:900; }
+  .time-total .v{ font-size:1.1rem; color:#9a3412; font-weight:900; }
+</style>
+
+<div class="page-wrapper">
+
+  <div class="form-column">
+    <div class="column-header">
+      <span><i class="fas fa-file-medical"></i> بلاغات CAD</span>
+      <span id="report-badge" style="font-size:.8rem; opacity:.9;">—</span>
+    </div>
+
+    <div class="scroll-content">
+      <form id="createReportForm" onsubmit="submitCreateReport(event)">
+        {% csrf_token %}
+        <input type="hidden" id="report_id" value="">
+
+        <div class="grid-2">
+          <div class="field-group">
+            <label>رقم البلاغ CAD</label>
+            <input name="cad_number"type="number"step="1"min="1"requiredplaceholder="مثال: 1325"oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+
+          </div>
+          <div class="field-group">
+            <label>وقت استقبال البلاغ</label>
+            <input id="cad_received_time" name="cad_received_time" type="time" step="1" required>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field-group">
+            <label>درجة الخطورة</label>
+            <select name="severity" required>
+              <option value="">— اختر —</option>
+              <option value="critical">حرجة</option>
+              <option value="medium">متوسطة</option>
+              <option value="simple">بسيطة</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label>حالة الوعي</label>
+            <select name="awareness" required>
+              <option value="">— اختر —</option>
+              <option value="aware">واعي</option>
+              <option value="unaware">غير واعي</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field-group">
+            <label>نوع الحالة</label>
+            <select name="case_type" required>
+              <option value="">— اختر نوع الحالة —</option>
+              {% for ct in case_types %}
+                <option value="{{ ct.id }}">{{ ct }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field-group">
+            <label>عدد المصابين</label>
+            <input name="injured_count" type="number" min="0" required value="1">
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field-group">
+            <label>العمر</label>
+            <input name="age" type="number" min="0" required>
+          </div>
+          <div class="field-group">
+            <label>المنطقة</label>
+            <input type="text" value="{{ request.user.region }}" readonly class="input-readonly" style="color:#64748b; border-color:#e2e8f0;">
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field-group">
+            <label>خط العرض (Latitude)</label>
+            <input id="latitude" name="latitude" type="text" readonly class="input-readonly" placeholder="سيتم التحديد من الخريطة">
+          </div>
+          <div class="field-group">
+            <label>خط الطول (Longitude)</label>
+            <input id="longitude" name="longitude" type="text" readonly class="input-readonly" placeholder="سيتم التحديد من الخريطة">
+          </div>
+        </div>
+
+        <div class="field-group" style="margin-top:5px;">
+          <label>وصف الموقع</label>
+          <input name="location_description" type="text" placeholder="بجوار المسجد / الطريق السريع...">
+        </div>
+
+        <div class="field-group" style="margin-top:12px;">
+          <label>تفاصيل البلاغ</label>
+          <textarea name="details" rows="3" required placeholder="اكتب تفاصيل البلاغ هنا..."></textarea>
+        </div>
+
+        <button type="submit" class="btn-submit" style="margin-top:15px;">✅ حفظ البلاغ</button>
+
+        <div class="btn-row">
+          <button type="button" id="btnDispatch" class="btn-action btn-dispatch" onclick="doDispatch()" disabled>🚑 ترحيل</button>
+          <button type="button" id="btnAccept" class="btn-action btn-accept" onclick="doAccept()" disabled>✅ قبول</button>
+          <button type="button" id="btnArrive" class="btn-action btn-arrive" onclick="doArrive()" disabled>📍 وصول</button>
+        </div>
+
+        <div class="time-panel">
+          <div class="title">⏱️ أزمنة البلاغ</div>
+
+          <div class="time-grid">
+            <div class="time-box">
+              <div class="k">وقت الإنشاء</div>
+              <div class="v" id="t_created">—</div>
+            </div>
+            <div class="time-box">
+              <div class="k">وقت الترحيل</div>
+              <div class="v" id="t_dispatched">—</div>
+            </div>
+            <div class="time-box">
+              <div class="k">وقت القبول</div>
+              <div class="v" id="t_accepted">—</div>
+            </div>
+            <div class="time-box">
+              <div class="k">وقت الوصول</div>
+              <div class="v" id="t_arrived">—</div>
+            </div>
+
+            <div class="time-box">
+              <div class="k">من الإنشاء → الترحيل</div>
+              <div class="v" id="d_dispatch">—</div>
+            </div>
+            <div class="time-box">
+              <div class="k">من الترحيل → القبول</div>
+              <div class="v" id="d_accept">—</div>
+            </div>
+            <div class="time-box">
+              <div class="k">من القبول → الوصول</div>
+              <div class="v" id="d_arrive">—</div>
+            </div>
+            <div class="time-box">
+              <div class="k">حالة البلاغ</div>
+              <div class="v" id="t_status">—</div>
+            </div>
+          </div>
+
+          <div class="time-total">
+            <div class="k">إجمالي زمن الاستجابة</div>
+            <div class="v" id="d_total">—</div>
+          </div>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <div class="map-column">
+    <div class="column-header" style="background: #334155;">
+      <span><i class="fas fa-map-marked-alt"></i> تحديد موقع البلاغ</span>
+    </div>
+    <div class="map-toolbar" id="geo-status">
+      <i class="fas fa-spinner fa-spin"></i> جاري محاولة تحديد موقعك الحالي...
+    </div>
+    <div id="map-canvas"></div>
+  </div>
+
+</div>
+
+<script>
+  let map, marker;
+
+  function initMap() {
+    // ✅ مركز الخريطة من منطقة المستخدم (يجي من الباك اند)
+    const defaultLoc = {
+      lat: Number("{{ map_center_lat|default:'24.7136' }}"),
+      lng: Number("{{ map_center_lng|default:'46.6753' }}")
+    };
+
+    const zoomLevel = Number("{{ map_zoom|default:'13' }}");
+
+    map = new google.maps.Map(document.getElementById("map-canvas"), {
+      zoom: zoomLevel,
+      center: defaultLoc,
+      mapTypeId: 'roadmap',
+      gestureHandling: "greedy"
+    });
+
+    // ✅ نعرض اسم المنطقة بدل "تحديد الموقع تلقائياً"
+    const regionName = "{{ user_region_name|default:'' }}";
+    if (regionName && regionName.trim().length > 0) {
+      document.getElementById('geo-status').innerHTML =
+        `<i class="fas fa-map-pin" style="color:#0f766e"></i> المنطقة الحالية: <b>${regionName}</b>`;
+    } else {
+      document.getElementById('geo-status').innerHTML =
+        `<i class="fas fa-map-pin"></i> اختر موقع البلاغ من الخريطة`;
+    }
+
+    // ✅ نضع Marker افتراضي في مركز المنطقة + تعبئة lat/lng
+    updateLocationFields(defaultLoc);
+
+    // النقر اليدوي لتغيير الموقع
+    map.addListener("click", (e) => {
+      updateLocationFields(e.latLng);
+    });
+  }
+
+  function updateLocationFields(location) {
+    const lat = typeof location.lat === 'function' ? location.lat() : location.lat;
+    const lng = typeof location.lng === 'function' ? location.lng() : location.lng;
+
+    document.getElementById("latitude").value = Number(lat).toFixed(6);
+    document.getElementById("longitude").value = Number(lng).toFixed(6);
+
+    if (marker) marker.setMap(null);
+    marker = new google.maps.Marker({
+      position: {lat: Number(lat), lng: Number(lng)},
+      map: map,
+      animation: google.maps.Animation.DROP,
+      icon: { url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png" }
+    });
+
+    if(!document.getElementById("cad_received_time").value) {
+      const now = new Date();
+      const time =
+        now.getHours().toString().padStart(2, '0') + ":" +
+        now.getMinutes().toString().padStart(2, '0') + ":" +
+        now.getSeconds().toString().padStart(2, '0');
+      document.getElementById("cad_received_time").value = time;
+    }
+  }
+
+  function csrfToken(){
+    const el = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    return el ? el.value : "";
+  }
+
+  function formatISO(iso){
+    if(!iso) return "—";
+    try{
+      const d = new Date(iso);
+      return d.toLocaleString('ar-SA');
+    }catch(e){ return iso; }
+  }
+
+  function formatSeconds(sec){
+    if(sec === null || sec === undefined) return "—";
+    sec = Number(sec);
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = Math.floor(sec % 60);
+    const parts = [];
+    if(h) parts.push(`${h}س`);
+    if(m || h) parts.push(`${m}د`);
+    parts.push(`${s}ث`);
+    return parts.join(" ");
+  }
+
+  function setButtonsState(report){
+    const btnDispatch = document.getElementById("btnDispatch");
+    const btnAccept = document.getElementById("btnAccept");
+    const btnArrive = document.getElementById("btnArrive");
+
+    btnDispatch.disabled = !report || !!report.dispatched_at;
+    btnAccept.disabled = !report || !report.dispatched_at || !!report.accepted_at;
+    btnArrive.disabled = !report || !report.accepted_at || !!report.arrived_at;
+  }
+
+  function renderTimes(report){
+    document.getElementById("t_created").innerText = formatISO(report.created_at);
+    document.getElementById("t_dispatched").innerText = formatISO(report.dispatched_at);
+    document.getElementById("t_accepted").innerText = formatISO(report.accepted_at);
+    document.getElementById("t_arrived").innerText = formatISO(report.arrived_at);
+
+    document.getElementById("d_dispatch").innerText = formatSeconds(report.time_to_dispatch_seconds);
+    document.getElementById("d_accept").innerText = formatSeconds(report.time_to_accept_seconds);
+    document.getElementById("d_arrive").innerText = formatSeconds(report.time_to_arrive_seconds);
+    document.getElementById("d_total").innerText = formatSeconds(report.total_response_seconds);
+
+    const status =
+      report.arrived_at ? "وصل" :
+      report.accepted_at ? "مقبول" :
+      report.dispatched_at ? "مُرحّل" :
+      "جديد";
+    document.getElementById("t_status").innerText = status;
+
+    document.getElementById("report-badge").innerText = report.cad_number ? `# ${report.cad_number}` : "—";
+  }
+
+  async function fetchReport(reportId){
+    const resp = await fetch(`/cad/${reportId}/`, { method:"GET" });
+    const data = await resp.json();
+    if(data.ok){
+      renderTimes(data.report);
+      setButtonsState(data.report);
+    }
+  }
+
+  async function submitCreateReport(ev) {
+    ev.preventDefault();
+    const fd = new FormData(ev.target);
+
+    try {
+      const resp = await fetch("/cad/create/", {
+        method: "POST",
+        body: fd,
+        headers: { "X-CSRFToken": csrfToken() }
+      });
+
+      const data = await resp.json();
+      if (resp.ok && data.ok) {
+        const report = data.report;
+        document.getElementById("report_id").value = report.id;
+
+        renderTimes(report);
+        setButtonsState(report);
+
+        alert("تم إنشاء البلاغ بنجاح ✅");
+      } else {
+        alert((data && (data.details || data.error)) ? (data.details || data.error) : "حدث خطأ أثناء الحفظ");
+      }
+    } catch (e) {
+      alert("فشل الاتصال بالخادم");
+    }
+  }
+
+  async function doDispatch(){
+    const reportId = document.getElementById("report_id").value;
+    if(!reportId){ alert("أنشئ البلاغ أولاً"); return; }
+
+    const resp = await fetch(`/cad/${reportId}/dispatch/`, {
+      method:"POST",
+      headers: { "X-CSRFToken": csrfToken() }
+    });
+    const data = await resp.json();
+    if(resp.ok && data.ok){
+      renderTimes(data.report);
+      setButtonsState(data.report);
+    }else{
+      alert((data && (data.details || data.error)) ? (data.details || data.error) : "تعذر الترحيل");
+    }
+  }
+
+  async function doAccept(){
+    const reportId = document.getElementById("report_id").value;
+    if(!reportId){ alert("أنشئ البلاغ أولاً"); return; }
+
+    const resp = await fetch(`/cad/${reportId}/accept/`, {
+      method:"POST",
+      headers: { "X-CSRFToken": csrfToken() }
+    });
+    const data = await resp.json();
+    if(resp.ok && data.ok){
+      renderTimes(data.report);
+      setButtonsState(data.report);
+    }else{
+      alert((data && (data.details || data.error)) ? (data.details || data.error) : "تعذر القبول");
+    }
+  }
+
+  async function doArrive(){
+    const reportId = document.getElementById("report_id").value;
+    if(!reportId){ alert("أنشئ البلاغ أولاً"); return; }
+
+    const resp = await fetch(`/cad/${reportId}/arrive/`, {
+      method:"POST",
+      headers: { "X-CSRFToken": csrfToken() }
+    });
+    const data = await resp.json();
+    if(resp.ok && data.ok){
+      renderTimes(data.report);
+      setButtonsState(data.report);
+    }else{
+      alert((data && (data.details || data.error)) ? (data.details || data.error) : "تعذر تسجيل الوصول");
+    }
+  }
+
+  // ✅ منع إدخال أي شيء غير أرقام في رقم البلاغ CAD
+  document.addEventListener("DOMContentLoaded", () => {
+    const cadInput = document.querySelector('input[name="cad_number"]');
+    if (cadInput) {
+      cadInput.addEventListener("input", function () {
+        this.value = this.value.replace(/[^0-9]/g, "");
+      });
+    }
+  });
+</script>
+
+
+<script async defer src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap"></script>
+
+{% endblock %}
