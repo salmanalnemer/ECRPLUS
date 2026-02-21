@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
+
     # تطبيقات ECR
     "accounts.apps.AccountsConfig",
     "usergroups.apps.UsergroupsConfig",
@@ -42,11 +43,13 @@ INSTALLED_APPS = [
     "organizations.apps.OrganizationsConfig",
     "ecr_reports.apps.EcrReportsConfig",
     "cad_reports.apps.CadReportsConfig",
-    "volunteer_hours.apps.VolunteerHoursConfig",
     "notifications.apps.NotificationsConfig",
 
     # تطبيق تتبع المستجيبين
     "responders.apps.RespondersConfig",
+
+    # ✅ NEW: تطبيق تذاكر الدعم الفني
+    "support_tickets.apps.SupportTicketsConfig",
 ]
 
 
@@ -77,7 +80,7 @@ TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
 
-        # مجلد قوالب عام (اختياري لكن مفيد من البداية)
+        # ✅ مجلد قوالب عام (وهنا سيتم وضع: templates/support_tickets/*.html)
         "DIRS": [BASE_DIR / "templates"],
 
         "APP_DIRS": True,
@@ -214,7 +217,6 @@ SIMPLE_JWT = {
 RESPONDER_ONLINE_WINDOW_SECONDS = int(os.getenv("RESPONDER_ONLINE_WINDOW_SECONDS", "3500"))
 
 
-
 # -----------------------------------------------------------------------------
 # إعدادات البريد الإلكتروني (SMTP) - Hostinger
 # -----------------------------------------------------------------------------
@@ -263,5 +265,9 @@ if not DEBUG:
     SECURE_HSTS_PRELOAD = os.getenv("SECURE_HSTS_PRELOAD", "False").lower() == "true"
 
 
-
 GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+SUPPORT_TICKETS_SLA_STOP_DURING_PAUSE = True

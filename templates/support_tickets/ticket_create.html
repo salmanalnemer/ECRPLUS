@@ -1,0 +1,396 @@
+{% extends "portal/base_portal.html" %}
+{% load static %}
+{% block content %}
+
+<style>
+  :root {
+    --primary: #4f46e5;
+    --primary-hover: #4338ca;
+    --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
+    --card-bg: rgba(255, 255, 255, 0.95);
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --accent: #0ea5e9;
+    --success: #10b981;
+    --danger: #ef4444;
+    --radius-lg: 24px;
+    --radius-md: 16px;
+    --shadow-sm: 0 4px 6px -1px rgba(0,0,0,0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+  }
+
+  .tk-page {
+    direction: rtl;
+    background: var(--bg-gradient);
+    padding: 40px 20px;
+    min-height: 100vh;
+    font-family: inherit !important;
+  }
+
+  .tk-card {
+    max-width: 1100px;
+    margin: 0 auto;
+    background: var(--card-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    overflow: hidden;
+    animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .tk-head {
+    padding: 30px 40px;
+    background: rgba(255, 255, 255, 0.5);
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .tk-title { 
+    font-size: 28px; 
+    font-weight: 800; 
+    color: var(--text-main); 
+    margin: 0;
+    letter-spacing: -0.5px;
+  }
+
+  .tk-sub { color: var(--text-muted); font-size: 14px; margin-top: 8px; font-weight: 500; }
+
+  .tk-back {
+    padding: 10px 20px;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    color: var(--text-main);
+    text-decoration: none;
+    font-weight: 700;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .tk-back:hover { background: #f8fafc; border-color: var(--primary); color: var(--primary); }
+
+  .tk-user-box {
+    margin: 30px 40px;
+    padding: 20px;
+    background: linear-gradient(to left, #f8fafc, #ffffff);
+    border-radius: var(--radius-md);
+    border: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .tk-user-avatar {
+    width: 65px; height: 65px;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    box-shadow: var(--shadow-sm);
+    object-fit: cover;
+  }
+
+  .tk-chip {
+    background: #fff;
+    padding: 6px 14px;
+    border-radius: 10px;
+    font-size: 12px;
+    border: 1px solid #e2e8f0;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .tk-body { padding: 0 40px 40px; }
+
+  .tk-layout {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 25px;
+  }
+
+  .tk-panel {
+    background: #fff;
+    border: 1px solid #f1f5f9;
+    border-radius: var(--radius-md);
+    padding: 25px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .tk-panel-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 800;
+    font-size: 16px;
+    margin-bottom: 20px;
+    color: var(--primary);
+  }
+
+  .tk-field { margin-bottom: 20px; }
+  .tk-label { display: block; margin-bottom: 8px; font-weight: 700; color: var(--text-main); font-size: 14px; }
+  
+  .tk-control select, .tk-control input, .tk-control textarea {
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1.5px solid #e2e8f0;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s;
+    background: #fbfcfe;
+  }
+
+  .tk-control select:focus, .tk-control textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+    background: #fff;
+    outline: none;
+  }
+
+  .tk-actions {
+    margin-top: 30px;
+    padding-top: 25px;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+  }
+
+  .btn-submit {
+    background: var(--primary);
+    color: white;
+    padding: 14px 40px;
+    border-radius: 14px;
+    border: none;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+  }
+
+  .btn-submit:hover {
+    background: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
+  }
+
+  /* مودل النجاح المحدث */
+  .modal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .success-modal {
+    background: white;
+    padding: 40px;
+    border-radius: var(--radius-lg);
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+    transform: scale(0.8);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .modal-overlay.active { display: flex; }
+  .modal-overlay.active .success-modal { transform: scale(1); }
+
+  .success-icon {
+    width: 80px; height: 80px;
+    background: #ecfdf5;
+    color: var(--success);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    margin: 0 auto 20px;
+  }
+
+  @media (max-width: 850px) {
+    .tk-layout { grid-template-columns: 1fr; }
+    .tk-head { flex-direction: column; text-align: center; gap: 20px; }
+  }
+</style>
+
+<div class="tk-page">
+  <div class="tk-card">
+    
+    <div class="tk-head">
+      <div>
+        <h2 class="tk-title">إنشاء طلب جديد</h2>
+        <p class="tk-sub">يرجى تعبئة التفاصيل بدقة لضمان سرعة معالجة التذكرة.</p>
+      </div>
+      <a class="tk-back" href="{% url 'support_tickets:list' %}">
+        <span>↩</span> رجوع للقائمة
+      </a>
+    </div>
+
+    <div class="tk-user-box">
+      <img class="tk-user-avatar" src="{% static 'img/user.png' %}" alt="Avatar">
+      <div>
+        <div style="font-weight: 800; color: var(--text-main); font-size: 16px;">{{ request.user }}</div>
+        <div style="display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap;">
+          {% if request.user.email %}<span class="tk-chip">✉️ {{ request.user.email }}</span>{% endif %}
+          {% if request.user.profile.department %}<span class="tk-chip">🏢 {{ request.user.profile.department }}</span>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="tk-body">
+      {% if form.errors %}
+        <div style="background: #fff1f2; border: 1px solid #fecdd3; color: #9f1239; padding: 15px; border-radius: 12px; margin-bottom: 25px; font-weight: 700;">
+          ⚠️ يرجى تصحيح الأخطاء الموضحة في الحقول أدناه.
+        </div>
+      {% endif %}
+
+      <form id="ticketForm" method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+
+        <div class="tk-layout">
+          <div class="tk-panel">
+            <h3 class="tk-panel-title">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+              تصنيف البلاغ
+            </h3>
+
+            <div class="tk-field">
+              <label class="tk-label">مصدر الطلب</label>
+              <div class="tk-control">{{ form.source }}</div>
+              {% for e in form.source.errors %}<small style="color:var(--danger)">{{ e }}</small>{% endfor %}
+            </div>
+
+            <div class="tk-field">
+              <label class="tk-label">التصنيف الرئيسي</label>
+              <div class="tk-control">{{ form.main_category }}</div>
+            </div>
+
+            <div class="tk-field">
+              <label class="tk-label">التصنيف الفرعي</label>
+              <div class="tk-control">{{ form.sub_category }}</div>
+              <p style="font-size: 11px; color: var(--text-muted); margin-top: 5px;">* يتغير بناءً على التصنيف الرئيسي</p>
+            </div>
+          </div>
+
+          <div class="tk-panel">
+            <h3 class="tk-panel-title">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+              وصف المشكلة والمرفقات
+            </h3>
+
+            <div class="tk-field">
+              <label class="tk-label">شرح المشكلة بالتفصيل</label>
+              <div class="tk-control">{{ form.description }}</div>
+            </div>
+
+            <div class="tk-field">
+              <label class="tk-label">إرفاق صورة (اختياري)</label>
+              <div style="border: 2px dashed #e2e8f0; padding: 20px; border-radius: 15px; background: #fcfdfe;">
+                 <div class="tk-control">{{ form.image }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {% for h in form.hidden_fields %}{{ h }}{% endfor %}
+
+        <div class="tk-actions">
+          <button type="reset" style="background: none; border: none; color: var(--text-muted); font-weight: 700; cursor: pointer;">مسح المدخلات</button>
+          <button type="submit" class="btn-submit" id="submitBtn">✅ إنشاء التذكرة</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="successModal">
+  <div class="success-modal">
+    <div class="success-icon">✓</div>
+    <h2 style="margin-bottom: 10px;">ممتاز تم انشاء التذكرة</h2>
+    <p style="color: var(--text-muted); line-height: 1.6;">تم استلام تذكرتك بنجاح، سيقوم الفريق المختص بمراجعتها قريباً.</p>
+    <div style="margin-top: 25px; font-weight: 800; color: var(--primary);">جاري تحويلك...</div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const form = document.getElementById("ticketForm");
+  const modal = document.getElementById("successModal");
+  const main = document.getElementById("id_main_category");
+  const sub  = document.getElementById("id_sub_category");
+  const description = document.getElementById("id_description");
+  const source = document.getElementById("id_source");
+
+  // معالجة إرسال الفورم والتحقق من الحقول
+  form.addEventListener("submit", function(e) {
+    e.preventDefault(); // منع الإرسال التلقائي للتحقق
+
+    // التحقق: إذا كانت الحقول الأساسية فارغة
+    if (!source.value || !main.value || !sub.value || !description.value.trim()) {
+        alert("يجب ادخال بيانات التذكرة للإنشاء");
+        return; // توقف هنا
+    }
+
+    // إذا كانت البيانات مكتملة، أظهر المودل وأكمل الإرسال
+    modal.classList.add("active");
+    
+    setTimeout(() => {
+        form.submit();
+    }, 2000); 
+  });
+
+  // منطق التصنيفات الفرعية (API)
+  if (!main || !sub) return;
+  const baseUrl = "{% url 'support_tickets:api_sub_categories' %}";
+
+  function resetSub() {
+    sub.innerHTML = '<option value="">— اختر تصنيفًا فرعيًا —</option>';
+    sub.disabled = true;
+  }
+
+  function loadSubs(mainId, preselectValue) {
+    resetSub();
+    if (!mainId) return;
+
+    fetch(baseUrl + "?main_id=" + encodeURIComponent(mainId), {
+      headers: { "X-Requested-With": "XMLHttpRequest" }
+    })
+    .then(r => r.json())
+    .then(data => {
+      const items = (data && data.items) ? data.items : [];
+      items.forEach(item => {
+        const opt = document.createElement("option");
+        opt.value = item.id;
+        opt.textContent = item.name;
+        sub.appendChild(opt);
+      });
+      sub.disabled = false;
+      if (preselectValue) sub.value = preselectValue;
+    })
+    .catch(() => resetSub());
+  }
+
+  const currentSub = sub.value;
+  if (main.value) {
+      loadSubs(main.value, currentSub);
+  } else {
+      resetSub();
+  }
+  
+  main.addEventListener("change", function () { loadSubs(this.value, null); });
+});
+</script>
+
+{% endblock %}

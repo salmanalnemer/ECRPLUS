@@ -9,6 +9,7 @@ GROUPS = [
     ("الدعم الفني", "ITS", False),
     ("مدير النظام", "SYSADMIN", False),
     ("المستجيبين", "ECRMOBIL", True),
+    ("العمليات المركزية", "CENTRAL_OPERATIONS", True),
 ]
 
 

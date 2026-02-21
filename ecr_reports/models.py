@@ -4,6 +4,8 @@ from django.conf import settings
 from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models
 from django.utils import timezone
+from django.core.exceptions import ValidationError
+
 
 
 class MedicalConditionCatalog(models.Model):
@@ -142,9 +144,10 @@ class MobileReport(models.Model):
     def __str__(self) -> str:
         return f"بلاغ #{self.pk} - {self.patient_name}"
 
-    def clean(self) -> None:
-        # منطق الاعتماد بين الحقول
-        if self.called_ambulance and not self.ambulance_called_by:
-            raise models.ValidationError({"ambulance_called_by": "حدد (أنا/شخص آخر) عند اختيار طلب إسعاف."})
-        if not self.called_ambulance and self.ambulance_called_by:
-            raise models.ValidationError({"ambulance_called_by": "لا يمكن تحديد هذا الحقل بدون اختيار طلب إسعاف."})
+
+def clean(self) -> None:
+    # منطق الاعتماد بين الحقول
+    if self.called_ambulance and not self.ambulance_called_by:
+        raise ValidationError({"ambulance_called_by": "حدد (أنا/شخص آخر) عند اختيار طلب إسعاف."})
+    if not self.called_ambulance and self.ambulance_called_by:
+        raise ValidationError({"ambulance_called_by": "لا يمكن تحديد هذا الحقل بدون اختيار طلب إسعاف."})

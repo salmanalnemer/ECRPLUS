@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}إنشاء تذكرة{% endblock %}
+{% block content %}
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">إنشاء تذكرة دعم فني</h1>
+      <p class="page-subtitle">املأ البيانات بدقة — التصنيفات تُحمّل ديناميكياً حسب النوع.</p>
+    </div>
+    <a class="btn btn--ghost" href="{% url 'support_tickets:list' %}">رجوع</a>
+  </div>
+
+  <div class="card">
+    <div class="card__bd">
+      <form method="post" enctype="multipart/form-data" novalidate class="form">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="flash flash--danger">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="form-grid">
+          <div>
+            <label>{{ form.kind.label }}</label>
+            {{ form.kind }}
+            {% if form.kind.errors %}<div class="error">{{ form.kind.errors }}</div>{% endif %}
+          </div>
+
+          <div>
+            <label>{{ form.source.label }}</label>
+            {{ form.source }}
+            {% if form.source.errors %}<div class="error">{{ form.source.errors }}</div>{% endif %}
+          </div>
+
+          <div>
+            <label>{{ form.main_category.label }}</label>
+            {{ form.main_category }}
+            <div id="mainHint" class="help">اختر النوع أولاً لتحميل التصنيفات.</div>
+            {% if form.main_category.errors %}<div class="error">{{ form.main_category.errors }}</div>{% endif %}
+          </div>
+
+          <div>
+            <label>{{ form.sub_category.label }}</label>
+            {{ form.sub_category }}
+            <div id="subHint" class="help">اختر التصنيف الرئيسي لتحميل الفرعي.</div>
+            {% if form.sub_category.errors %}<div class="error">{{ form.sub_category.errors }}</div>{% endif %}
+          </div>
+        </div>
+
+        <div>
+          <label>{{ form.description.label }}</label>
+          {{ form.description }}
+          {% if form.description.errors %}<div class="error">{{ form.description.errors }}</div>{% endif %}
+        </div>
+
+        <div>
+          <label>{{ form.image.label }}</label>
+          {{ form.image }}
+          <div class="help">اختياري — صورة أو لقطة شاشة تساعد الدعم.</div>
+          {% if form.image.errors %}<div class="error">{{ form.image.errors }}</div>{% endif %}
+        </div>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button type="submit" class="btn btn--primary">إنشاء</button>
+          <a class="btn btn--ghost" href="{% url 'support_tickets:list' %}">رجوع</a>
+          <span id="ajaxState" class="help" style="margin-right:auto;"></span>
+        </div>
+      </form>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const kindEl = document.getElementById("id_kind");
+  const mainEl = document.getElementById("id_main_category");
+  const subEl  = document.getElementById("id_sub_category");
+  const state  = document.getElementById("ajaxState");
+  const mainHint = document.getElementById("mainHint");
+  const subHint  = document.getElementById("subHint");
+
+  const mainUrl = "{% url 'support_tickets:api_main_categories' %}";
+  const subUrl  = "{% url 'support_tickets:api_sub_categories' %}";
+
+  function setState(msg, isError=false){
+    if(!state) return;
+    state.textContent = msg || "";
+    state.style.color = isError ? "#b91c1c" : "";
+  }
+
+  function setOptions(selectEl, items, placeholder){
+    if(!selectEl) return;
+    selectEl.innerHTML = "";
+    const ph = document.createElement("option");
+    ph.value = "";
+    ph.textContent = placeholder;
+    selectEl.appendChild(ph);
+
+    for (const it of items){
+      const opt = document.createElement("option");
+      opt.value = it.id;
+      opt.textContent = it.name;
+      selectEl.appendChild(opt);
+    }
+  }
+
+  async function fetchJson(url){
+    const resp = await fetch(url, {
+      headers: {"X-Requested-With":"XMLHttpRequest"},
+      credentials: "same-origin"
+    });
+    const data = await resp.json().catch(()=> ({}));
+    if (!resp.ok || !data.ok) throw new Error(data.error || "Request failed");
+    return data.items || [];
+  }
+
+  async function refreshMain(){
+    const kind = (kindEl?.value || "").trim();
+    setOptions(mainEl, [], "اختر تصنيفًا رئيسيًا");
+    setOptions(subEl, [], "اختر تصنيفًا فرعيًا");
+    if(mainHint) mainHint.style.display = kind ? "none" : "";
+    if(subHint) subHint.style.display = "";
+    if (!kind) return;
+
+    try{
+      setState("جارٍ تحميل التصنيفات...");
+      const items = await fetchJson(mainUrl + "?kind=" + encodeURIComponent(kind));
+      setOptions(mainEl, items, "اختر تصنيفًا رئيسيًا");
+      setState("");
+    }catch(e){
+      console.error(e);
+      setOptions(mainEl, [], "تعذر تحميل التصنيفات");
+      setState("تعذر تحميل التصنيفات الرئيسية.", true);
+    }
+  }
+
+  async function refreshSub(){
+    const mainId = (mainEl?.value || "").trim();
+    setOptions(subEl, [], "اختر تصنيفًا فرعيًا");
+    if(subHint) subHint.style.display = mainId ? "none" : "";
+    if (!mainId) return;
+
+    try{
+      setState("جارٍ تحميل التصنيفات الفرعية...");
+      const items = await fetchJson(subUrl + "?main_id=" + encodeURIComponent(mainId));
+      setOptions(subEl, items, "اختر تصنيفًا فرعيًا");
+      setState("");
+    }catch(e){
+      console.error(e);
+      setOptions(subEl, [], "تعذر تحميل التصنيفات الفرعية");
+      setState("تعذر تحميل التصنيفات الفرعية.", true);
+    }
+  }
+
+  if (kindEl) kindEl.addEventListener("change", refreshMain);
+  if (mainEl) mainEl.addEventListener("change", refreshSub);
+})();
+</script>
+{% endblock %}

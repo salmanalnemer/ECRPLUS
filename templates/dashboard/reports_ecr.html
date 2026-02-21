@@ -115,11 +115,11 @@
       gap:8px;
       padding: 8px 10px;
       border-radius: 999px;
-      font-size: 12px;
+      font-size: 10px;
       border: 1px solid;
       white-space:nowrap;
       line-height:1;
-      font-weight: 700;
+      font-weight: 500;
     }
     .pill.primary{ background: var(--primary); border-color: var(--primary-b); color: var(--primary-t); }
     .pill.yellow{ background: var(--yellow); border-color: var(--yellow-b); color: var(--yellow-t); }
@@ -177,7 +177,7 @@
     tbody td{
       border-bottom: 1px solid rgba(15,23,42,.08);
       padding:10px 8px;       /* ⬅️ أكبر */
-      font-size: 10px;          /* ⬅️ أكبر */
+      font-size: 11px;          /* ⬅️ أكبر */
       font-weight: 500;
       color: rgba(15,23,42,.92);
       vertical-align: middle;
@@ -199,7 +199,7 @@
       padding: 8px 12px;
       border-radius: 999px;
       border: 1px solid;
-      font-size: 13px;          /* ⬅️ أكبر */
+      font-size: 10px;          /* ⬅️ أكبر */
       font-weight: 900;
       line-height: 1;
       white-space:nowrap;
@@ -407,7 +407,7 @@
       <table id="tbl">
         <thead>
           <tr>
-            <th>#</th>
+
             <th class="nowrap">رقم البلاغ</th>
             <th class="nowrap">الحالة</th>
             <th class="nowrap">اسم المريض</th>
@@ -440,9 +440,8 @@
             {{ region_label|default_if_none:'' }}
           ">
 
-            <td class="muted nowrap">{{ forloop.counter }}</td>
 
-            <td class="nowrap"><strong>#{{ r.id }}</strong></td>
+            <td class="nowrap"><strong style="padding:6px 8px; font-size:10px; font-weight:900;">{{ r.id }}</strong></td>
 
             <td class="nowrap">
               {% if r.ui_status_class == "red" %}
@@ -467,7 +466,7 @@
 
             <td>
               {% for s in r.services.all %}
-                <span class="pill primary" style="padding:6px 8px; font-size:12px; font-weight:900;">{{ s.name }}</span>
+                <span class="pill primary" style="padding:6px 8px; font-size:10px; font-weight:900;">{{ s.name }}</span>
               {% empty %}
                 <span class="muted">—</span>
               {% endfor %}
@@ -475,9 +474,9 @@
 
             <td class="nowrap">
               {% if r.called_ambulance %}
-                <span class="pill yellow" style="padding:6px 8px; font-size:12px;"><i class="fa-solid fa-check"></i> نعم</span>
+                <span class="pill yellow" style="padding:6px 8px; font-size:10;"><i class="fa-solid fa-check"></i> نعم</span>
               {% else %}
-                <span class="pill gray" style="padding:6px 8px; font-size:12px;"><i class="fa-solid fa-xmark"></i> لا</span>
+                <span class="pill gray" style="padding:6px 8px; font-size:10px;"><i class="fa-solid fa-xmark"></i> لا</span>
               {% endif %}
             </td>
 
@@ -485,9 +484,9 @@
 
             <td class="nowrap">
               {% if r.send_to_997 %}
-                <span class="pill red" style="padding:6px 8px; font-size:12px;"><i class="fa-solid fa-share-nodes"></i> نعم</span>
+                <span class="pill red" style="padding:6px 8px; font-size:10px;"><i class="fa-solid fa-share-nodes"></i> نعم</span>
               {% else %}
-                <span class="pill gray" style="padding:6px 8px; font-size:12px;"><i class="fa-solid fa-minus"></i> لا</span>
+                <span class="pill gray" style="padding:6px 8px; font-size:10px;"><i class="fa-solid fa-minus"></i> لا</span>
               {% endif %}
             </td>
 

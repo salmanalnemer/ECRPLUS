@@ -1,0 +1,22 @@
+<div class="card card--flat" style="box-shadow:none;">
+  <div class="card__bd">
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+      <div>
+        <div style="font-size:12px; color:var(--muted); margin-bottom:6px;">{{ title }}</div>
+        <div style="display:flex; align-items:baseline; gap:8px;">
+          <div style="font-size:24px; font-weight:900;">{{ value|default:0 }}</div>
+          {% if suffix %}<div style="font-size:12px; color:var(--muted);">{{ suffix }}</div>{% endif %}
+        </div>
+      </div>
+      {% if badge == "danger" %}
+        <span class="badge badge--danger">SLA</span>
+      {% elif badge == "warn" %}
+        <span class="badge badge--warn">Delay</span>
+      {% elif badge == "ok" %}
+        <span class="badge badge--ok">OK</span>
+      {% elif badge == "info" %}
+        <span class="badge badge--info">Info</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
