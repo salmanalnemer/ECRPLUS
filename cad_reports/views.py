@@ -8,6 +8,8 @@ from typing import Any
 from django.conf import settings
 from django.contrib.auth import get_user_model  # ✅ NEW
 from django.contrib.auth.decorators import login_required, permission_required
+from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import Count, Q
 from django.db.models.functions import TruncDate
 from django.http import HttpRequest, JsonResponse
@@ -19,9 +21,11 @@ from ecr_reports.models import MobileReport
 from responders.models import ResponderLocation
 from regions.models import Region  # ✅ NEW
 
-from .models import CADReport, CaseType
+from .models import CADReport, CaseType, UserDeviceToken
+from .services.fcm import send_fcm_to_tokens
 
 logger = logging.getLogger(__name__)
+
 User = get_user_model()  # ✅ NEW
 
 # ==========================
@@ -100,12 +104,14 @@ def _format_duration(d: timedelta | None) -> str:
     except Exception:
         return ""
 
+
 #   =========================
 #   Online responders cutoff
 #   =========================
 def _online_cutoff() -> timezone.datetime:
     # يعتبر المستجيب Online إذا آخر تحديث خلال 10 دقائق
     return timezone.now() - timedelta(minutes=10)
+
 
 #   =========================
 #   Map center helper
@@ -136,11 +142,32 @@ def _bool_param(request: HttpRequest, name: str) -> bool:
     return v in {"1", "true", "yes", "y", "on"}
 
 
+def _safe_when_not_before_created(report: CADReport, when_dt: timezone.datetime | None) -> timezone.datetime:
+    """
+    ✅ يمنع dispatched_at يكون قبل created_at (حسب Validation عندك).
+    - إذا when_dt None -> now
+    - إذا when_dt < created_at -> created_at
+    """
+    if when_dt is None:
+        return timezone.now()
+
+    if timezone.is_naive(when_dt):
+        when_dt = timezone.make_aware(when_dt, timezone.get_current_timezone())
+
+    created = getattr(report, "created_at", None)
+    if not created:
+        return when_dt
+
+    if timezone.is_naive(created):
+        created = timezone.make_aware(created, timezone.get_current_timezone())
+
+    return created if when_dt < created else when_dt
+
+
 def _report_to_dict(r: CADReport) -> dict[str, Any]:
     def _dur_seconds(d):
         return int(d.total_seconds()) if d else None
 
-    # ✅ NEW (اختياري - ما يضر): عشان تتأكد من API أنه فعلاً انحفظ
     assigned_responder = None
     try:
         if getattr(r, "assigned_responder_id", None):
@@ -167,7 +194,7 @@ def _report_to_dict(r: CADReport) -> dict[str, Any]:
         "location_text": r.location_text,
         "region_id": r.region_id,
         "created_by": {"id": r.created_by_id, "name": getattr(r.created_by, "full_name", None)},
-        "assigned_responder": assigned_responder,  # ✅ NEW
+        "assigned_responder": assigned_responder,
         "created_at": r.created_at.isoformat() if r.created_at else None,
         "dispatched_at": r.dispatched_at.isoformat() if r.dispatched_at else None,
         "accepted_at": r.accepted_at.isoformat() if r.accepted_at else None,
@@ -192,7 +219,7 @@ def _get_report_by_cad(cad_number: str) -> CADReport:
     cad = str(cad_number or "").strip()
     return get_object_or_404(
         CADReport.objects.select_related("case_type", "region", "assigned_responder"),
-        cad_number=cad
+        cad_number=cad,
     )
 
 
@@ -245,13 +272,11 @@ def _get_user_map_center(user):
 def reports_cad_page(request):
     case_types = CaseType.objects.filter(is_active=True)
 
-    # ✅ NEW: صلاحيات + قائمة مناطق (لـ SYSADMIN/NEMSCC فقط)
     user_group_code = _get_user_group_code(request.user)
     all_regions = None
     if user_group_code in PRIVILEGED_GROUP_CODES:
         all_regions = Region.objects.all().order_by("name_ar")
 
-    # ✅ مركز الخريطة حسب منطقة المستخدم (بدون GPS)
     region = getattr(request.user, "region", None)
 
     center_lat = None
@@ -294,8 +319,6 @@ def reports_cad_page(request):
             "case_types": case_types,
             "google_maps_api_key": getattr(settings, "GOOGLE_MAPS_API_KEY", ""),
             "map_config": map_config,
-
-            # ✅ NEW (للقائمة المنسدلة)
             "user_group_code": user_group_code,
             "privileged_group_codes": PRIVILEGED_GROUP_CODES,
             "all_regions": all_regions,
@@ -311,7 +334,6 @@ def reports_cad_ecr(request):
     viewer_group = _get_user_group_code(request.user)
     viewer_region_id = getattr(request.user, "region_id", None)
 
-    # 1) بلاغات تطبيق ECR
     ecr_qs = (
         MobileReport.objects.select_related("region", "medical_condition", "created_by")
         .prefetch_related("services")
@@ -355,7 +377,6 @@ def reports_cad_ecr(request):
             }
         )
 
-    # 2) المستجيبين Online
     cutoff = _online_cutoff()
     resp_qs = (
         ResponderLocation.objects.select_related("responder", "responder__region", "responder__user_group")
@@ -386,10 +407,8 @@ def reports_cad_ecr(request):
             }
         )
 
-    # 3) كتلوج أنواع CAD لنموذج التعديل داخل المودال
     case_types_json = list(CaseType.objects.filter(is_active=True).values("id", "name"))
 
-    # مركز الخريطة
     center_lat, center_lng, zoom = _get_user_map_center(request.user)
 
     restrict_map = (viewer_group not in PRIVILEGED_GROUP_CODES) and bool(viewer_region_id)
@@ -414,7 +433,6 @@ def cad_reports_reports_page(request):
     context = {
         "google_maps_api_key": getattr(settings, "GOOGLE_MAPS_API_KEY", ""),
         "case_types": CaseType.objects.filter(is_active=True).order_by("name"),
-        # ✅ NEW: عشان dashboard/reports_cad.html يعتمد على case_types_json في json_script
         "case_types_json": list(CaseType.objects.filter(is_active=True).values("id", "name")),
     }
     return render(request, "dashboard/reports_cad.html", context)
@@ -427,11 +445,7 @@ def cad_reports_reports_page(request):
 
 
 def _apply_viewer_region_filter(qs, user, region_field: str = "region_id"):
-    """Apply region restriction for non-privileged users.
-
-    - Privileged groups (SYSADMIN/NEMSCC): see all.
-    - Others: if user has region -> filter to it, else empty.
-    """
+    """Apply region restriction for non-privileged users."""
     viewer_group = _get_user_group_code(user)
     if viewer_group in PRIVILEGED_GROUP_CODES:
         return qs
@@ -446,7 +460,6 @@ def _apply_viewer_region_filter(qs, user, region_field: str = "region_id"):
 @permission_required("cad_reports.can_view_cad_report", raise_exception=True)
 @require_GET
 def main_dashboard_page(request):
-    """لوحة التحكم الرئيسية (مؤشرات + رسوم) مربوطة ببيانات فعلية عبر API."""
     return render(request, "dashboard/main_dashboard.html")
 
 
@@ -454,27 +467,20 @@ def main_dashboard_page(request):
 @permission_required("cad_reports.can_view_cad_report", raise_exception=True)
 @require_GET
 def api_dashboard_summary(request):
-    """API: KPIs + chart datasets for the main dashboard."""
     now = timezone.now()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
-    # Windowing
     days_7_start = today_start - timedelta(days=6)
     days_30_start = today_start - timedelta(days=29)
 
-    # Base querysets (region-aware)
     cad_qs = _apply_viewer_region_filter(CADReport.objects.all(), request.user, "region_id")
     ecr_qs = _apply_viewer_region_filter(MobileReport.objects.all(), request.user, "region_id")
 
-    # --------------------------
-    # KPIs
-    # --------------------------
     cad_today = cad_qs.filter(created_at__gte=today_start).count()
     ecr_today = ecr_qs.filter(created_at__gte=today_start).count()
     active_cad = cad_qs.filter(is_closed=False).count()
     closed_30d = cad_qs.filter(is_closed=True, closed_at__gte=days_30_start).count()
 
-    # Responders online
     cutoff = _online_cutoff()
     online_qs = (
         ResponderLocation.objects.select_related("responder", "responder__region", "responder__user_group")
@@ -485,9 +491,6 @@ def api_dashboard_summary(request):
     online_qs = _apply_viewer_region_filter(online_qs, request.user, "responder__region_id")
     responders_online = online_qs.count()
 
-    # --------------------------
-    # Chart 1: CAD reports last 7 days (line)
-    # --------------------------
     cad_7d_rows = (
         cad_qs.filter(created_at__gte=days_7_start)
         .annotate(d=TruncDate("created_at"))
@@ -503,9 +506,6 @@ def api_dashboard_summary(request):
         labels_7d.append(day.strftime("%Y-%m-%d"))
         data_7d.append(int(cad_7d_map.get(day, 0)))
 
-    # --------------------------
-    # Chart 2: CAD case types distribution last 30 days (doughnut)
-    # --------------------------
     types_rows = (
         cad_qs.filter(created_at__gte=days_30_start)
         .values("case_type__name")
@@ -515,9 +515,6 @@ def api_dashboard_summary(request):
     types_labels = [r["case_type__name"] or "-" for r in types_rows[:12]]
     types_data = [int(r["c"]) for r in types_rows[:12]]
 
-    # --------------------------
-    # Chart 3: CAD by region last 30 days (bar)
-    # --------------------------
     region_rows = (
         cad_qs.filter(created_at__gte=days_30_start)
         .values("region__name_ar", "region__name_en")
@@ -565,7 +562,6 @@ def reports_cad_dashboard(request):
 
     case_types_json = list(CaseType.objects.filter(is_active=True).values("id", "name"))
 
-    # ✅ NEW: region filter يظهر فقط للـ PRIVILEGED بدون Region
     viewer_group = _get_user_group_code(request.user)
     viewer_region_id = getattr(request.user, "region_id", None)
     show_region_filter = (viewer_group in PRIVILEGED_GROUP_CODES) and (not viewer_region_id)
@@ -590,7 +586,6 @@ def reports_cad_dashboard(request):
             "map_center_lng": center_lng,
             "map_zoom": zoom,
             "case_types_json": case_types_json,
-            # ✅ NEW:
             "show_region_filter": show_region_filter,
             "regions_json": regions_json,
         },
@@ -618,7 +613,7 @@ def reports_ecr_dashboard(request):
         if not viewer_region_id:
             qs = qs.none()
         else:
-            qs = qs.filter(region_id=viewer_region_id)
+            qs = qs.filter(Q(region_id=viewer_region_id) | Q(region__isnull=True))
 
     cases_json = []
     for r in qs[:800]:
@@ -650,8 +645,6 @@ def reports_ecr_dashboard(request):
             }
         )
 
-    # conditions dropdown (بدون افتراض وجود Catalog Model)
-    # نجمع الحالات المرضية الموجودة فعلاً في البيانات
     cond_names = (
         qs.exclude(medical_condition__isnull=True)
         .values_list("medical_condition__name", flat=True)
@@ -679,26 +672,37 @@ def reports_ecr_dashboard(request):
 # Dashboard JSON (CAD)
 # ==========================
 
-@login_required
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.authentication import SessionAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
+
+
+@api_view(["GET"])
+@authentication_classes([JWTAuthentication, SessionAuthentication])
+@permission_classes([IsAuthenticated])
 def assigned_reports_json(request):
-    """API لبلاغات CAD"""
     viewer_group = _get_user_group_code(request.user)
     viewer_region_id = getattr(request.user, "region_id", None)
 
     qs = CADReport.objects.select_related("case_type", "region", "assigned_responder").order_by("-created_at")
-    if viewer_group not in PRIVILEGED_GROUP_CODES:
-        if not viewer_region_id:
-            qs = qs.none()
-        else:
-            qs = qs.filter(region_id=viewer_region_id)
 
-    # ✅ NEW: دعم فلتر المنطقة من القالب (فقط إذا المستخدم privileged بدون region)
-    region_filter = (request.GET.get("region_id") or "").strip()
-    if region_filter and (viewer_group in PRIVILEGED_GROUP_CODES) and (not viewer_region_id):
-        try:
-            qs = qs.filter(region_id=int(region_filter))
-        except Exception:
-            pass
+    if viewer_group not in PRIVILEGED_GROUP_CODES:
+        qs = qs.filter(assigned_responder_id=request.user.id)
+        if viewer_region_id:
+            qs = qs.filter(Q(region_id=viewer_region_id) | Q(region__isnull=True))
+    else:
+        if viewer_region_id:
+            qs = qs.filter(Q(region_id=viewer_region_id) | Q(region__isnull=True))
+
+        region_filter = (request.GET.get("region_id") or "").strip()
+        if region_filter and (not viewer_region_id):
+            try:
+                qs = qs.filter(region_id=int(region_filter))
+            except Exception:
+                pass
 
     data = []
     for r in qs[:800]:
@@ -719,7 +723,7 @@ def assigned_reports_json(request):
                 "details": r.details or "",
                 "latitude": float(r.latitude) if r.latitude is not None else None,
                 "longitude": float(r.longitude) if r.longitude is not None else None,
-                "region_id": r.region_id,  # ✅ NEW (مهم لفلتر المنطقة)
+                "region_id": r.region_id,
                 "region": getattr(getattr(r, "region", None), "name_ar", None)
                 or getattr(getattr(r, "region", None), "name", None)
                 or "-",
@@ -737,7 +741,7 @@ def assigned_reports_json(request):
             }
         )
 
-    return JsonResponse(data, safe=False)
+    return Response(data, status=status.HTTP_200_OK)
 
 
 # ==========================
@@ -748,6 +752,12 @@ def assigned_reports_json(request):
 @permission_required("cad_reports.can_create_cad_report", raise_exception=True)
 @require_POST
 def create_report(request: HttpRequest) -> JsonResponse:
+    """
+    ✅ تعديل مطلوب حسب طلبك:
+    - إنشاء البلاغ + الترحيل (dispatch) يكونون عملية واحدة داخل transaction.
+    - إذا فشل الترحيل => نلغي إنشاء البلاغ (rollback) ونرجع السبب للمستخدم.
+    - نعرض السبب الحقيقي دائمًا (validation_error / permission / ...).
+    """
     if request.content_type and "application/json" in request.content_type:
         data = _json_body(request)
     else:
@@ -757,9 +767,9 @@ def create_report(request: HttpRequest) -> JsonResponse:
     case_type_id = data.get("case_type_id") or data.get("case_type")
 
     if not cad_number:
-        return JsonResponse({"ok": False, "error": "cad_number_required"}, status=400)
+        return JsonResponse({"ok": False, "error": "cad_number_required", "detail": "رقم البلاغ مطلوب."}, status=400)
     if not case_type_id:
-        return JsonResponse({"ok": False, "error": "case_type_required"}, status=400)
+        return JsonResponse({"ok": False, "error": "case_type_required", "detail": "نوع الحالة مطلوب."}, status=400)
 
     case_type = get_object_or_404(CaseType, pk=case_type_id, is_active=True)
 
@@ -771,29 +781,26 @@ def create_report(request: HttpRequest) -> JsonResponse:
     is_conscious = _bool_from_any(data.get("is_conscious", data.get("awareness")), default=True)
     location_text = str(data.get("location_text") or data.get("location_description") or "").strip()
 
-    # ✅ NEW: تحديد المنطقة بشكل آمن:
-    # - SYSADMIN/NEMSCC يقدر يرسل region من الفورم/JSON
-    # - غيرهم: نأخذ منطقة المستخدم فقط (ولا نثق بمدخلات العميل)
     viewer_group = _get_user_group_code(request.user)
     chosen_region_id = None
 
     if viewer_group in PRIVILEGED_GROUP_CODES:
         chosen_region_id = (data.get("region") or data.get("region_id") or "").strip()
         if not chosen_region_id:
-            return JsonResponse({"ok": False, "error": "region_required"}, status=400)
+            return JsonResponse({"ok": False, "error": "region_required", "detail": "يجب تحديد المنطقة."}, status=400)
         try:
             chosen_region_id_int = int(chosen_region_id)
         except Exception:
-            return JsonResponse({"ok": False, "error": "region_invalid"}, status=400)
+            return JsonResponse({"ok": False, "error": "region_invalid", "detail": "معرّف المنطقة غير صحيح."}, status=400)
 
         region_obj = get_object_or_404(Region, id=chosen_region_id_int)
         chosen_region_id = region_obj.id
     else:
         chosen_region_id = getattr(request.user, "region_id", None)
 
-    # ✅ NEW: نفس تنظيف الإحداثيات المستخدم في update (بدون منع المستخدم)
     def _clean_decimal_field_for_create(value, field_name: str):
         from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+
         if value in (None, "", "null"):
             return None
         try:
@@ -808,9 +815,9 @@ def create_report(request: HttpRequest) -> JsonResponse:
         quant = Decimal("1").scaleb(-dp)
         return raw.quantize(quant, rounding=ROUND_HALF_UP)
 
-    # ✅✅ FIX ONLY: ربط المستجيب المختار عند إنشاء البلاغ
+    # ✅ المستجيب المختار
     responder_obj = None
-    responder_id_raw = (data.get("responder_id") or "").strip()
+    responder_id_raw = str(data.get("responder_id") or "").strip()
     if responder_id_raw:
         try:
             responder_id_int = int(responder_id_raw)
@@ -818,6 +825,16 @@ def create_report(request: HttpRequest) -> JsonResponse:
         except Exception:
             responder_obj = None
 
+    # ✅ هل نلزم الترحيل؟
+    must_dispatch = _bool_from_any(data.get("must_dispatch"), default=True)
+
+    if must_dispatch and not responder_obj:
+        return JsonResponse(
+            {"ok": False, "error": "responder_required", "detail": "لا يمكن إنشاء البلاغ بدون اختيار مستجيب للترحيل."},
+            status=400,
+        )
+
+    # ✅ بناء البلاغ
     r = CADReport(
         cad_number=cad_number,
         injured_count=int(injured_count) if str(injured_count).strip() else 0,
@@ -830,16 +847,65 @@ def create_report(request: HttpRequest) -> JsonResponse:
         longitude=_clean_decimal_field_for_create(lng, "longitude"),
         location_text=location_text,
         created_by=request.user,
-        region_id=chosen_region_id,  # ✅ UPDATED
-        assigned_responder=responder_obj,  # ✅✅ FIX HERE (يحفظ المستجيب المختار)
+        region_id=chosen_region_id,
+        assigned_responder=responder_obj,
     )
 
+    # ✅ إنشاء + ترحيل داخل Transaction واحد
     try:
-        r.full_clean()
-        r.save()
-    except Exception as e:
+        with transaction.atomic():
+            # 1) إنشاء
+            r.full_clean()
+            r.save()
+
+            # 2) ترحيل (إجباري إذا must_dispatch)
+            if responder_obj and must_dispatch:
+                if not request.user.has_perm("cad_reports.can_dispatch_cad_report"):
+                    # rollback
+                    raise PermissionError("ليس لديك صلاحية ترحيل البلاغ.")
+
+                when = _parse_when_param(request)
+                when = _safe_when_not_before_created(r, when)
+                force = True
+                source = "web_create"
+
+                # mark_dispatched قد يرمي ValidationError إذا when قبل created_at
+                r.mark_dispatched(when=when, by=request.user, source=source, force=force)
+
+    except PermissionError as e:
+        logger.warning("create_report blocked due to permission: %s", str(e))
+        return JsonResponse({"ok": False, "error": "permission_denied", "detail": str(e)}, status=403)
+
+    except ValidationError as e:
+        # ✅ نرجع أخطاء الفاليديشن بشكل مفهوم
         logger.exception("create_report validation error")
-        return JsonResponse({"ok": False, "error": "validation_error", "details": str(e)}, status=400)
+        return JsonResponse({"ok": False, "error": "validation_error", "detail": e.message_dict}, status=400)
+
+    except Exception as e:
+        logger.exception("create_report failed")
+        return JsonResponse({"ok": False, "error": "create_failed", "detail": str(e)}, status=400)
+
+    # ✅ FCM بعد نجاح الـ commit فقط (عشان ما نرسل لو صار rollback)
+    def _send_fcm_on_commit(report_id: int, assigned_user_id: int | None, cad_no: str):
+        try:
+            if not assigned_user_id:
+                return
+            tokens = list(
+                UserDeviceToken.objects.filter(user_id=assigned_user_id, is_active=True)
+                .values_list("token", flat=True)
+            )
+            if not tokens:
+                return
+            send_fcm_to_tokens(
+                tokens,
+                title="بلاغ CAD جديد",
+                body=f"رقم البلاغ: {cad_no}",
+                data={"cad_number": cad_no, "status": "مفتوح", "report_id": report_id},
+            )
+        except Exception:
+            logger.exception("FCM push failed (non-blocking)")
+
+    transaction.on_commit(lambda: _send_fcm_on_commit(r.id, getattr(r, "assigned_responder_id", None), r.cad_number))
 
     return JsonResponse({"ok": True, "report": _report_to_dict(r)}, status=201)
 
@@ -868,15 +934,25 @@ def list_reports(request: HttpRequest) -> JsonResponse:
 # ==========================
 
 @login_required
-@permission_required("cad_reports.can_dispatch_cad_report", raise_exception=True)
 @require_POST
 def dispatch_report(request: HttpRequest, report_id: int) -> JsonResponse:
+    """Dispatch/assign report to a responder (Web dashboard). Return JSON always."""
+    if not request.user.has_perm("cad_reports.can_dispatch_cad_report"):
+        return JsonResponse(
+            {"ok": False, "error": "permission_denied", "detail": "ليس لديك صلاحية ترحيل البلاغ."},
+            status=403,
+        )
+
     r = get_object_or_404(CADReport, pk=report_id)
     try:
         when = _parse_when_param(request)
+        when = _safe_when_not_before_created(r, when)
         force = _bool_param(request, "force")
         source = (request.POST.get("source") or "web_manual").strip() or "web_manual"
         r.mark_dispatched(when=when, by=request.user, source=source, force=force)
+    except ValidationError as e:
+        logger.exception("dispatch_report validation error")
+        return JsonResponse({"ok": False, "error": "validation_error", "detail": e.message_dict}, status=400)
     except Exception as e:
         logger.exception("dispatch_report error")
         return JsonResponse({"ok": False, "error": "dispatch_failed", "detail": str(e)}, status=400)
@@ -892,6 +968,9 @@ def accept_report(request: HttpRequest, report_id: int) -> JsonResponse:
         when = _parse_when_param(request)
         force = _bool_param(request, "force")
         r.mark_accepted(when=when, by=request.user, source="web_manual", force=force)
+    except ValidationError as e:
+        logger.exception("accept_report validation error")
+        return JsonResponse({"ok": False, "error": "validation_error", "detail": e.message_dict}, status=400)
     except Exception as e:
         logger.exception("accept_report error")
         return JsonResponse({"ok": False, "error": "accept_failed", "detail": str(e)}, status=400)
@@ -907,6 +986,9 @@ def arrive_report(request: HttpRequest, report_id: int) -> JsonResponse:
         when = _parse_when_param(request)
         force = _bool_param(request, "force")
         r.mark_arrived(when=when, by=request.user, source="web_manual", force=force)
+    except ValidationError as e:
+        logger.exception("arrive_report validation error")
+        return JsonResponse({"ok": False, "error": "validation_error", "detail": e.message_dict}, status=400)
     except Exception as e:
         logger.exception("arrive_report error")
         return JsonResponse({"ok": False, "error": "arrive_failed", "detail": str(e)}, status=400)
@@ -922,6 +1004,9 @@ def close_report(request: HttpRequest, report_id: int) -> JsonResponse:
         when = _parse_when_param(request)
         force = _bool_param(request, "force")
         r.mark_closed(when=when, by=request.user, source="web_manual", force=force)
+    except ValidationError as e:
+        logger.exception("close_report validation error")
+        return JsonResponse({"ok": False, "error": "validation_error", "detail": e.message_dict}, status=400)
     except Exception as e:
         logger.exception("close_report error")
         return JsonResponse({"ok": False, "error": "close_failed", "detail": str(e)}, status=400)
@@ -1013,6 +1098,7 @@ def api_assigned_close(request: HttpRequest, cad_number: str) -> JsonResponse:
 
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
+
 @login_required
 @permission_required("cad_reports.can_dispatch_cad_report", raise_exception=True)
 @require_http_methods(["PATCH", "PUT"])
@@ -1027,7 +1113,7 @@ def api_assigned_update(request: HttpRequest, cad_number: str) -> JsonResponse:
             {
                 "ok": False,
                 "error": "times_readonly",
-                "detail": "لا يمكن تعديل الأوقات من نموذج التعديل — استخدم الأزرار فقط."
+                "detail": "لا يمكن تعديل الأوقات من نموذج التعديل — استخدم الأزرار فقط.",
             },
             status=400,
         )
@@ -1044,10 +1130,6 @@ def api_assigned_update(request: HttpRequest, cad_number: str) -> JsonResponse:
         return str(v or "").strip()
 
     def _clean_decimal_field(value, field_name: str):
-        """
-        يقبل أرقام طويلة من Google Maps ثم يضبطها تلقائياً حسب decimal_places
-        الموجودة في المودل، بدون ما يسبب ValidationError.
-        """
         if value in (None, "", "null"):
             return None
         try:
@@ -1055,22 +1137,17 @@ def api_assigned_update(request: HttpRequest, cad_number: str) -> JsonResponse:
         except (InvalidOperation, ValueError, TypeError):
             return None
 
-        # اقرأ إعدادات الحقل من المودل (سواء 6 أو 12 أو غيره)
         try:
             f = r._meta.get_field(field_name)
             dp = int(getattr(f, "decimal_places", 6) or 6)
         except Exception:
             dp = 6
 
-        quant = Decimal("1").scaleb(-dp)  # مثل 0.000001 إذا dp=6
+        quant = Decimal("1").scaleb(-dp)
         return raw.quantize(quant, rounding=ROUND_HALF_UP)
 
-    # منع تعديل البلاغ المغلق (اختياري لكنه منطقي)
     if bool(getattr(r, "is_closed", False)):
-        return JsonResponse(
-            {"ok": False, "error": "closed_readonly", "detail": "لا يمكن تعديل بلاغ مغلق."},
-            status=400,
-        )
+        return JsonResponse({"ok": False, "error": "closed_readonly", "detail": "لا يمكن تعديل بلاغ مغلق."}, status=400)
 
     if "injured_count" in data:
         v = _clean_int(data.get("injured_count"))
@@ -1112,13 +1189,10 @@ def api_assigned_update(request: HttpRequest, cad_number: str) -> JsonResponse:
     return JsonResponse({"ok": True, "report": _report_to_dict(r)})
 
 
-from django.views.decorators.http import require_GET
-
 @login_required
 @permission_required("cad_reports.can_view_cad_report", raise_exception=True)
 @require_GET
 def responders_online_json(request: HttpRequest) -> JsonResponse:
-    """API للمستجيبين المتصلين (آخر ظهور خلال 10 دقائق)."""
     viewer_group = _get_user_group_code(request.user)
     viewer_region_id = getattr(request.user, "region_id", None)
 
@@ -1131,7 +1205,6 @@ def responders_online_json(request: HttpRequest) -> JsonResponse:
         .order_by("-last_seen")
     )
 
-    # ✅ NEW: افتراضيًا نعرض ECRMOBIL لأن هذا المطلوب في شاشة المستجيبين
     qs = qs.filter(responder__user_group__code="ECRMOBIL")
 
     if viewer_group not in PRIVILEGED_GROUP_CODES:
@@ -1140,7 +1213,6 @@ def responders_online_json(request: HttpRequest) -> JsonResponse:
         else:
             qs = qs.filter(responder__region_id=viewer_region_id)
 
-    # ✅ NEW: دعم فلتر المنطقة من القالب (للـ privileged بدون region)
     region_filter = (request.GET.get("region_id") or "").strip()
     if region_filter and (viewer_group in PRIVILEGED_GROUP_CODES) and (not viewer_region_id):
         try:
@@ -1166,27 +1238,16 @@ def responders_online_json(request: HttpRequest) -> JsonResponse:
             }
         )
 
-    # ✅ NEW: صيغة ثابتة للقالب (يدعم array أو results)
     return JsonResponse({"ok": True, "count": len(data), "results": data})
 
 
 # ==========================
-# ✅ NEW: AI Hotspots Page
+# ✅ NEW: AI Hotspots Page (FIX: تعريف واحد فقط)
 # ==========================
-@login_required
-def ai_hotspots_page(request):
-    return render(request, "live_map_view/ai_hotspots_map.html", {
-    "google_maps_api_key": getattr(settings, "GOOGLE_MAPS_API_KEY", ""),
-    })
-
-
-from django.contrib.auth.decorators import login_required
 
 @login_required
 def ai_hotspots_page(request):
     user = request.user
-
-    # ✅ إذا تستخدم Django Groups (الموجودة في admin > Groups)
     allowed = user.groups.filter(name__in=["NEMSCC", "SYSADMIN"]).exists()
 
     return render(
@@ -1194,6 +1255,6 @@ def ai_hotspots_page(request):
         "live_map_view/ai_hotspots_map.html",
         {
             "google_maps_api_key": getattr(settings, "GOOGLE_MAPS_API_KEY", ""),
-            "can_see_cad_dashboard_link": allowed,  # ✅ هذا اللي بنستخدمه في السايدبار
+            "can_see_cad_dashboard_link": allowed,
         },
     )

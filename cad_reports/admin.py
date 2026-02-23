@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils import timezone
 
-from .models import CADReport, CaseType
+from .models import CADReport, CaseType, UserDeviceToken
 from .forms import CADReportForm
 
 
@@ -65,3 +65,12 @@ class CADReportAdmin(admin.ModelAdmin):
             obj.closed_source = "web_manual"
 
         super().save_model(request, obj, form, change)
+
+
+
+@admin.register(UserDeviceToken)
+class UserDeviceTokenAdmin(admin.ModelAdmin):
+    list_display = ("user", "platform", "token", "created_at")
+    search_fields = ("user__username", "user__email", "token", "platform")
+    list_filter = ("platform", "created_at")
+    ordering = ("-created_at",)

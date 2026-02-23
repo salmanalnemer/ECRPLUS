@@ -214,9 +214,11 @@
             <label>عدد المصابين</label>
             <input name="injured_count" type="number" min="0" required value="1">
           </div>
-        </div>
-
-        <div class="field-group">
+          <div class="field-group">
+            <label>العمر</label>
+            <input name="age" type="number" min="0" required value="">
+          </div>
+          <div class="field-group">
           <label>المنطقة</label>
 
           {% if user_group_code in privileged_group_codes %}
@@ -241,6 +243,7 @@
                   style="color:#64748b; border-color:#e2e8f0;">
           {% endif %}
 
+        </div>
         </div>
 
         <div class="grid-2">
@@ -527,6 +530,33 @@
 
     const fd = new FormData(ev.target);
 
+    // helper: safely parse JSON, otherwise return null + text snippet
+    async function safeReadJson(resp){
+      const ct = (resp.headers.get("content-type") || "").toLowerCase();
+      if(ct.includes("application/json")){
+        try { return { json: await resp.json(), text: "" }; } catch(_){ return { json: null, text: "" }; }
+      }
+      // non-json (HTML/empty)
+      try {
+        const t = await resp.text();
+        return { json: null, text: (t || "").slice(0, 500) };
+      } catch(_) {
+        return { json: null, text: "" };
+      }
+    }
+
+    // Build dispatch "when" from input time (cad_received_time) using today's date
+    function buildWhenIsoFromTimeInput(){
+      const t = (document.getElementById("cad_received_time")?.value || "").trim();
+      if(!t) return "";
+      const now = new Date();
+      const yyyy = now.getFullYear().toString().padStart(4,"0");
+      const mm = (now.getMonth()+1).toString().padStart(2,"0");
+      const dd = now.getDate().toString().padStart(2,"0");
+      // t is "HH:MM" or "HH:MM:SS"
+      return `${yyyy}-${mm}-${dd}T${t}`;
+    }
+
     try {
       const resp = await fetch("/cad/create/", {
         method: "POST",
@@ -534,9 +564,13 @@
         headers: { "X-CSRFToken": csrfToken() }
       });
 
-      const data = await resp.json();
+      const r1 = await safeReadJson(resp);
+      const data = r1.json;
+
       if (!(resp.ok && data && data.ok)) {
-        alert((data && (data.details || data.error)) ? (data.details || data.error) : "حدث خطأ أثناء إنشاء البلاغ");
+        const msg = (data && (data.details || data.detail || data.error)) ? (data.details || data.detail || data.error)
+                   : (r1.text ? "فشل إنشاء البلاغ: " + r1.text : "حدث خطأ أثناء إنشاء البلاغ");
+        alert(msg);
         return;
       }
 
@@ -545,19 +579,29 @@
       const fd2 = new FormData();
       fd2.append("responder_id", responderId);
 
+      // ✅ send when so dispatched_at gets saved deterministically
+      const whenIso = buildWhenIsoFromTimeInput();
+      if(whenIso) fd2.append("when", whenIso);
+
       const resp2 = await fetch(`/cad/${reportId}/dispatch/`, {
         method: "POST",
         body: fd2,
         headers: { "X-CSRFToken": csrfToken() }
       });
 
-      const data2 = await resp2.json();
+      const r2 = await safeReadJson(resp2);
+      const data2 = r2.json;
+
       if (resp2.ok && data2 && data2.ok) {
         alert("تم إنشاء البلاغ وترحيله للمستجيب ✅");
       } else {
-        alert((data2 && (data2.details || data2.error)) ? (data2.details || data2.error) : "تعذر ترحيل البلاغ");
+        // Permission denied or other server error should be shown clearly
+        const msg2 = (data2 && (data2.detail || data2.details || data2.error)) ? (data2.detail || data2.details || data2.error)
+                    : (r2.text ? "تم إنشاء البلاغ ✅ لكن تعذر الترحيل: " + r2.text : "تم إنشاء البلاغ ✅ لكن تعذر الترحيل.");
+        alert(msg2);
       }
     } catch (e) {
+      // real network error
       alert("فشل الاتصال بالخادم");
     }
   }

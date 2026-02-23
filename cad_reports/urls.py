@@ -5,6 +5,26 @@ from django.urls import path
 from . import views
 from .views_ai import ai_hotspots_page, cad_api_ai_hotspots, cad_api_case_types
 
+"""cad_reports URLs.
+
+ملاحظة مهمة:
+- مسارات dashboard التي تعتمد على cad_number يجب أن تعمل عبر جلسة الويب (Session) + CSRF
+  لأن لوحة التحكم تستخدم تسجيل دخول Django العادي، وليس JWT.
+- مسارات الموبايل تبقى في views_mobile_api وتستخدم JWT.
+
+هذا الملف كان يربط مسارات dashboard (api/assigned/...) إلى نقاط JWT بالخطأ،
+مما تسبب برسائل مثل: "لم يتم تزويد بيانات الدخول" أو HTTP 403.
+"""
+
+from .views_mobile_api import (
+    cad_accept,
+    cad_arrive,
+    cad_close,
+    cad_reject,
+    cad_assigned_reports,
+    register_device_token,
+)
+
 app_name = "cad_reports"
 
 urlpatterns = [
@@ -73,8 +93,26 @@ urlpatterns = [
     # ==========================
     # Dashboard API (CAD number)
     # ==========================
+    # ✅ هذه هي endpoints الخاصة بلوحة الويب (Session-based)
     path("api/assigned/<str:cad_number>/accept/", views.api_assigned_accept, name="api_assigned_accept"),
     path("api/assigned/<str:cad_number>/arrive/", views.api_assigned_arrive, name="api_assigned_arrive"),
     path("api/assigned/<str:cad_number>/close/", views.api_assigned_close, name="api_assigned_close"),
+    # reject لا يوجد له نسخة web حالياً؛ لو أضفت زر رفض في الويب لاحقاً أضف view هنا.
+    path("api/assigned/<str:cad_number>/reject/", cad_reject, name="api_assigned_reject"),
     path("api/assigned/<str:cad_number>/update/", views.api_assigned_update, name="api_assigned_update"),
+
+    # ==========================
+    # Device token (FCM)
+    # ==========================
+    path("api/device-token/", register_device_token, name="api_device_token"),
+
+    # ==========================
+    # API mobile/app (CAD number)
+    # ==========================
+    path("cad/api/assigned/<str:cad_number>/accept/", cad_accept, name="cad_accept"),
+    path("cad/api/assigned/<str:cad_number>/arrive/", cad_arrive, name="cad_arrive"),
+    path("cad/api/assigned/<str:cad_number>/close/", cad_close, name="cad_close"),
+    path("cad/api/assigned-reports/", cad_assigned_reports, name="cad_assigned_reports"),
+    path("cad/api/device-token/", register_device_token, name="cad_device_token"),
+    path("cad/api/assigned/<str:cad_number>/reject/", cad_reject, name="cad_reject"),
 ]

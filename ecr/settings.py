@@ -17,9 +17,11 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-change-this-in-prod
 
 DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() == "true"
 
-ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "").split() if not DEBUG else []
-
-
+ALLOWED_HOSTS = [
+    "127.0.0.1",
+    "localhost",
+    "192.168.8.43",
+]
 # -----------------------------------------------------------------------------
 # التطبيقات المثبتة
 # -----------------------------------------------------------------------------
