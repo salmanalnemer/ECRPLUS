@@ -416,6 +416,12 @@
             <th class="nowrap">العمر</th>
             <th class="nowrap">الجنسية</th>
             <th class="nowrap">الجنس</th>
+            <th class="nowrap">درجة الحرارة</th>
+            <th class="nowrap">معدل النبض</th>
+            <th class="nowrap">ضغط الدم</th>
+            <th class="nowrap">معدل التنفس</th>
+            <th class="nowrap">نسبة السكر</th>
+            <th>ملاحظات</th>
             <th>تفاصيل الحالة</th>
             <th>الخدمات</th>
             <th class="nowrap">طلب إسعاف؟</th>
@@ -461,6 +467,13 @@
             <td class="nowrap">{{ r.age|default_if_none:"—" }}</td>
             <td class="nowrap">{{ r.get_nationality_display|default_if_none:"—" }}</td>
             <td class="nowrap">{{ r.get_gender_display|default_if_none:"—" }}</td>
+
+            <td class="nowrap">{{ r.temperature|default_if_none:"—" }}</td>
+            <td class="nowrap">{{ r.pulse_rate|default_if_none:"—" }}</td>
+            <td class="nowrap">{{ r.blood_pressure|default_if_none:"—" }}</td>
+            <td class="nowrap">{{ r.respiratory_rate|default_if_none:"—" }}</td>
+            <td class="nowrap">{{ r.blood_sugar|default_if_none:"—" }}</td>
+            <td>{{ r.notes|default_if_none:"—" }}</td>
 
             <td>{{ r.medical_condition.name|default_if_none:"—" }}</td>
 
@@ -521,6 +534,12 @@
                         data-age="{{ r.age|default_if_none:"—"|escapejs }}"
                         data-nat="{{ r.get_nationality_display|default_if_none:"—"|escapejs }}"
                         data-gender="{{ r.get_gender_display|default_if_none:"—"|escapejs }}"
+                        data-temp="{{ r.temperature|default_if_none:"—"|escapejs }}"
+                        data-pulse="{{ r.pulse_rate|default_if_none:"—"|escapejs }}"
+                        data-bp="{{ r.blood_pressure|default_if_none:"—"|escapejs }}"
+                        data-resp="{{ r.respiratory_rate|default_if_none:"—"|escapejs }}"
+                        data-sugar="{{ r.blood_sugar|default_if_none:"—"|escapejs }}"
+                        data-notes="{{ r.notes|default_if_none:"—"|escapejs }}"
                         data-type="{{ r.medical_condition.name|default_if_none:"—"|escapejs }}"
                         data-ambulance="{{ r.called_ambulance|yesno:"نعم,لا" }}"
                         data-ambulanceby="{{ r.get_ambulance_called_by_display|default_if_none:"—"|escapejs }}"
@@ -536,7 +555,7 @@
 
           {% empty %}
           <tr>
-            <td colspan="19" class="muted" style="padding:18px;text-align:center;">
+            <td colspan="24" class="muted" style="padding:18px;text-align:center;">
               لا توجد بلاغات للعرض حالياً.
             </td>
           </tr>
@@ -571,6 +590,12 @@
         <div class="kv"><div class="k">الجوال</div><div class="v" id="kvPhone">—</div></div>
         <div class="kv"><div class="k">العمر</div><div class="v" id="kvAge">—</div></div>
         <div class="kv"><div class="k">الجنسية / الجنس</div><div class="v" id="kvNG">—</div></div>
+        <div class="kv"><div class="k">درجة الحرارة</div><div class="v" id="kvTemp">—</div></div>
+        <div class="kv"><div class="k">معدل النبض</div><div class="v" id="kvPulse">—</div></div>
+        <div class="kv"><div class="k">ضغط الدم</div><div class="v" id="kvBP">—</div></div>
+        <div class="kv"><div class="k">معدل التنفس</div><div class="v" id="kvResp">—</div></div>
+        <div class="kv"><div class="k">نسبة السكر</div><div class="v" id="kvSugar">—</div></div>
+        <div class="kv"><div class="k">ملاحظات</div><div class="v" id="kvNotes">—</div></div>
         <div class="kv"><div class="k">تفاصيل الحالة</div><div class="v" id="kvType">—</div></div>
         <div class="note">
           <div class="k"><i class="fa-regular fa-note-sticky"></i> نص توثيق جاهز (مشاركة 997)</div>
@@ -645,6 +670,12 @@
       d.age || '—',
       d.nat || '—',
       d.gender || '—',
+      d.temp || '—',
+      d.pulse || '—',
+      d.bp || '—',
+      d.resp || '—',
+      d.sugar || '—',
+      d.notes || '—',
       d.type || '—',
       d.ambulance || '—',
       d.ambulanceby || '—',
@@ -653,7 +684,7 @@
     );
   }
 
-  function openMapModal(id, lat, lng, region, patient, nid, phone, age, nat, gender, type, ambulance, ambulanceBy, send997, createdAt){
+  function openMapModal(id, lat, lng, region, patient, nid, phone, age, nat, gender, temp, pulse, bp, resp, sugar, notes, type, ambulance, ambulanceBy, send997, createdAt){
     document.getElementById('kvNo').textContent = `#${id || '—'}`;
     document.getElementById('kvRegion').textContent = region || '—';
     document.getElementById('kvPatient').textContent = patient || '—';
@@ -661,6 +692,12 @@
     document.getElementById('kvPhone').textContent = phone || '—';
     document.getElementById('kvAge').textContent = age || '—';
     document.getElementById('kvNG').textContent = `${nat || '—'} / ${gender || '—'}`;
+    document.getElementById('kvTemp').textContent = temp || '—';
+    document.getElementById('kvPulse').textContent = pulse || '—';
+    document.getElementById('kvBP').textContent = bp || '—';
+    document.getElementById('kvResp').textContent = resp || '—';
+    document.getElementById('kvSugar').textContent = sugar || '—';
+    document.getElementById('kvNotes').textContent = notes || '—';
     document.getElementById('kvType').textContent = type || '—';
 
     document.getElementById('mTitle').textContent = `موقع البلاغ #${id || '—'}`;
@@ -674,6 +711,12 @@
 العمر: ${age || '-'}
 الجنسية: ${nat || '-'}
 الجنس: ${gender || '-'}
+درجة الحرارة: ${temp || '-'}
+معدل النبض: ${pulse || '-'}
+ضغط الدم: ${bp || '-'}
+معدل التنفس: ${resp || '-'}
+نسبة السكر في الدم: ${sugar || '-'}
+ملاحظات: ${notes || '-'}
 تفاصيل الحالة: ${type || '-'}
 هل تم طلب إسعاف؟: ${ambulance || '-'}
 من طلب الإسعاف: ${ambulanceBy || '-'}

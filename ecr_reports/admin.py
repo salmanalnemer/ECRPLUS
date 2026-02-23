@@ -28,6 +28,11 @@ class MobileReportAdmin(admin.ModelAdmin):
         "patient_name",
         "patient_phone",
         "region",
+        "temperature",
+        "pulse_rate",
+        "blood_pressure",
+        "respiratory_rate",
+        "blood_sugar",
         "called_ambulance",
         "send_to_997",
         "created_at",
@@ -37,5 +42,3 @@ class MobileReportAdmin(admin.ModelAdmin):
     date_hierarchy = "created_at"
     readonly_fields = ("created_at",)
     filter_horizontal = ("services",)
-
-

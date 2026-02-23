@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from .views import ecr_dashcad
 from django.contrib.auth.views import LogoutView
+from .api_views import MeView, ChangePasswordView, LocationSharingView
 
 urlpatterns = [
     # Auth

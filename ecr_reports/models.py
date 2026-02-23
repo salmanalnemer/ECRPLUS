@@ -132,6 +132,17 @@ class MobileReport(models.Model):
         help_text="يوثق رغبة المستخدم (يتم إرجاع نص جاهز للمشاركة/الإبلاغ عبر التطبيق).",
     )
 
+
+    # =========================
+    # Vital Signs (NEW)
+    # =========================
+    temperature = models.DecimalField("درجة الحرارة", max_digits=4, decimal_places=1, null=True, blank=True)
+    pulse_rate = models.PositiveSmallIntegerField("معدل النبض", null=True, blank=True, validators=[MinValueValidator(0)])
+    blood_pressure = models.CharField("ضغط الدم", max_length=20, blank=True, default="")
+    respiratory_rate = models.PositiveSmallIntegerField("معدل التنفس", null=True, blank=True, validators=[MinValueValidator(0)])
+    blood_sugar = models.DecimalField("نسبة السكر في الدم", max_digits=5, decimal_places=2, null=True, blank=True)
+    notes = models.TextField("ملاحظات", blank=True, default="")
+
     class Meta:
         verbose_name = "بلاغ تطبيق"
         verbose_name_plural = "بلاغات التطبيق"

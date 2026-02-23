@@ -31,6 +31,8 @@ urlpatterns = [
     #تكامل التحقق من الهوية باستخدام JWT
     path("api/auth/login/", NationalIdTokenObtainPairView.as_view(), name="jwt_login"),
     path("api/auth/refresh/", TokenRefreshView.as_view(), name="jwt-refresh"),
+    # API حسابات المستخدمين (تسجيل، تسجيل دخول، إلخ) عبرالتطبيق
+    path("api/accounts/", include("accounts.api_urls")),
 ]
 
 if settings.DEBUG:

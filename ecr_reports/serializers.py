@@ -45,6 +45,12 @@ class MobileReportCreateSerializer(serializers.ModelSerializer):
             "latitude",
             "longitude",
             "send_to_997",
+            "temperature",
+            "pulse_rate",
+            "blood_pressure",
+            "respiratory_rate",
+            "blood_sugar",
+            "notes",
         ]
 
     def validate_patient_name(self, value: str) -> str:
@@ -137,5 +143,11 @@ class MobileReportSerializer(serializers.ModelSerializer):
             "region",
             "region_name",
             "send_to_997",
+            "temperature",
+            "pulse_rate",
+            "blood_pressure",
+            "respiratory_rate",
+            "blood_sugar",
+            "notes",
             "created_at",
         ]
