@@ -331,7 +331,10 @@
   // Endpoints + Context
   // ==========
   const URL_CAD_REPORTS = "{% url 'cad_reports:assigned_reports_json' %}";
-  const URL_ECR_REPORTS = "/api/ecr/mobile-reports/";
+
+  // ✅ مهم: لا تستدعي API الموبايل من الويب (لأنه يحتاج JWT وبالتالي يسبب 403)
+  // الويب سيعتمد على cases_json المحقون داخل الصفحة
+  const URL_ECR_REPORTS = "";
 
   let ECR_CASES = JSON.parse(document.getElementById("ecr-cases-data").textContent || "[]");
   const RESPONDERS = JSON.parse(document.getElementById("responders-data").textContent || "[]");
@@ -715,8 +718,6 @@
       return;
     }
 
-    // ✅ توقع: base يكون مثل /api/cad/update/ أو /api/ecr/update/
-    // سنرسل payload كامل + id داخل body
     const csrf = getCsrfToken();
     document.getElementById("edit-status").textContent = "جاري الحفظ...";
 
@@ -745,7 +746,6 @@
       toast("تم الحفظ بنجاح");
       document.getElementById("edit-status").textContent = "تم الحفظ ✅";
       closeEditModal();
-      // تحديث صامت
       manualRefresh();
     }catch(e){
       document.getElementById("edit-status").textContent = "فشل الحفظ";
@@ -764,6 +764,11 @@
   }
 
   async function fetchEcrReports(){
+    // ✅ مهم: لا نطلب من /api/ecr/mobile-reports/ من صفحة الويب
+    if(!URL_ECR_REPORTS){
+      return;
+    }
+
     try{
       const res = await fetch(URL_ECR_REPORTS, { headers: {"Accept":"application/json"} });
       if(!res.ok) throw new Error("ECR fetch failed");
@@ -807,7 +812,13 @@
   // Init map
   // ==========
   window.initMap = function(){
-    map = new google.maps.Map(document.getElementById("map-canvas"), { center: MAP_CENTER, zoom: MAP_ZOOM, mapTypeId:"roadmap", gestureHandling:"greedy" });
+    map = new google.maps.Map(document.getElementById("map-canvas"), {
+      center: MAP_CENTER,
+      zoom: MAP_ZOOM,
+      mapTypeId:"roadmap",
+      gestureHandling:"greedy"
+    });
+
     silentRefreshOnce().then(() => {
       fitAllVisible();
       if(refreshTimer) clearInterval(refreshTimer);
