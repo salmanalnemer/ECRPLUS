@@ -22,6 +22,7 @@ from .views_mobile_api import (
     cad_close,
     cad_reject,
     cad_assigned_reports,
+    cad_my_reports,
     register_device_token,
 )
 
@@ -47,8 +48,6 @@ urlpatterns = [
     # ==========================
     path("api/dashboard/summary/", views.api_dashboard_summary, name="api_dashboard_summary"),
 
-
-
     # ==========================
     # AI Hotspots Map Page
     # ==========================
@@ -59,7 +58,6 @@ urlpatterns = [
     # ==========================
     path("api/ai/hotspots/", cad_api_ai_hotspots, name="cad_api_ai_hotspots"),
     path("api/case-types/", cad_api_case_types, name="cad_api_case_types"),
-    
 
     # ==========================
     # JSON for dashboard
@@ -115,7 +113,13 @@ urlpatterns = [
     path("cad/api/assigned/<str:cad_number>/accept/", cad_accept, name="cad_accept"),
     path("cad/api/assigned/<str:cad_number>/arrive/", cad_arrive, name="cad_arrive"),
     path("cad/api/assigned/<str:cad_number>/close/", cad_close, name="cad_close"),
+
+    # ✅ قائمة البلاغات المعيّنة للمستجيب (assigned to me)
     path("cad/api/assigned-reports/", cad_assigned_reports, name="cad_assigned_reports"),
+
+    # ✅ قائمة بلاغاتي (my reports) — مسار منفصل
+    path("cad/api/my-reports/", cad_my_reports, name="cad_my_reports"),
+
     path("cad/api/device-token/", register_device_token, name="cad_device_token"),
     path("cad/api/assigned/<str:cad_number>/reject/", cad_reject, name="cad_reject"),
 ]

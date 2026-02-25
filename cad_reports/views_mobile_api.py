@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import logging
 
+from django.utils.dateparse import parse_date
+
 from rest_framework.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 from django.db import models
@@ -255,3 +257,63 @@ def register_device_token(request):
         return Response({'ok': False, 'error': 'save_failed', 'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     return Response({'ok': True}, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def cad_my_reports(request):
+    """قائمة بلاغات CAD الخاصة بالمستجيب (المعيّنة له) مع فلترة بالتاريخ.
+
+    Query params:
+      - from=YYYY-MM-DD
+      - to=YYYY-MM-DD
+      - year=YYYY
+    """
+    qs = (
+        CADReport.objects
+        .select_related("case_type", "region", "assigned_responder")
+        .filter(assigned_responder=request.user)
+        .order_by("-created_at")
+    )
+
+    year = request.query_params.get("year")
+    dfrom = request.query_params.get("from")
+    dto = request.query_params.get("to")
+
+    if year:
+        try:
+            y = int(year)
+            qs = qs.filter(created_at__year=y)
+        except Exception:
+            pass
+
+    if dfrom:
+        d = parse_date(dfrom)
+        if d:
+            qs = qs.filter(created_at__date__gte=d)
+
+    if dto:
+        d = parse_date(dto)
+        if d:
+            qs = qs.filter(created_at__date__lte=d)
+
+    def safe_str(v):
+        return "" if v is None else str(v)
+
+    data = []
+    for r in qs[:500]:  # سقف حماية
+        data.append({
+            "id": r.id,
+            "cad_number": safe_str(r.cad_number),
+            "case_type": safe_str(getattr(r.case_type, "name", "")),
+            "severity": safe_str(getattr(r, "severity", "")),
+            "status": _status_of(r),
+            "created_at": r.created_at.isoformat() if getattr(r, "created_at", None) else None,
+            "dispatched_at": r.dispatched_at.isoformat() if getattr(r, "dispatched_at", None) else None,
+            "accepted_at": r.accepted_at.isoformat() if getattr(r, "accepted_at", None) else None,
+            "arrived_at": r.arrived_at.isoformat() if getattr(r, "arrived_at", None) else None,
+            "is_closed": bool(getattr(r, "is_closed", False)),
+        })
+
+    return Response({"results": data, "count": qs.count()}, status=status.HTTP_200_OK)

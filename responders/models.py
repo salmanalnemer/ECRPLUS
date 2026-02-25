@@ -6,13 +6,6 @@ from django.utils import timezone
 
 
 class ResponderLocation(models.Model):
-    """آخر حالة/موقع للمستجيب.
-
-    - يتم تحديثه من تطبيق المستجيب كل 10 ثواني.
-    - لا نخزن تاريخ طويل لتقليل الحجم (نخزن آخر موقع فقط).
-      لو احتجت مسار كامل لاحقاً نضيف جدول TrackingHistory منفصل.
-    """
-
     responder = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from datetime import datetime, date
+
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count
 from django.shortcuts import render
+from django.utils.dateparse import parse_date
 
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
@@ -35,26 +37,68 @@ class MobileReportViewSet(
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
-    mixins.UpdateModelMixin,   # ✅✅ إضافة التعديل الحقيقي (PATCH/PUT)
+    mixins.UpdateModelMixin,  # ✅✅ إضافة التعديل الحقيقي (PATCH/PUT)
     viewsets.GenericViewSet,
 ):
     permission_classes = [IsEcrMobileReporter]
+
+    def _parse_date_param(self, key: str) -> date | None:
+        """
+        يدعم:
+        - YYYY-MM-DD
+        ويرجع date أو None.
+        """
+        raw = (self.request.query_params.get(key) or "").strip()
+        if not raw:
+            return None
+        d = parse_date(raw)
+        return d
+
+    def _parse_int_param(self, key: str) -> int | None:
+        raw = (self.request.query_params.get(key) or "").strip()
+        if not raw:
+            return None
+        try:
+            return int(raw)
+        except Exception:
+            return None
 
     def get_queryset(self):
         user = self.request.user
 
         qs = (
-            MobileReport.objects
-            .select_related("region", "medical_condition")
+            MobileReport.objects.select_related("region", "medical_condition")
             .prefetch_related("services")
         )
 
         # ✅ منطق التطبيق كما هو: المستخدم العادي يشوف بلاغاته فقط
         # ✅ إضافة عملية للويب: لو المستخدم staff يقدر يشوف الكل (للتعديل اليدوي)
         if getattr(user, "is_staff", False) or getattr(user, "is_superuser", False):
-            return qs
+            base_qs = qs
+        else:
+            base_qs = qs.filter(created_by=user)
 
-        return qs.filter(created_by=user)
+        # ==========================
+        # ✅ فلترة التاريخ (للـ List فقط)
+        # query params:
+        #   ?from=YYYY-MM-DD&to=YYYY-MM-DD&year=2026
+        # ==========================
+        if self.action == "list":
+            year = self._parse_int_param("year")
+            from_d = self._parse_date_param("from")
+            to_d = self._parse_date_param("to")
+
+            # year filter
+            if year:
+                base_qs = base_qs.filter(created_at__year=year)
+
+            # range filter (inclusive)
+            if from_d:
+                base_qs = base_qs.filter(created_at__date__gte=from_d)
+            if to_d:
+                base_qs = base_qs.filter(created_at__date__lte=to_d)
+
+        return base_qs.order_by("-created_at")
 
     def get_serializer_class(self):
         if self.action in {"create"}:
@@ -69,7 +113,11 @@ class MobileReportViewSet(
         services = ", ".join([s.name for s in report.services.all()]) or "-"
         condition = report.medical_condition.name if report.medical_condition else "-"
         ambulance = "نعم" if report.called_ambulance else "لا"
-        ambulance_by = report.get_ambulance_called_by_display() if report.ambulance_called_by else "-"
+        ambulance_by = (
+            report.get_ambulance_called_by_display()
+            if report.ambulance_called_by
+            else "-"
+        )
 
         text = (
             "بلاغ تطبيق ECR\n"
@@ -94,7 +142,9 @@ class MobileReportViewSet(
             f"وقت البلاغ: {report.created_at:%Y-%m-%d %H:%M}\n"
         )
 
-        return Response({"report_id": report.pk, "send_to_997": report.send_to_997, "text": text})
+        return Response(
+            {"report_id": report.pk, "send_to_997": report.send_to_997, "text": text}
+        )
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -108,6 +158,7 @@ class MobileReportViewSet(
 # ==========================
 # ✅ Web Dashboard (NEW)
 # ==========================
+
 
 def _get_user_map_center(user):
     """
@@ -179,8 +230,7 @@ def reports_ecr_dashboard(request):
     user = request.user
 
     qs = (
-        MobileReport.objects
-        .select_related("region", "medical_condition", "created_by")
+        MobileReport.objects.select_related("region", "medical_condition", "created_by")
         .prefetch_related("services")
         .order_by("-created_at")
     )
@@ -196,7 +246,7 @@ def reports_ecr_dashboard(request):
     # لا تسحب أعداد ضخمة بالويب
     reports = list(qs[:1000])
 
-    # ✅ احصائيات احترافية (منطق واقعي حسب موديلك)
+    # ✅ احصائيات (منطق واقعي حسب موديلك)
     total = len(reports)
     to_997 = sum(1 for r in reports if bool(getattr(r, "send_to_997", False)))
     ambulance = sum(1 for r in reports if bool(getattr(r, "called_ambulance", False)))
@@ -204,9 +254,9 @@ def reports_ecr_dashboard(request):
 
     stats = {
         "total": total,
-        "urgent": to_997,          # أحمر
-        "open": ambulance,         # أصفر
-        "closed": stable,          # أخضر (اعتبرناها “مستقرة/مسجلة”)
+        "urgent": to_997,  # أحمر
+        "open": ambulance,  # أصفر
+        "closed": stable,  # أخضر
         "last_updated": reports[0].created_at.strftime("%Y-%m-%d %H:%M") if reports else None,
     }
 
@@ -218,7 +268,9 @@ def reports_ecr_dashboard(request):
 
     # كتالوج الحالات للفلترة داخل القالب (اختياري)
     conditions_json = list(
-        MedicalConditionCatalog.objects.filter(is_active=True).values("id", "name").order_by("name")
+        MedicalConditionCatalog.objects.filter(is_active=True)
+        .values("id", "name")
+        .order_by("name")
     )
 
     center_lat, center_lng, zoom = _get_user_map_center(user)
@@ -236,5 +288,3 @@ def reports_ecr_dashboard(request):
             "conditions_json": conditions_json,
         },
     )
-
-    

@@ -55,6 +55,9 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     is_health_practitioner = models.BooleanField("ممارس صحي", default=False)
 
+    # ✅ تحكم مشاركة الموقع (يتم تحديثه من التطبيق)
+    location_sharing_enabled = models.BooleanField("مشاركة الموقع", default=True, db_index=True)
+
     # حقول نظامية
     is_active = models.BooleanField("مفعّل", default=True)
     is_staff = models.BooleanField("موظف لوحة التحكم", default=False)

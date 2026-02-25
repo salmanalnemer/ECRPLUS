@@ -104,10 +104,38 @@ class LocationSharingView(APIView):
         if enabled is None:
             return Response({"enabled": ["هذا الحقل مطلوب."]}, status=status.HTTP_400_BAD_REQUEST)
 
-        # إذا عندك حقل في User مثل location_sharing_enabled خزّنه هنا
-        # مثال:
-        # if hasattr(request.user, "location_sharing_enabled"):
-        #     request.user.location_sharing_enabled = bool(enabled)
-        #     request.user.save(update_fields=["location_sharing_enabled"])
+        # ✅ تحويل enabled إلى Boolean بشكل آمن (يدعم true/false و 1/0 و yes/no)
+        def _to_bool(v):
+            if isinstance(v, bool):
+                return v
+            if isinstance(v, (int, float)):
+                return bool(int(v))
+            s = str(v).strip().lower()
+            if s in {"true", "1", "yes", "y", "on"}:
+                return True
+            if s in {"false", "0", "no", "n", "off"}:
+                return False
+            # أي قيمة أخرى تعتبر خطأ في الإدخال
+            raise ValueError("قيمة enabled غير صالحة. استخدم true/false أو 1/0.")
 
-        return Response({"enabled": bool(enabled)}, status=status.HTTP_200_OK)
+        try:
+            enabled_bool = _to_bool(enabled)
+        except ValueError as e:
+            return Response({"enabled": [str(e)]}, status=status.HTTP_400_BAD_REQUEST)
+
+        # ✅ حفظ الحالة في قاعدة البيانات إذا كان الحقل موجوداً في User
+        if hasattr(request.user, "location_sharing_enabled"):
+            try:
+                request.user.location_sharing_enabled = enabled_bool
+                request.user.save(update_fields=["location_sharing_enabled"])
+            except Exception:
+                # لا نكسر الـ API لو حصل خطأ غير متوقع أثناء الحفظ
+                return Response({"detail": "تعذر حفظ حالة مشاركة الموقع."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            # إن لم يكن الحقل موجوداً، نرجّع رسالة واضحة
+            return Response(
+                {"detail": "حقل location_sharing_enabled غير موجود في نموذج المستخدم. أضفه في accounts/models.py ثم نفّذ migrations."},
+                status=status.HTTP_501_NOT_IMPLEMENTED,
+            )
+
+        return Response({"enabled": enabled_bool}, status=status.HTTP_200_OK)

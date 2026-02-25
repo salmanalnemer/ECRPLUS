@@ -119,8 +119,18 @@ PRIVILEGED_GROUP_CODES = {"SYSADMIN", "NEMSCC"}
 
 
 def _online_cutoff():
-    window = int(getattr(settings, "RESPONDER_ONLINE_WINDOW_SECONDS", 35))
+    window = int(getattr(settings, "RESPONDER_ONLINE_WINDOW_SECONDS", 3500))
     return timezone.now() - timedelta(seconds=window)
+
+
+# ✅ تحقق آمن: هل لدى User حقل location_sharing_enabled؟
+def _user_has_field(field_name: str) -> bool:
+    try:
+        User = get_user_model()
+        User._meta.get_field(field_name)
+        return True
+    except Exception:
+        return False
 
 
 # ==========================
@@ -225,6 +235,18 @@ class UpdateMyLocationAPI(APIView):
     def post(self, request):
         data = request.data or {}
 
+        # ✅ تحكم مشاركة الموقع من التطبيق/السيرفر (إذا الحقل موجود)
+        if _user_has_field("location_sharing_enabled"):
+            try:
+                if not bool(getattr(request.user, "location_sharing_enabled", True)):
+                    return Response(
+                        {"detail": "تم إيقاف مشاركة الموقع"},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+            except Exception:
+                # لو صار أي خطأ غير متوقع، لا نكسر الـ API
+                pass
+
         try:
             lat = _to_decimal(data.get("lat"), "lat")
             lng = _to_decimal(data.get("lng"), "lng")
@@ -279,6 +301,13 @@ class OnlineRespondersAPI(APIView):
             .order_by("-last_seen")
         )
 
+        # ✅ لا تعرض متصلين إذا مشاركة الموقع OFF (إذا الحقل موجود)
+        if _user_has_field("location_sharing_enabled"):
+            try:
+                qs = qs.filter(responder__location_sharing_enabled=True)
+            except Exception:
+                pass
+
         viewer_group = _get_user_group_code(request.user)
         if viewer_group not in PRIVILEGED_GROUP_CODES:
             viewer_region_id = getattr(request.user, "region_id", None)
@@ -307,3 +336,67 @@ class OnlineRespondersAPI(APIView):
             )
 
         return Response({"count": len(results), "results": results}, status=status.HTTP_200_OK)
+
+# ==========================
+# Mobile Home Summary API (JWT)
+# ==========================
+
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from django.db.models import Q
+from ecr_reports.models import MobileReport
+from cad_reports.models import CADReport
+
+
+class MobileHomeSummaryAPI(APIView):
+    """ملخص الصفحة الرئيسية لتطبيق الجوال.
+
+    يعيد:
+    - my_points: نقاطي (placeholder حالياً)
+    - my_ecr_count: عدد بلاغات ECR الخاصة بالمستجيب
+    - my_cad_count: عدد بلاغات CAD (997) المعيّنة للمستجيب
+    - responders_total: عدد المستجيبين المسجلين بالنظام (حسب user_group.code == ECRMOBIL)
+    - region_ecr_total: إجمالي بلاغات ECR لنفس منطقة المستخدم
+    - region_cad_total: إجمالي بلاغات CAD لنفس منطقة المستخدم
+    - region_responders_total: عدد المستجيبين في نفس المنطقة
+    """
+
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        User = get_user_model()
+
+        region_id = getattr(user, "region_id", None)
+
+        my_ecr = MobileReport.objects.filter(created_by=user).count()
+        my_cad = CADReport.objects.filter(assigned_responder=user).count()
+
+        responders_total = User.objects.filter(
+            is_active=True,
+            user_group__code="ECRMOBIL",
+        ).count()
+
+        if region_id:
+            region_ecr_total = MobileReport.objects.filter(region_id=region_id).count()
+            region_cad_total = CADReport.objects.filter(region_id=region_id).count()
+            region_responders_total = User.objects.filter(
+                is_active=True,
+                user_group__code="ECRMOBIL",
+                region_id=region_id,
+            ).count()
+        else:
+            region_ecr_total = 0
+            region_cad_total = 0
+            region_responders_total = 0
+
+        data = {
+            "my_points": 0,
+            "my_ecr_count": my_ecr,
+            "my_cad_count": my_cad,
+            "responders_total": responders_total,
+            "region_ecr_total": region_ecr_total,
+            "region_cad_total": region_cad_total,
+            "region_responders_total": region_responders_total,
+        }
+        return Response(data, status=status.HTTP_200_OK)

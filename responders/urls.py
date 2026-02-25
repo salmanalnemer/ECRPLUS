@@ -6,6 +6,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .views import (
     OnlineRespondersAPI,
     UpdateMyLocationAPI,
+    MobileHomeSummaryAPI,
     show_all_responders,  # ✅ صفحة عرض جميع المستجيبين (HTML)
 )
 
@@ -28,4 +29,5 @@ urlpatterns = [
     # ==========================
     path("me/location/", UpdateMyLocationAPI.as_view(), name="update_my_location"),
     path("online/", OnlineRespondersAPI.as_view(), name="online_responders"),
+    path("mobile/home/summary/", MobileHomeSummaryAPI.as_view(), name="mobile_home_summary"),
 ]
