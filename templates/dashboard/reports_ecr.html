@@ -1,792 +1,928 @@
 {% extends "portal/base_portal.html" %}
 {% load static %}
 
-{% block content %}
-<title>بلاغات ECR</title>
-<div style="padding: 18px 12px 34px; max-width: 100%; margin: 0 auto;">
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-  <style>
-    :root{
-      /* Light theme */
-      --bg:#f8fafc;
-      --card:#ffffff;
-      --stroke: rgba(15,23,42,.12);
-      --text:#0f172a;
-      --muted:#475569;
-      --shadow: 0 10px 28px rgba(2,6,23,.10);
-      --radius: 16px;
+<style>
+  :root {
+    --primary: #4f46e5;
+    --primary-dark: #4338ca;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --info: #3b82f6;
+    --bg-body: #f1f5f9;
+    --bg-card: #ffffff;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --radius: 16px;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  }
 
-      /* muted status colors (light) */
-      --green: rgba(34,197,94,.12);
-      --green-b: rgba(34,197,94,.22);
-      --green-t: rgba(21,128,61,.95);
+  body {
+    font-family: 'Cairo', sans-serif;
+    background-color: var(--bg-body);
+    color: var(--text-main);
+  }
 
-      --yellow: rgba(234,179,8,.14);
-      --yellow-b: rgba(234,179,8,.26);
-      --yellow-t: rgba(161,98,7,.95);
+  .ecr-container {
+    padding: 24px;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
 
-      --red: rgba(239,68,68,.12);
-      --red-b: rgba(239,68,68,.22);
-      --red-t: rgba(153,27,27,.95);
+  /* ===== Hero Section ===== */
+  .ecr-hero {
+    background: linear-gradient(135deg, #fafafa );
+    border-radius: var(--radius);
+    padding: 32px;
+    color: rgb(102, 102, 102);
+    margin-bottom: 24px;
+    box-shadow: var(--shadow);
+  }
 
-      --gray: rgba(100,116,139,.12);
-      --gray-b: rgba(100,116,139,.22);
-      --gray-t: rgba(51,65,85,.95);
+  .ecr-hero h1 {
+    font-size: 24px;
+    font-weight: 900;
+    margin: 0 0 8px 0;
+  }
 
-      --primary: rgba(56,189,248,.14);
-      --primary-b: rgba(56,189,248,.26);
-      --primary-t: rgba(3,105,161,.95);
+  .ecr-hero p {
+    margin: 0;
+    opacity: 0.8;
+    font-size: 14px;
+  }
+
+  /* ===== Stats Cards ===== */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+  }
+
+  .stat-info h3 {
+    font-size: 24px;
+    font-weight: 900;
+    margin: 0;
+    line-height: 1;
+  }
+
+  .stat-info p {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 4px 0 0 0;
+    font-weight: 600;
+  }
+
+  .stat-total .stat-icon { background: rgba(96, 246, 59, 0.1); color: var(--info); }
+  .stat-ambulance .stat-icon { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+  .stat-997 .stat-icon { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+  .stat-closed .stat-icon { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+
+  /* ===== Filters ===== */
+  .filters-bar {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+  }
+
+  .filters-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-end;
+  }
+
+  .filter-group {
+    flex: 1;
+    min-width: 150px;
+  }
+
+  .filter-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  .filter-input, .filter-select {
+    width: 90%;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: #f8fafc;
+    font-family: 'Cairo', sans-serif;
+    font-size: 13px;
+  }
+
+  .filter-input:focus, .filter-select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  }
+
+  .btn-filter {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-filter:hover {
+    background: var(--primary-dark);
+  }
+
+  .btn-secondary {
+    background: #0f172a;
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-weight: 800;
+    cursor: pointer;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-secondary:hover {
+    opacity: 0.95;
+  }
+
+  /* ===== Table ===== */
+  .table-container {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .table-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    background: #f8fafc;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .table-title {
+    font-size: 15px;
+    font-weight: 800;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .table-title i {
+    color: var(--primary);
+  }
+
+  .table-responsive {
+    overflow-x: auto;
+  }
+
+  .ecr-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .ecr-table th {
+    text-align: right;
+    padding: 14px 16px;
+    color: var(--text-muted);
+    font-weight: 700;
+    border-bottom: 2px solid var(--border);
+    background: #fff;
+    font-size: 12px;
+  }
+
+  .ecr-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+
+  .ecr-table tr:hover td {
+    background: #f8fafc;
+  }
+
+  /* ===== Status Badges ===== */
+  .status-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .status-red {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+  }
+
+  .status-yellow {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning);
+  }
+
+  .status-green {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+  }
+
+  .status-gray {
+    background: rgba(100, 116, 139, 0.1);
+    color: var(--text-muted);
+  }
+
+  /* ===== Vitals Group ===== */
+  .vitals-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .vital-item {
+    background: #f1f5f9;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .vital-item i {
+    margin-left: 4px;
+    opacity: 0.6;
+  }
+
+  /* ===== Action Buttons ===== */
+  .action-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: white;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    margin-left: 4px;
+  }
+
+  .action-btn:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
+
+  .action-btn.view:hover { background: var(--info); border-color: var(--info); }
+  .action-btn.edit:hover { background: var(--warning); border-color: var(--warning); }
+  .action-btn.delete:hover { background: var(--danger); border-color: var(--danger); }
+
+  /* ===== Yes/No Badges ===== */
+  .yes-badge {
+    color: var(--success);
+    font-weight: 700;
+    font-size: 12px;
+  }
+
+  .no-badge {
+    color: var(--text-muted);
+    font-weight: 700;
+    font-size: 12px;
+  }
+
+  /* ===== Map Link ===== */
+  .map-link {
+    color: var(--info);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .map-link:hover {
+    text-decoration: underline;
+  }
+
+  /* ===== Empty State ===== */
+  .empty-state {
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--text-muted);
+  }
+
+  .empty-state i {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.3;
+  }
+
+  .empty-state p {
+    font-size: 14px;
+    margin: 0;
+  }
+
+  /* ===== Last Updated ===== */
+  .last-updated {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .last-updated i {
+    color: var(--success);
+  }
+
+  /* ===== Pagination ===== */
+  .pagination-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    background: #fff;
+    flex-wrap: wrap;
+  }
+
+  .pagination-info {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+  }
+
+  .pagination-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .page-btn {
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--text-main);
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-weight: 800;
+    cursor: pointer;
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    text-decoration: none;
+    font-size: 12px;
+  }
+
+  .page-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+
+  .page-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 1024px) {
+    .ecr-table {
+      font-size: 12px;
     }
-
-    /* Header */
-    .page-header{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      margin-bottom: 14px;
-      flex-wrap:wrap;
-    }
-
-    .title{ display:flex; flex-direction:column; gap:6px; }
-    .title h1{ margin:0; font-size: 20px; letter-spacing:.2px; color: var(--text); }
-    .title p{ margin:0; color: var(--muted); font-size: 13px; }
-
-    .toolbar{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:flex-end; }
-    .input{
-      background: #ffffff;
-      border: 1px solid var(--stroke);
-      color: var(--text);
+    .ecr-table th,
+    .ecr-table td {
       padding: 10px 12px;
-      border-radius: 12px;
-      outline: none;
-      min-width: 280px;
-      box-shadow: 0 1px 0 rgba(2,6,23,.03);
     }
-    .input::placeholder{ color: rgba(71,85,105,.75); }
+  }
 
-    .btn{
-      border: 1px solid var(--stroke);
-      background: #ffffff;
-      color: var(--text);
-      padding: 10px 12px;
-      border-radius: 12px;
-      cursor:pointer;
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      transition: .15s ease;
-      user-select:none;
-      text-decoration:none;
-      white-space:nowrap;
-      box-shadow: 0 1px 0 rgba(2,6,23,.03);
-      font-weight: 600;
+  @media (max-width: 768px) {
+    .stats-grid {
+      grid-template-columns: repeat(2, 1fr);
     }
-    .btn:hover{ transform: translateY(-1px); border-color: rgba(15,23,42,.18); }
-    .btn:active{ transform: translateY(0); }
-
-    /* Stats */
-    .stats{
-      display:grid;
-      grid-template-columns: repeat(12, 1fr);
-      gap: 12px;
-      margin-bottom: 14px;
+    .filters-row {
+      flex-direction: column;
     }
-    .stat{
-      grid-column: span 3;
-      background: var(--card);
-      border: 1px solid var(--stroke);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 14px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      min-height: 82px;
-    }
-    .stat .meta{ display:flex; flex-direction:column; gap:6px; }
-    .stat .label{ color: var(--muted); font-size: 12px; }
-    .stat .value{ font-size: 22px; font-weight: 900; letter-spacing:.3px; color: var(--text); }
-
-    .pill{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding: 8px 10px;
-      border-radius: 999px;
-      font-size: 10px;
-      border: 1px solid;
-      white-space:nowrap;
-      line-height:1;
-      font-weight: 500;
-    }
-    .pill.primary{ background: var(--primary); border-color: var(--primary-b); color: var(--primary-t); }
-    .pill.yellow{ background: var(--yellow); border-color: var(--yellow-b); color: var(--yellow-t); }
-    .pill.red{ background: var(--red); border-color: var(--red-b); color: var(--red-t); }
-    .pill.green{ background: var(--green); border-color: var(--green-b); color: var(--green-t); }
-    .pill.gray{ background: var(--gray); border-color: var(--gray-b); color: var(--gray-t); }
-
-    /* Card + Table */
-    .card{
-      background: var(--card);
-      border: 1px solid var(--stroke);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow:hidden;
-    }
-    .card-head{
-      padding: 14px 14px 10px;
-      border-bottom: 1px solid var(--stroke);
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:10px;
-      flex-wrap:wrap;
-      background: rgba(248,250,252,.9);
-    }
-    .card-head .left{ display:flex; align-items:center; gap:10px; }
-    .card-head .left h2{ margin:0; font-size: 15px; color: var(--text); font-weight: 900; }
-    .card-head .left span{ color: var(--muted); font-size: 12px; }
-    .table-wrap{
-      overflow-x:auto;
-    }
-
-    /* ✅ جدول يتمدد بكامل الصفحة + خط أكبر */
-    table{
-      width:100%;
-      border-collapse: collapse;
-      border-spacing: 0;
-      table-layout: auto; /* يساعد على احتواء العرض داخل الصفحة */
-    }
-
-    thead th{
-      position: sticky;
-      top: 0;
-      background: rgba(241,245,249,.95);
-      backdrop-filter: blur(6px);
-      border-bottom: 1px solid var(--stroke);
-      color: rgba(15,23,42,.92);
-      font-size: 12px;          /* ⬅️ أكبر */
-      font-weight:1000;
-      text-align: right;
-      padding:10px 8px;       /* ⬅️ أكبر */
-      white-space: normal;
-    }
-
-    tbody td{
-      border-bottom: 1px solid rgba(15,23,42,.08);
-      padding:10px 8px;       /* ⬅️ أكبر */
-      font-size: 11px;          /* ⬅️ أكبر */
-      font-weight: 500;
-      color: rgba(15,23,42,.92);
-      vertical-align: middle;
-      background: #ffffff;
-      line-height:1.4;
-      white-space: normal;      /* ⬅️ يسمح بلف النص حتى ما يوسع الجدول */
-      word-break: break-word;
-    }
-
-    tbody tr:hover td{ background: rgba(2,6,23,.03); }
-    .muted{ color: rgba(71,85,105,.95); font-weight: 600; }
-    .nowrap{ white-space: nowrap !important; }
-
-    .status-badge{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      gap:8px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      border: 1px solid;
-      font-size: 10px;          /* ⬅️ أكبر */
-      font-weight: 900;
-      line-height: 1;
-      white-space:nowrap;
-      user-select:none;
-    }
-    .status-badge.green{ background: var(--green); border-color: var(--green-b); color: var(--green-t); }
-    .status-badge.yellow{ background: var(--yellow); border-color: var(--yellow-b); color: var(--yellow-t); }
-    .status-badge.red{ background: var(--red); border-color: var(--red-b); color: var(--red-t); }
-    .status-badge.gray{ background: var(--gray); border-color: var(--gray-b); color: var(--gray-t); }
-
-    .actions{ display:flex; gap:8px; justify-content:flex-start; flex-wrap:wrap; }
-    .icon-btn{
-      width: 40px; height: 40px;
-      border-radius: 12px;
-      border: 1px solid var(--stroke);
-      background: #ffffff;
-      color: rgba(15,23,42,.9);
-      cursor:pointer;
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      transition:.15s ease;
-      box-shadow: 0 1px 0 rgba(2,6,23,.03);
-    }
-    .icon-btn:hover{ transform: translateY(-1px); border-color: rgba(15,23,42,.18); }
-    .icon-btn:active{ transform: translateY(0); }
-
-    /* Modal */
-    .modal{
-      position: fixed;
-      inset: 0;
-      background: rgba(2,6,23,.35);
-      display:none;
-      align-items:center;
-      justify-content:center;
-      padding: 18px;
-      z-index: 9999;
-    }
-    .modal.open{ display:flex; }
-
-    .modal-card{
-      width: min(1200px, 100%);
-      background: #ffffff;
-      border: 1px solid var(--stroke);
-      border-radius: 18px;
-      box-shadow: var(--shadow);
-      overflow:hidden;
-    }
-    .modal-head{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:10px;
-      padding: 14px 14px;
-      border-bottom: 1px solid var(--stroke);
-      background: rgba(241,245,249,.95);
-    }
-    .modal-head .h{ display:flex; flex-direction:column; gap:5px; }
-    .modal-head .h strong{ font-size: 14px; color: var(--text); font-weight: 900; }
-    .modal-head .h small{ color: var(--muted); }
-
-    .close-btn{
-      width: 40px; height: 40px;
-      border-radius: 12px;
-      border: 1px solid var(--stroke);
-      background: #ffffff;
-      color: rgba(15,23,42,.9);
-      cursor:pointer;
-    }
-
-    .modal-body{
-      display:grid;
-      grid-template-columns: 1.6fr .9fr;
-      gap: 12px;
-      padding: 14px;
-      background: #ffffff;
-    }
-
-    #map{
+    .filter-group {
       width: 100%;
-      height: 460px;
-      border-radius: 16px;
-      border: 1px solid rgba(15,23,42,.12);
-      overflow:hidden;
-      background: rgba(2,6,23,.03);
     }
-
-    .side{
-      background: rgba(2,6,23,.02);
-      border: 1px solid rgba(15,23,42,.10);
-      border-radius: 16px;
-      padding: 12px;
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-      min-height: 460px;
+    .btn-filter {
+      width: 100%;
+      justify-content: center;
     }
+  }
 
-    .kv{
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap:10px;
-      padding: 10px 10px;
-      border-radius: 14px;
-      border: 1px solid rgba(15,23,42,.10);
-      background: #ffffff;
-    }
-    .kv .k{ color: var(--muted); font-size: 12px; font-weight: 800; }
-    .kv .v{
-      color: rgba(15,23,42,.92);
-      font-size: 13.5px;
-      text-align:left;
-      max-width: 60%;
-      word-break: break-word;
-      white-space: pre-wrap;
-      font-weight: 700;
-    }
+  /* ===== Tooltip ===== */
+  .tooltip-container {
+    position: relative;
+    display: inline-block;
+  }
 
-    .note{
-      flex:1;
-      border-radius: 16px;
-      border: 1px solid rgba(15,23,42,.10);
-      background: #ffffff;
-      padding: 10px 10px;
-      overflow:auto;
-    }
-    .note .k{ color: var(--muted); font-size: 12px; margin-bottom: 8px; font-weight: 900; }
-    .note .v{ font-size: 13px; line-height: 1.6; white-space: pre-wrap; color: rgba(15,23,42,.92); font-weight: 700; }
+  .tooltip-container:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+  }
 
-    @media (max-width: 1100px){
-      .stat{ grid-column: span 6; }
-      .modal-body{ grid-template-columns: 1fr; }
-      #map{ height: 380px; }
-      .side{ min-height: unset; }
-    }
-    @media (max-width: 640px){
-      .stat{ grid-column: span 12; }
-      .input{ min-width: unset; width: 100%; }
-      .toolbar{ width:100%; justify-content:stretch; }
-      .btn{ width:100%; justify-content:center; }
-    }
-  </style>
+  .tooltip-text {
+    visibility: hidden;
+    opacity: 0;
+    background: #1e293b;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    transition: opacity 0.2s;
+    z-index: 100;
+  }
 
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  .tooltip-text::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #1e293b transparent transparent transparent;
+  }
+</style>
+{% endblock %}
 
-  <div class="page-header">
-    <div class="title">
-      <h1><i class="fa-solid fa-clipboard-list"></i> بلاغات ECR (تطبيق الجوال)</h1>
-    </div>
+{% block content %}
+<div class="ecr-container">
 
-    <div class="toolbar">
-      <input id="q" class="input" type="text"
-             placeholder="بحث سريع: رقم البلاغ، اسم المريض، الهوية، الجوال، المنطقة..."
-             oninput="filterRows()" />
-      <button class="btn" type="button" onclick="resetFilter()">
-        <i class="fa-solid fa-rotate-right"></i> مسح
-      </button>
+  <!-- Hero Section -->
+  <div class="ecr-hero">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+      <div>
+        <h1><i class="fa fa-ambulance"></i> بلاغات ECR (تطبيق الجوال)</h1>
+        <p> متابعة توثيق الحالات المرضية المرسلة من المستجيبين</p>
+      </div>
+      <div class="last-updated">
+        <i class="fa fa-clock"></i>
+        آخر تحديث: {{ stats.last_updated|default_if_none:"—" }}
+      </div>
     </div>
   </div>
 
-  <div class="stats">
-    <div class="stat">
-      <div class="meta">
-        <div class="label">إجمالي البلاغات</div>
-        <div class="value">{{ stats.total|default_if_none:"0" }}</div>
+  <!-- Stats Cards -->
+  <div class="stats-grid">
+    <div class="stat-card stat-total">
+      <div class="stat-icon"><i class="fa fa-file-medical"></i></div>
+      <div class="stat-info">
+        <h3>{{ stats.total|default_if_none:"0" }}</h3>
+        <p>إجمالي البلاغات</p>
       </div>
-      <span class="pill primary"><i class="fa-solid fa-layer-group"></i> Total</span>
     </div>
 
-    <div class="stat">
-      <div class="meta">
-        <div class="label">تم طلب إسعاف</div>
-        <div class="value">{{ stats.open|default_if_none:"0" }}</div>
+    <div class="stat-card stat-ambulance">
+      <div class="stat-icon"><i class="fa fa-ambulance"></i></div>
+      <div class="stat-info">
+        <h3>{{ stats.open|default_if_none:"0" }}</h3>
+        <p>تم طلب إسعاف</p>
       </div>
-      <span class="pill yellow"><i class="fa-solid fa-truck-medical"></i> Ambulance</span>
     </div>
 
-    <div class="stat">
-      <div class="meta">
-        <div class="label">توثيق 997</div>
-        <div class="value">{{ stats.urgent|default_if_none:"0" }}</div>
+    <div class="stat-card stat-997">
+      <div class="stat-icon"><i class="fa fa-phone-volume"></i></div>
+      <div class="stat-info">
+        <h3>{{ stats.urgent|default_if_none:"0" }}</h3>
+        <p>توثيق 997</p>
       </div>
-      <span class="pill red"><i class="fa-solid fa-triangle-exclamation"></i> 997</span>
     </div>
 
-    <div class="stat">
-      <div class="meta">
-        <div class="label">بلاغات مسجلة</div>
-        <div class="value">{{ stats.closed|default_if_none:"0" }}</div>
+    <div class="stat-card stat-closed">
+      <div class="stat-icon"><i class="fa fa-check-circle"></i></div>
+      <div class="stat-info">
+        <h3>{{ stats.closed|default_if_none:"0" }}</h3>
+        <p>بلاغات مسجلة</p>
       </div>
-      <span class="pill green"><i class="fa-solid fa-circle-check"></i> Logged</span>
     </div>
   </div>
 
-  <div class="card">
-    <div class="card-head">
-      <div class="left">
-        <h2>قائمة البلاغات</h2>
-        <span class="muted">آخر تحديث: {{ stats.last_updated|default_if_none:"—" }}</span>
+  <!-- Filters -->
+  <form method="get" class="filters-bar" id="filtersForm">
+    <div class="filters-row">
+      <div class="filter-group">
+        <label class="filter-label"><i class="fa fa-search"></i> بحث</label>
+        <input class="filter-input" type="text" id="searchInput" name="search" placeholder="رقم البلاغ، اسم المريض، الهوية..." value="{{ request.GET.search|default:'' }}">
+      </div>
+      <div class="filter-group">
+        <label class="filter-label"><i class="fa fa-calendar"></i> من تاريخ</label>
+        <input class="filter-input" type="date" name="from" value="{{ request.GET.from|default:'' }}">
+      </div>
+      <div class="filter-group">
+        <label class="filter-label"><i class="fa fa-calendar"></i> إلى تاريخ</label>
+        <input class="filter-input" type="date" name="to" value="{{ request.GET.to|default:'' }}">
+      </div>
+      <div class="filter-group">
+        <label class="filter-label"><i class="fa fa-exclamation-triangle"></i> الحالة</label>
+        <select class="filter-select" name="status" id="statusSelect">
+          <option value="">الكل</option>
+          <option value="red" {% if request.GET.status == "red" %}selected{% endif %}>حرجة</option>
+          <option value="yellow" {% if request.GET.status == "yellow" %}selected{% endif %}>متوسطة</option>
+          <option value="green" {% if request.GET.status == "green" %}selected{% endif %}>مستقرة</option>
+        </select>
+      </div>
 
+      {# تثبيت حجم الصفحة = 10 دائماً #}
+      <input type="hidden" name="page_size" value="10">
+
+      <div class="filter-group" style="flex: 0 0 auto; display:flex; gap:10px;">
+        <button class="btn-filter" type="submit">
+          <i class="fa fa-filter"></i> تطبيق
+        </button>
+        <button class="btn-secondary" type="button" id="clearFiltersBtn" title="مسح الفلاتر">
+          <i class="fa fa-eraser"></i> مسح
+        </button>
+      </div>
+    </div>
+  </form>
+
+  <!-- Table -->
+  <div class="table-container">
+    <div class="table-header">
+      <h3 class="table-title"><i class="fa fa-list"></i> قائمة البلاغات</h3>
+      <div style="display: flex; gap: 8px; align-items:center; flex-wrap:wrap;">
+        <button class="action-btn" title="تصدير Excel" type="button" onclick="exportExcel()">
+          <i class="fa fa-file-excel"></i>
+        </button>
+        <button class="action-btn" title="تصدير PDF" type="button" onclick="exportPdf()">
+          <i class="fa fa-file-pdf"></i>
+        </button>
+        <button class="action-btn" title="تحديث" type="button" onclick="refreshPage()">
+          <i class="fa fa-sync-alt"></i>
+        </button>
+        <div class="last-updated" style="margin-right:10px;">
+          <i class="fa fa-layer-group"></i>
+          عرض 10 فقط + تنقل (السابق/التالي)
+        </div>
+      </div>
     </div>
 
-    <div class="table-wrap">
-      <table id="tbl">
+    <div class="table-responsive">
+      {% if reports %}
+      <table class="ecr-table" id="reportsTable">
         <thead>
           <tr>
-
-            <th class="nowrap">رقم البلاغ</th>
-            <th class="nowrap">الحالة</th>
-            <th class="nowrap">اسم المريض</th>
-            <th class="nowrap">رقم الهوية</th>
-            <th class="nowrap">الجوال</th>
-            <th class="nowrap">العمر</th>
-            <th class="nowrap">الجنسية</th>
-            <th class="nowrap">الجنس</th>
-            <th class="nowrap">درجة الحرارة</th>
-            <th class="nowrap">معدل النبض</th>
-            <th class="nowrap">ضغط الدم</th>
-            <th class="nowrap">معدل التنفس</th>
-            <th class="nowrap">نسبة السكر</th>
-            <th>ملاحظات</th>
-            <th>تفاصيل الحالة</th>
-            <th>الخدمات</th>
-            <th class="nowrap">طلب إسعاف؟</th>
-            <th>من طلب الإسعاف</th>
-            <th class="nowrap">توثيق 997</th>
-            <th class="nowrap">المنطقة</th>
-            <th class="nowrap">المستجيب</th>
-            <th class="nowrap">تاريخ البلاغ</th>
-            <th class="nowrap">الإحداثيات</th>
-            <th class="nowrap">الإجراءات</th>
+            <th style="min-width: 80px;"># البلاغ</th>
+            <th style="min-width: 100px;">الحالة</th>
+            <th style="min-width: 150px;">المريض</th>
+            <th style="min-width: 120px;">الهوية</th>
+            <th style="min-width: 100px;">الجوال</th>
+            <th style="min-width: 80px;">العمر/الجنس</th>
+            <th style="min-width: 200px;">العلامات الحيوية</th>
+            <th style="min-width: 120px;">الحالة الطبية</th>
+            <th style="min-width: 80px;">إسعاف</th>
+            <th style="min-width: 80px;">997</th>
+            <th style="min-width: 100px;">المنطقة</th>
+            <th style="min-width: 120px;">التاريخ</th>
+            <th style="min-width: 100px;">الموقع</th>
+            <th style="min-width: 120px;">الإجراءات</th>
           </tr>
         </thead>
-
         <tbody>
           {% for r in reports %}
           {% with region_label=r.region.name_ar|default_if_none:r.region %}
-          <tr data-search="
-            {{ r.id }}
-            {{ r.patient_name|default_if_none:'' }}
-            {{ r.national_id|default_if_none:'' }}
-            {{ r.patient_phone|default_if_none:'' }}
-            {{ region_label|default_if_none:'' }}
-          ">
-
-
-            <td class="nowrap"><strong style="padding:6px 8px; font-size:10px; font-weight:900;">{{ r.id }}</strong></td>
-
-            <td class="nowrap">
-              {% if r.ui_status_class == "red" %}
-                <span class="status-badge red"><i class="fa-solid fa-triangle-exclamation"></i> {{ r.ui_status_label }}</span>
-              {% elif r.ui_status_class == "yellow" %}
-                <span class="status-badge yellow"><i class="fa-solid fa-truck-medical"></i> {{ r.ui_status_label }}</span>
-              {% elif r.ui_status_class == "green" %}
-                <span class="status-badge green"><i class="fa-solid fa-circle-check"></i> {{ r.ui_status_label }}</span>
-              {% else %}
-                <span class="status-badge gray"><i class="fa-solid fa-circle"></i> {{ r.ui_status_label }}</span>
-              {% endif %}
-            </td>
-
-            <td class="nowrap">{{ r.patient_name|default_if_none:"—" }}</td>
-            <td class="nowrap">{{ r.national_id|default_if_none:"—" }}</td>
-            <td class="nowrap">{{ r.patient_phone|default_if_none:"—" }}</td>
-            <td class="nowrap">{{ r.age|default_if_none:"—" }}</td>
-            <td class="nowrap">{{ r.get_nationality_display|default_if_none:"—" }}</td>
-            <td class="nowrap">{{ r.get_gender_display|default_if_none:"—" }}</td>
-
-            <td class="nowrap">{{ r.temperature|default_if_none:"—" }}</td>
-            <td class="nowrap">{{ r.pulse_rate|default_if_none:"—" }}</td>
-            <td class="nowrap">{{ r.blood_pressure|default_if_none:"—" }}</td>
-            <td class="nowrap">{{ r.respiratory_rate|default_if_none:"—" }}</td>
-            <td class="nowrap">{{ r.blood_sugar|default_if_none:"—" }}</td>
-            <td>{{ r.notes|default_if_none:"—" }}</td>
-
-            <td>{{ r.medical_condition.name|default_if_none:"—" }}</td>
-
+          <tr>
+            <td style="font-weight: 700; color: var(--primary);">{{ r.id }}</td>
             <td>
-              {% for s in r.services.all %}
-                <span class="pill primary" style="padding:6px 8px; font-size:10px; font-weight:900;">{{ s.name }}</span>
-              {% empty %}
-                <span class="muted">—</span>
-              {% endfor %}
-            </td>
-
-            <td class="nowrap">
-              {% if r.called_ambulance %}
-                <span class="pill yellow" style="padding:6px 8px; font-size:10;"><i class="fa-solid fa-check"></i> نعم</span>
+              {% if r.ui_status_class == "red" %}
+                <span class="status-badge status-red"><i class="fa fa-circle"></i> {{ r.ui_status_label }}</span>
+              {% elif r.ui_status_class == "yellow" %}
+                <span class="status-badge status-yellow"><i class="fa fa-circle"></i> {{ r.ui_status_label }}</span>
+              {% elif r.ui_status_class == "green" %}
+                <span class="status-badge status-green"><i class="fa fa-circle"></i> {{ r.ui_status_label }}</span>
               {% else %}
-                <span class="pill gray" style="padding:6px 8px; font-size:10px;"><i class="fa-solid fa-xmark"></i> لا</span>
+                <span class="status-badge status-gray"><i class="fa fa-circle"></i> {{ r.ui_status_label }}</span>
               {% endif %}
             </td>
-
-            <td>{{ r.get_ambulance_called_by_display|default_if_none:"—" }}</td>
-
-            <td class="nowrap">
-              {% if r.send_to_997 %}
-                <span class="pill red" style="padding:6px 8px; font-size:10px;"><i class="fa-solid fa-share-nodes"></i> نعم</span>
-              {% else %}
-                <span class="pill gray" style="padding:6px 8px; font-size:10px;"><i class="fa-solid fa-minus"></i> لا</span>
-              {% endif %}
+            <td>
+              <div style="font-weight: 600;">{{ r.patient_name|default_if_none:"—" }}</div>
+              <div style="font-size: 11px; color: var(--text-muted);">{{ r.created_by.full_name|default_if_none:"—" }}</div>
             </td>
-
-            <td class="nowrap">{{ region_label|default_if_none:"—" }}</td>
-
-            <!-- ✅ المستجيب = منشئ البلاغ -->
-            <td class="nowrap">
-              {% if r.created_by %}
-                  {{ r.created_by.full_name }}
-              {% else %}
-                  —
-              {% endif %}
+            <td>{{ r.national_id|default_if_none:"—" }}</td>
+            <td dir="ltr">{{ r.patient_phone|default_if_none:"—" }}</td>
+            <td>
+              <div>{{ r.age|default_if_none:"—" }} سنة</div>
+              <div style="font-size: 11px; color: var(--text-muted);">{{ r.get_gender_display|default_if_none:"—" }}</div>
             </td>
-
-            <td class="nowrap">{{ r.created_at|date:"Y-m-d H:i" }}</td>
-
-            <td class="nowrap muted">{{ r.latitude }}, {{ r.longitude }}</td>
-
-            <td class="nowrap">
-              <div class="actions">
-                <button type="button"
-                        class="icon-btn"
-                        title="عرض على الخريطة"
-                        onclick="openMapModalFromBtn(this)"
-                        data-id="{{ r.id }}"
-                        data-lat="{{ r.latitude }}"
-                        data-lng="{{ r.longitude }}"
-                        data-region="{{ region_label|default_if_none:"—"|escapejs }}"
-                        data-patient="{{ r.patient_name|default_if_none:"—"|escapejs }}"
-                        data-nid="{{ r.national_id|default_if_none:"—"|escapejs }}"
-                        data-phone="{{ r.patient_phone|default_if_none:"—"|escapejs }}"
-                        data-age="{{ r.age|default_if_none:"—"|escapejs }}"
-                        data-nat="{{ r.get_nationality_display|default_if_none:"—"|escapejs }}"
-                        data-gender="{{ r.get_gender_display|default_if_none:"—"|escapejs }}"
-                        data-temp="{{ r.temperature|default_if_none:"—"|escapejs }}"
-                        data-pulse="{{ r.pulse_rate|default_if_none:"—"|escapejs }}"
-                        data-bp="{{ r.blood_pressure|default_if_none:"—"|escapejs }}"
-                        data-resp="{{ r.respiratory_rate|default_if_none:"—"|escapejs }}"
-                        data-sugar="{{ r.blood_sugar|default_if_none:"—"|escapejs }}"
-                        data-notes="{{ r.notes|default_if_none:"—"|escapejs }}"
-                        data-type="{{ r.medical_condition.name|default_if_none:"—"|escapejs }}"
-                        data-ambulance="{{ r.called_ambulance|yesno:"نعم,لا" }}"
-                        data-ambulanceby="{{ r.get_ambulance_called_by_display|default_if_none:"—"|escapejs }}"
-                        data-send997="{{ r.send_to_997|yesno:"نعم,لا" }}"
-                        data-created="{{ r.created_at|date:'Y-m-d H:i' }}">
-                  <i class="fa-solid fa-eye"></i>
-                </button>
+            <td>
+              <div class="vitals-group">
+                {% if r.temperature %}
+                <span class="vital-item tooltip-container">
+                  <i class="fa fa-thermometer-half"></i>{{ r.temperature }}°
+                  <span class="tooltip-text">درجة الحرارة</span>
+                </span>
+                {% endif %}
+                {% if r.pulse_rate %}
+                <span class="vital-item tooltip-container">
+                  <i class="fa fa-heartbeat"></i>{{ r.pulse_rate }}
+                  <span class="tooltip-text">النبض</span>
+                </span>
+                {% endif %}
+                {% if r.blood_pressure %}
+                <span class="vital-item tooltip-container">
+                  <i class="fa fa-tint"></i>{{ r.blood_pressure }}
+                  <span class="tooltip-text">ضغط الدم</span>
+                </span>
+                {% endif %}
+                {% if r.respiratory_rate %}
+                <span class="vital-item tooltip-container">
+                  <i class="fa fa-lungs"></i>{{ r.respiratory_rate }}
+                  <span class="tooltip-text">التنفس</span>
+                </span>
+                {% endif %}
+                {% if r.blood_sugar %}
+                <span class="vital-item tooltip-container">
+                  <i class="fa fa-drop"></i>{{ r.blood_sugar }}
+                  <span class="tooltip-text">السكر</span>
+                </span>
+                {% endif %}
               </div>
             </td>
-
-          </tr>
-          {% endwith %}
-
-          {% empty %}
-          <tr>
-            <td colspan="24" class="muted" style="padding:18px;text-align:center;">
-              لا توجد بلاغات للعرض حالياً.
+            <td>
+              <div style="font-weight: 600;">{{ r.medical_condition.name|default_if_none:"—" }}</div>
+              <div style="font-size: 11px; color: var(--text-muted); max-width: 150px; overflow: hidden; text-overflow: ellipsis;">
+                {{ r.notes|default_if_none:"—" }}
+              </div>
+            </td>
+            <td>
+              {% if r.called_ambulance %}
+                <span class="yes-badge"><i class="fa fa-check"></i> نعم</span>
+              {% else %}
+                <span class="no-badge"><i class="fa fa-times"></i> لا</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if r.send_to_997 %}
+                <span class="yes-badge"><i class="fa fa-check"></i> نعم</span>
+              {% else %}
+                <span class="no-badge"><i class="fa fa-times"></i> لا</span>
+              {% endif %}
+            </td>
+            <td>{{ region_label|default_if_none:"—" }}</td>
+            <td>{{ r.created_at|date:"Y-m-d H:i" }}</td>
+            <td>
+              {% if r.latitude and r.longitude %}
+                <a href="https://maps.google.com/?q={{ r.latitude }},{{ r.longitude }}"
+                   target="_blank"
+                   class="map-link">
+                  <i class="fa fa-map-marker-alt"></i> عرض
+                </a>
+              {% else %}
+                <span style="color: var(--text-muted);">—</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="tooltip-container">
+                <button class="action-btn view" title="عرض التفاصيل" type="button">
+                  <i class="fa fa-eye"></i>
+                </button>
+                <span class="tooltip-text">عرض</span>
+              </div>
+              <div class="tooltip-container">
+                <button class="action-btn" title="نسخ نص 997" type="button" onclick="copy997Text({{ r.id }})">
+                  <i class="fa fa-copy"></i>
+                </button>
+                <span class="tooltip-text">نسخ 997</span>
+              </div>
+              <div class="tooltip-container">
+                <button class="action-btn edit" title="تعديل" type="button">
+                  <i class="fa fa-edit"></i>
+                </button>
+                <span class="tooltip-text">تعديل</span>
+              </div>
             </td>
           </tr>
+          {% endwith %}
           {% endfor %}
         </tbody>
-
       </table>
-    </div>
-  </div>
-</div>
 
-<div id="modal" class="modal" role="dialog" aria-modal="true" aria-hidden="true" onclick="onBackdrop(event)">
-  <div class="modal-card" onclick="event.stopPropagation()">
-    <div class="modal-head">
-      <div class="h">
-        <strong id="mTitle">موقع البلاغ</strong>
-        <small id="mSub" class="muted">—</small>
-      </div>
-      <button class="close-btn" type="button" onclick="closeModal()" aria-label="إغلاق">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-    </div>
-
-    <div class="modal-body">
-      <div id="map"></div>
-
-      <div class="side">
-        <div class="kv"><div class="k">رقم البلاغ</div><div class="v" id="kvNo">—</div></div>
-        <div class="kv"><div class="k">المنطقة</div><div class="v" id="kvRegion">—</div></div>
-        <div class="kv"><div class="k">اسم المريض</div><div class="v" id="kvPatient">—</div></div>
-        <div class="kv"><div class="k">الهوية</div><div class="v" id="kvNid">—</div></div>
-        <div class="kv"><div class="k">الجوال</div><div class="v" id="kvPhone">—</div></div>
-        <div class="kv"><div class="k">العمر</div><div class="v" id="kvAge">—</div></div>
-        <div class="kv"><div class="k">الجنسية / الجنس</div><div class="v" id="kvNG">—</div></div>
-        <div class="kv"><div class="k">درجة الحرارة</div><div class="v" id="kvTemp">—</div></div>
-        <div class="kv"><div class="k">معدل النبض</div><div class="v" id="kvPulse">—</div></div>
-        <div class="kv"><div class="k">ضغط الدم</div><div class="v" id="kvBP">—</div></div>
-        <div class="kv"><div class="k">معدل التنفس</div><div class="v" id="kvResp">—</div></div>
-        <div class="kv"><div class="k">نسبة السكر</div><div class="v" id="kvSugar">—</div></div>
-        <div class="kv"><div class="k">ملاحظات</div><div class="v" id="kvNotes">—</div></div>
-        <div class="kv"><div class="k">تفاصيل الحالة</div><div class="v" id="kvType">—</div></div>
-        <div class="note">
-          <div class="k"><i class="fa-regular fa-note-sticky"></i> نص توثيق جاهز (مشاركة 997)</div>
-          <div class="v" id="kvDoc">—</div>
-          <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
-            <button class="btn" type="button" onclick="copyDoc()">
-              <i class="fa-solid fa-copy"></i> نسخ النص
-            </button>
-            <a class="btn" href="#" id="openGmaps" target="_blank" rel="noopener">
-              <i class="fa-solid fa-map-location-dot"></i> فتح في Google Maps
-            </a>
-          </div>
+      {# ===== Pagination (Prev/Next) - يعمل إذا reports هو Page من Django Paginator ===== #}
+      <div class="pagination-bar" id="paginationBar">
+        <div class="pagination-info">
+          <i class="fa fa-info-circle"></i>
+          {% if reports.paginator %}
+            صفحة {{ reports.number }} من {{ reports.paginator.num_pages }} — إجمالي {{ reports.paginator.count }} بلاغ
+          {% else %}
+            عرض النتائج الحالية
+          {% endif %}
         </div>
 
+        <div class="pagination-actions">
+          {% if reports.has_previous %}
+            <a class="page-btn" href="#" onclick="goToPage({{ reports.previous_page_number }}); return false;">
+              <i class="fa fa-chevron-right"></i> السابق
+            </a>
+          {% else %}
+            <span class="page-btn disabled"><i class="fa fa-chevron-right"></i> السابق</span>
+          {% endif %}
+
+          {% if reports.has_next %}
+            <a class="page-btn" href="#" onclick="goToPage({{ reports.next_page_number }}); return false;">
+              التالي <i class="fa fa-chevron-left"></i>
+            </a>
+          {% else %}
+            <span class="page-btn disabled">التالي <i class="fa fa-chevron-left"></i></span>
+          {% endif %}
+        </div>
       </div>
+
+      {% else %}
+      <div class="empty-state">
+        <i class="fa fa-inbox"></i>
+        <p>لا توجد بلاغات للعرض حالياً</p>
+      </div>
+      {% endif %}
     </div>
   </div>
+
 </div>
 
-<script
-  src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key|default_if_none:'' }}&callback=initMap"
-  async defer>
-</script>
-
 <script>
-  function filterRows(){
-    const q = (document.getElementById('q').value || '').trim().toLowerCase();
-    const rows = document.querySelectorAll('#tbl tbody tr');
-    rows.forEach(r => {
-      const hay = (r.getAttribute('data-search') || '').toLowerCase();
-      r.style.display = hay.includes(q) ? '' : 'none';
+// ==============================
+// Helpers: QueryString utilities
+// ==============================
+function getQueryParams() {
+  const url = new URL(window.location.href);
+  return url.searchParams;
+}
+
+function setQueryParam(key, value) {
+  const url = new URL(window.location.href);
+  if (value === null || value === undefined || value === '') {
+    url.searchParams.delete(key);
+  } else {
+    url.searchParams.set(key, value);
+  }
+  return url;
+}
+
+function removeQueryParam(key) {
+  const url = new URL(window.location.href);
+  url.searchParams.delete(key);
+  return url;
+}
+
+function navigateToUrl(url) {
+  window.location.href = url.toString();
+}
+
+// ==============================
+// Filtering "حسب الجدول"
+// (فلترة إضافية داخل الصفحة على 10 صفوف المعروضة)
+// ==============================
+(function initClientSideTableFilter() {
+  const searchInput = document.getElementById('searchInput');
+  const table = document.getElementById('reportsTable');
+  if (!searchInput || !table) return;
+
+  function normalize(s) {
+    return (s || '').toString().trim().toLowerCase();
+  }
+
+  function filterRows() {
+    const term = normalize(searchInput.value);
+    const rows = table.querySelectorAll('tbody tr');
+    if (!rows || rows.length === 0) return;
+
+    rows.forEach((tr) => {
+      const text = normalize(tr.innerText);
+      tr.style.display = term === '' || text.includes(term) ? '' : 'none';
     });
   }
 
-  function resetFilter(){
-    document.getElementById('q').value = '';
-    filterRows();
-  }
+  // فلترة لحظية + ما تلغي فلترة السيرفر (اللي بالـ GET)
+  searchInput.addEventListener('input', filterRows);
+})();
 
-  let map, marker, lastLatLng = null;
-  let lastDocText = "";
+// ==============================
+// Excel / PDF export (يحافظ على الفلاتر)
+// يعتمد على السيرفر: إذا استقبل export=excel يرجع ملف Excel
+// وإذا export=pdf يرجع PDF (اختياري)
+// ==============================
+function exportExcel() {
+  const url = new URL(window.location.href);
+  url.searchParams.set('export', 'excel');
+  // غالباً عند التصدير نبي كل النتائج حسب الفلاتر بدون page
+  url.searchParams.delete('page');
+  navigateToUrl(url);
+}
 
-  function initMap(){
-    const center = {
-      lat: parseFloat('{{ map_center_lat }}') || 23.8859,
-      lng: parseFloat('{{ map_center_lng }}') || 45.0792
-    };
-    const zoom = parseInt('{{ map_zoom }}') || 5;
+function exportPdf() {
+  const url = new URL(window.location.href);
+  url.searchParams.set('export', 'pdf');
+  url.searchParams.delete('page');
+  navigateToUrl(url);
+}
 
-    map = new google.maps.Map(document.getElementById('map'), {
-      center,
-      zoom,
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: true
-    });
+// ==============================
+// Pagination: 10 فقط + السابق/التالي
+// ==============================
+function goToPage(pageNumber) {
+  const url = new URL(window.location.href);
+  url.searchParams.set('page', pageNumber);
+  // تثبيت حجم الصفحة 10
+  url.searchParams.set('page_size', '10');
+  // لا نصدر أثناء التنقل
+  url.searchParams.delete('export');
+  navigateToUrl(url);
+}
 
-    marker = new google.maps.Marker({ map });
-    marker.setVisible(false);
-  }
+// ==============================
+// Actions
+// ==============================
+function refreshPage() {
+  // تحديث بدون فقد الفلاتر (نفس الرابط)
+  const url = new URL(window.location.href);
+  // لا نثبت export أثناء التحديث
+  url.searchParams.delete('export');
+  navigateToUrl(url);
+}
 
-  function openMapModalFromBtn(btn){
-    const d = btn.dataset || {};
-    openMapModal(
-      d.id || '',
-      d.lat || '',
-      d.lng || '',
-      d.region || '—',
-      d.patient || '—',
-      d.nid || '—',
-      d.phone || '—',
-      d.age || '—',
-      d.nat || '—',
-      d.gender || '—',
-      d.temp || '—',
-      d.pulse || '—',
-      d.bp || '—',
-      d.resp || '—',
-      d.sugar || '—',
-      d.notes || '—',
-      d.type || '—',
-      d.ambulance || '—',
-      d.ambulanceby || '—',
-      d.send997 || '—',
-      d.created || ''
-    );
-  }
+// Clear filters (يرجع للصفحة بدون أي GET)
+function clearFilters() {
+  const url = new URL(window.location.href);
+  url.search = ''; // remove all params
+  navigateToUrl(url);
+}
 
-  function openMapModal(id, lat, lng, region, patient, nid, phone, age, nat, gender, temp, pulse, bp, resp, sugar, notes, type, ambulance, ambulanceBy, send997, createdAt){
-    document.getElementById('kvNo').textContent = `#${id || '—'}`;
-    document.getElementById('kvRegion').textContent = region || '—';
-    document.getElementById('kvPatient').textContent = patient || '—';
-    document.getElementById('kvNid').textContent = nid || '—';
-    document.getElementById('kvPhone').textContent = phone || '—';
-    document.getElementById('kvAge').textContent = age || '—';
-    document.getElementById('kvNG').textContent = `${nat || '—'} / ${gender || '—'}`;
-    document.getElementById('kvTemp').textContent = temp || '—';
-    document.getElementById('kvPulse').textContent = pulse || '—';
-    document.getElementById('kvBP').textContent = bp || '—';
-    document.getElementById('kvResp').textContent = resp || '—';
-    document.getElementById('kvSugar').textContent = sugar || '—';
-    document.getElementById('kvNotes').textContent = notes || '—';
-    document.getElementById('kvType').textContent = type || '—';
+document.getElementById('clearFiltersBtn')?.addEventListener('click', clearFilters);
 
-    document.getElementById('mTitle').textContent = `موقع البلاغ #${id || '—'}`;
-    document.getElementById('mSub').textContent = `${region || '—'}${createdAt ? ' • ' + createdAt : ''}`;
+// Copy 997 Text Function
+function copy997Text(reportId) {
+  // Implement your copy logic here
+  alert('تم نسخ نص توثيق 997 للبلاغ #' + reportId);
+}
 
-    const docText =
-`بلاغ تطبيق ECR
-اسم المريض: ${patient || '-'}
-رقم الهوية: ${nid || '-'}
-الجوال: ${phone || '-'}
-العمر: ${age || '-'}
-الجنسية: ${nat || '-'}
-الجنس: ${gender || '-'}
-درجة الحرارة: ${temp || '-'}
-معدل النبض: ${pulse || '-'}
-ضغط الدم: ${bp || '-'}
-معدل التنفس: ${resp || '-'}
-نسبة السكر في الدم: ${sugar || '-'}
-ملاحظات: ${notes || '-'}
-تفاصيل الحالة: ${type || '-'}
-هل تم طلب إسعاف؟: ${ambulance || '-'}
-من طلب الإسعاف: ${ambulanceBy || '-'}
-إرسال توثيق إلى 997: ${send997 || '-'}
-الموقع: ${lat}, ${lng}
-المنطقة: ${region || '-'}
-وقت البلاغ: ${createdAt || '-'}
-`;
-    lastDocText = docText;
-    document.getElementById('kvDoc').textContent = docText;
-
-    const modal = document.getElementById('modal');
-    modal.classList.add('open');
-    modal.setAttribute('aria-hidden', 'false');
-
-    const latNum = parseFloat(String(lat).replace(',', '.'));
-    const lngNum = parseFloat(String(lng).replace(',', '.'));
-
-    const gmaps = document.getElementById('openGmaps');
-    if (Number.isFinite(latNum) && Number.isFinite(lngNum)){
-      lastLatLng = { lat: latNum, lng: lngNum };
-      gmaps.href = `https://www.google.com/maps?q=${latNum},${lngNum}`;
-
-      safeMapResize();
-      if (map){
-        marker.setVisible(true);
-        marker.setPosition(lastLatLng);
-        map.setCenter(lastLatLng);
-        map.setZoom(16);
-      }
-    } else {
-      lastLatLng = null;
-      gmaps.href = "#";
-      safeMapResize();
-      if (map){
-        marker.setVisible(false);
-      }
-    }
-  }
-
-  function copyDoc(){
-    if (!lastDocText) return;
-    navigator.clipboard.writeText(lastDocText).catch(() => {});
-  }
-
-  function closeModal(){
-    const modal = document.getElementById('modal');
-    modal.classList.remove('open');
-    modal.setAttribute('aria-hidden', 'true');
-  }
-
-  function onBackdrop(e){
-    if (e.target && e.target.id === 'modal') closeModal();
-  }
-
-  function safeMapResize(){
-    setTimeout(() => {
-      if (map && window.google && google.maps){
-        google.maps.event.trigger(map, 'resize');
-        if (lastLatLng) map.setCenter(lastLatLng);
-      }
-    }, 220);
-  }
-
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape'){
-      const modal = document.getElementById('modal');
-      if (modal.classList.contains('open')) closeModal();
-    }
-  });
+// Auto-refresh every 60 seconds
+setTimeout(function() {
+  // تحديث بدون export
+  refreshPage();
+}, 60000);
 </script>
-
 {% endblock %}

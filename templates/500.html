@@ -1,69 +1,53 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>خطأ في الخادم</title>
+    <meta charset="UTF-8">
+    <title>500 - خطأ في الخادم | ECR</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<style>
-body {
-    margin:0;
-    font-family: "Tajawal", system-ui, sans-serif;
-    background: linear-gradient(135deg,#3b0000,#7a0000);
-    color:white;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    height:100vh;
-}
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Tajawal', sans-serif;
+            background: linear-gradient(135deg, #7f1d1d, #1e1b4b);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+        }
 
-.card {
-    background:#ffffff10;
-    backdrop-filter: blur(10px);
-    padding:40px;
-    border-radius:20px;
-    text-align:center;
-    max-width:420px;
-    box-shadow:0 10px 30px #00000050;
-}
+        .card {
+            background: rgba(255,255,255,0.05);
+            padding: 40px;
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            max-width: 500px;
+        }
 
-h1 {
-    font-size:70px;
-    margin:0;
-    color:#ff4d4d;
-}
+        h1 {
+            font-size: 80px;
+            margin: 0;
+            color: #f87171;
+        }
 
-p {
-    margin:15px 0 30px;
-    font-size:18px;
-}
-
-button {
-    background:#b30000;
-    border:none;
-    padding:12px 28px;
-    color:white;
-    font-size:16px;
-    border-radius:10px;
-    cursor:pointer;
-    transition:.3s;
-}
-
-button:hover {
-    background:#ff1a1a;
-    transform:scale(1.05);
-}
-</style>
+        a {
+            display: inline-block;
+            margin-top: 25px;
+            padding: 12px 25px;
+            background: #E31E24;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+        }
+    </style>
 </head>
-
 <body>
-<div class="card">
-    <h1>500</h1>
-    <p>حدث خطأ غير متوقع في الخادم.</p>
-
-    <button onclick="history.back()">
-        الرجوع للصفحة السابقة
-    </button>
-</div>
+    <div class="card">
+        <h1>500</h1>
+        <p>حدث خطأ داخلي في النظام. تم إشعار الإدارة.</p>
+        <a href="/accounts/dashboard/main/">العودة للوحة التحكم</a>
+    </div>
 </body>
 </html>

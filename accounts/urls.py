@@ -13,5 +13,6 @@ urlpatterns = [
     path("logout/", LogoutView.as_view(next_page="/accounts/login/"), name="logout"),
     # Register
     path("register/", views.register_view, name="accounts_register"),
-    path("portal/ecr_dashcad/", ecr_dashcad, name="ecr_dashcad"),
+    path("dashboard/main/", ecr_dashcad, name="ecr_dashcad"),
+    
 ]

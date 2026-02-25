@@ -463,9 +463,99 @@ tbody tr:hover td{ background:#f8fafc; }
     .timeGrid{ grid-template-columns: 1fr; }
 
   }
+
+  /* ✅ Toast Notifications */
+  .toast{
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 280px;
+    max-width: min(92vw, 640px);
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-weight: 950;
+    color: #fff;
+    z-index: 99999;
+    box-shadow: 0 12px 28px rgba(0,0,0,.22);
+    direction: rtl;
+    text-align: center;
+    opacity: 0;
+    transition: opacity .25s ease, transform .25s ease;
+    pointer-events: none;
+  }
+  .toast.show{
+    opacity: 1;
+    transform: translateX(-50%) translateY(-6px);
+  }
+
+  /* ✅ Notifications toggle (like your screenshot) */
+  .notify-toggle{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(245,158,11,.35);
+    background: rgba(245,158,11,.10);
+    font-weight:950;
+  }
+  .notify-toggle input{
+    width:18px; height:18px;
+    accent-color: var(--my-yellow);
+    cursor:pointer;
+  }
+
+
+  /* ✅ Tap-to-enable sound banner */
+  .sound-banner{
+    position: fixed;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15,23,42,.92);
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 12px;
+    z-index: 99998;
+    font-weight: 950;
+    box-shadow: 0 12px 28px rgba(0,0,0,.25);
+    display: none;
+    direction: rtl;
+    text-align: center;
+    max-width: min(92vw, 720px);
+  }
+  .sound-banner.show{ display:block; }
+  .sound-banner .mini{
+    opacity:.9;
+    font-weight:800;
+    font-size:12px;
+    margin-top:4px;
+  }
+
+
+  /* ✅ Click CAD number to silence alert */
+  .cad-link{
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    cursor: pointer;
+    color: var(--my-blue);
+    font-weight: 950;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+  .cad-link:active{ transform: translateY(1px); }
+
 </style>
 
 <div class="wrap">
+
+  <div class="sound-banner show" id="soundBanner">
+    اضغط أي مكان مرة واحدة لتفعيل صوت التنبيهات 🔊
+  </div>
 
   <div class="topbar" style="direction:rtl;">
     <div class="title">
@@ -493,7 +583,18 @@ tbody tr:hover td{ background:#f8fafc; }
       </select>
       {% endif %}
 
-      <button class="btn btn-ghost" id="btnRefresh">
+      <span class="notify-toggle" title="التنبيهات في المتصفح">
+  <span style="display:inline-flex; align-items:center; gap:8px;">
+    <i class="fa-solid fa-bell" style="color:var(--my-yellow)"></i>
+    <span>التنبيهات</span>
+  </span>
+  <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; user-select:none;">
+    <input type="checkbox" id="chkSound" checked />
+    <span style="font-weight:900;">تشغيل الصوت</span>
+  </label>
+</span>
+
+<button class="btn btn-ghost" id="btnRefresh">
         <i class="fa-solid fa-rotate"></i> تحديث
       </button>
     </div>
@@ -814,6 +915,222 @@ tbody tr:hover td{ background:#f8fafc; }
   // Marker Icons
   const ICON_CAD = "{% static 'icons/ecrb.png' %}";
   const ICON_RESPONDER = "{% static 'icons/responlive.png' %}";
+
+
+  /* ===== Dispatcher Alerts Engine (Works even if MP3 is blocked) ===== */
+  let soundEnabled = true;     // يتحكم بها Checkbox
+  let audioPrimed = false;     // بعد أول لمسة
+  let audioCtx = null;
+
+  // MP3 (ندعم اسمين للبلاغ الجديد)
+  const SOUND_NEW_A = new Audio("{% static 'sounds/cad.mp3' %}");
+  const SOUND_NEW_B = new Audio("{% static 'sounds/accept.mp3' %}");
+  const SOUND_ACCEPT = new Audio("{% static 'sounds/accept.mp3' %}");
+  const SOUND_ARRIVE = new Audio("{% static 'sounds/arrive.mp3' %}");
+
+  try{ SOUND_NEW_A.preload="auto"; }catch(_e){}
+  try{ SOUND_NEW_B.preload="auto"; }catch(_e){}
+  try{ SOUND_ACCEPT.preload="auto"; }catch(_e){}
+  try{ SOUND_ARRIVE.preload="auto"; }catch(_e){}
+
+  function showToast(message, bgColor){
+    try{
+      const t = document.createElement("div");
+      t.className = "toast";
+      t.style.background = bgColor || "var(--my-green)";
+      t.textContent = message || "";
+      document.body.appendChild(t);
+      requestAnimationFrame(()=>t.classList.add("show"));
+      setTimeout(()=>{
+        t.classList.remove("show");
+        setTimeout(()=>{ try{ t.remove(); }catch(_e){} }, 300);
+      }, 4500);
+    }catch(_e){}
+  }
+
+  function ensureAudioCtx(){
+    try{
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if(!AudioCtx) return null;
+      if(!audioCtx) audioCtx = new AudioCtx();
+      if(audioCtx.state === "suspended"){
+        audioCtx.resume().catch(()=>{});
+      }
+      return audioCtx;
+    }catch(_e){
+      return null;
+    }
+  }
+
+  
+  let _lastOsc = null;
+
+  function stopAllSounds(){
+    try{
+      // stop oscillator beep immediately
+      if(_lastOsc){
+        try{ _lastOsc.stop(); }catch(_e){}
+        _lastOsc = null;
+      }
+    }catch(_e){}
+
+    // stop mp3 elements immediately
+    const audios = [SOUND_NEW_A, SOUND_NEW_B, SOUND_ACCEPT, SOUND_ARRIVE];
+    for(const a of audios){
+      try{
+        a.pause();
+        a.currentTime = 0;
+      }catch(_e){}
+    }
+  }
+
+function beep(durationMs=170, frequency=880, volume=0.22){
+    if(!soundEnabled) return;
+    const ctx = ensureAudioCtx();
+    if(!ctx) return;
+    try{
+      // stop previous beep if any
+      if(_lastOsc){ try{ _lastOsc.stop(); }catch(_e){}; _lastOsc = null; }
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      _lastOsc = o;
+      o.type = "sine";
+      o.frequency.value = frequency;
+      g.gain.value = volume;
+      o.connect(g);
+      g.connect(ctx.destination);
+      o.start();
+      setTimeout(()=>{ try{o.stop();}catch(_e){} }, durationMs);
+    }catch(_e){}
+  }
+
+  async function tryPlayMp3(audio){
+    if(!soundEnabled) return false;
+    if(!audioPrimed) return false; // قبل اللمسة الأولى غالبًا ممنوع
+    try{
+      audio.currentTime = 0;
+      const p = audio.play();
+      if(p && typeof p.catch === "function"){
+        await p.catch(()=>{ throw new Error("blocked"); });
+      }
+      return true;
+    }catch(_e){
+      return false;
+    }
+  }
+
+  async function playAlert(kind){
+    // kind: new/accept/arrive
+    if(!soundEnabled) return;
+
+    // 1) دائماً بييب كـ fallback (مضمون بعد اللمسة الأولى، وأحيانًا قبلها)
+    if(kind === "new") beep(180, 1100);
+    if(kind === "accept") beep(160, 900);
+    if(kind === "arrive") beep(200, 650);
+
+    // 2) جرّب MP3 (لو اشتغل ممتاز)
+    if(kind === "new"){
+      const okA = await tryPlayMp3(SOUND_NEW_A);
+      if(!okA) await tryPlayMp3(SOUND_NEW_B);
+    }else if(kind === "accept"){
+      await tryPlayMp3(SOUND_ACCEPT);
+    }else if(kind === "arrive"){
+      await tryPlayMp3(SOUND_ARRIVE);
+    }
+  }
+
+  function primeAudioOnce(){
+    if(audioPrimed) return;
+    audioPrimed = true;
+    ensureAudioCtx();
+    // Prime MP3 elements with a silent play attempt (some browsers need this)
+    const list = [SOUND_NEW_A, SOUND_NEW_B, SOUND_ACCEPT, SOUND_ARRIVE];
+    list.forEach(a=>{
+      try{
+        const prevVol = a.volume;
+        a.volume = 0.0;
+        const p = a.play();
+        if(p && typeof p.then === "function"){
+          p.then(()=>{ try{ a.pause(); a.currentTime=0; }catch(_e){}; a.volume = prevVol; })
+           .catch(()=>{ try{ a.pause(); }catch(_e){}; a.volume = prevVol; });
+        }else{
+          try{ a.pause(); a.currentTime=0; }catch(_e){}
+          a.volume = prevVol;
+        }
+      }catch(_e){}
+    });
+
+    try{ document.getElementById("soundBanner")?.classList.remove("show"); }catch(_e){}
+    showToast("تم تفعيل صوت التنبيهات ✅", "var(--my-blue)");
+  }
+
+  // Helpers لاستخراج الحقول مهما اختلف الاسم من الـ API
+  function getCad(r){ return String(r.cad_number ?? r.cad ?? r.number ?? ""); }
+  function getAccepted(r){ return r.accepted_at || r.accepted_time || r.acceptedAt || r.accepted || r.time_accept || ""; }
+  function getArrive(r){ return r.arrival_time || r.arrived_at || r.arrivedAt || r.arrival || r.time_arrive || ""; }
+  function getRespName(r){ return r.responder_name || r.responder || r.responder_display || r.responderName || "المستجيب"; }
+
+  // Tracking
+  let knownCadSet = new Set();
+  let hasInitialSnapshot = false;
+  let snapshotByCad = new Map(); // cad -> {acc, arr}
+
+  function detectAndNotifyChanges(){
+    const list = Array.isArray(reportsRaw) ? reportsRaw : [];
+
+    // snapshot init: no notifications on first load
+    if(!hasInitialSnapshot){
+      knownCadSet = new Set(list.map(x => getCad(x)).filter(Boolean));
+      snapshotByCad.clear();
+      for(const r of list){
+        const cad = getCad(r);
+        if(!cad) continue;
+        snapshotByCad.set(cad, { acc: getAccepted(r) || "", arr: getArrive(r) || "" });
+      }
+      hasInitialSnapshot = true;
+      return;
+    }
+
+    // 1) New reports
+    const newly = [];
+    for(const r of list){
+      const cad = getCad(r);
+      if(!cad) continue;
+      if(!knownCadSet.has(cad)){
+        newly.push(r);
+        knownCadSet.add(cad);
+      }
+    }
+    if(newly.length === 1){
+      const cad = getCad(newly[0]);
+      showToast(`بلاغ جديد وارد: ${cad}`, "var(--my-blue)");
+      playAlert("new");
+    }else if(newly.length > 1){
+      showToast(`ورد ${newly.length} بلاغات جديدة`, "var(--my-blue)");
+      playAlert("new");
+    }
+
+    // 2) Accept/Arrive transitions
+    for(const r of list){
+      const cad = getCad(r);
+      if(!cad) continue;
+      const prev = snapshotByCad.get(cad) || { acc:"", arr:"" };
+      const acc = getAccepted(r) || "";
+      const arr = getArrive(r) || "";
+      const name = getRespName(r);
+
+      if(!prev.acc && acc){
+        showToast(`تم قبول البلاغ ${cad} بواسطة ${name}`, "var(--my-green)");
+        playAlert("accept");
+      }
+      if(!prev.arr && arr){
+        showToast(`وصول المستجيب ${name} للبلاغ ${cad}`, "var(--my-yellow)");
+        playAlert("arrive");
+      }
+      snapshotByCad.set(cad, { acc, arr });
+    }
+  }
+
 
   const MAP_CENTER = {
     lat: parseFloat("{{ map_center_lat|default:23.8859 }}"),
@@ -1252,7 +1569,7 @@ function setField(id, val){
       tr.style.cursor = "pointer";
       tr.dataset.cad = String(r.cad_number || "");
       tr.innerHTML = `
-        <td style="font-weight:950; color:var(--my-blue)">${escapeHtml(r.cad_number)}</td>
+        <td><button class="cad-link" type="button" data-cad="${escapeHtml(r.cad_number)}">${escapeHtml(r.cad_number)}</button></td>
         <td>${escapeHtml(r.case_type || r.type || "-")}</td>
         <td>
           <span class="pill ${(r.is_closed || r.closed) ? "closed" : "ready"}">
@@ -1346,6 +1663,9 @@ tr.addEventListener("click", () => {
       reportsRaw = Array.isArray(data) ? data : [];
       applyAll();
 
+      // ✅ بعد تحديث البيانات: كشف البلاغ الجديد/القبول/الوصول للمرحل
+      if(typeof detectAndNotifyChanges === 'function') detectAndNotifyChanges();
+
       if(keepOpenedCad){
         const rep = findReportByCad(keepOpenedCad);
         if(rep) populateModal(rep);
@@ -1424,6 +1744,43 @@ tr.addEventListener("click", () => {
       loadCad();
       loadResponders();
     });
+
+    // ✅ عند الضغط على رقم البلاغ: اسكت الصوت فورًا (ولا يمنع وصول تنبيهات جديدة لاحقًا)
+    const tbody = document.getElementById("tbody");
+    if(tbody){
+      tbody.addEventListener("click", (ev) => {
+        const btn = ev.target && ev.target.closest ? ev.target.closest(".cad-link") : null;
+        if(btn){
+          stopAllSounds();
+          // لا نمنع فتح التفاصيل/تحديد الصف (خليها تشتغل طبيعي)
+        }
+      });
+    }
+
+
+    // ✅ Checkbox تشغيل الصوت
+    const chkSound = document.getElementById("chkSound");
+    if(chkSound){
+      soundEnabled = !!chkSound.checked;
+      chkSound.addEventListener("change", ()=>{
+        soundEnabled = !!chkSound.checked;
+        showToast(soundEnabled ? "تم تشغيل الصوت" : "تم إيقاف الصوت", soundEnabled ? "var(--my-blue)" : "var(--my-dark)");
+      });
+    }
+
+    // ✅ تفعيل الصوت عند أول لمسة/نقرة من المرحل (مطلوب من المتصفح)
+    let _primed = false;
+    function _primeOnce(){
+      if(_primed) return;
+      _primed = true;
+      primeAudioOnce();
+      document.removeEventListener("click", _primeOnce, true);
+      document.removeEventListener("touchstart", _primeOnce, true);
+      document.removeEventListener("keydown", _primeOnce, true);
+    }
+    document.addEventListener("click", _primeOnce, true);
+    document.addEventListener("touchstart", _primeOnce, true);
+    document.addEventListener("keydown", _primeOnce, true);
 
     document.getElementById("q").addEventListener("input", applyAll);
     document.getElementById("status").addEventListener("change", applyAll);
@@ -1551,6 +1908,9 @@ tr.addEventListener("click", () => {
 
     // ✅ تحديث تلقائي للمستجيبين كل 10 ثواني
     setInterval(loadResponders, 10000);
+
+    // ✅ تحديث صامت للبلاغات (الخريطة + الجدول) كل 5 ثواني
+    setInterval(() => loadCad(), 5000);
   });
 </script>
 

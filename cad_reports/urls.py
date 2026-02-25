@@ -47,6 +47,8 @@ urlpatterns = [
     # ==========================
     path("api/dashboard/summary/", views.api_dashboard_summary, name="api_dashboard_summary"),
 
+
+
     # ==========================
     # AI Hotspots Map Page
     # ==========================
@@ -57,6 +59,7 @@ urlpatterns = [
     # ==========================
     path("api/ai/hotspots/", cad_api_ai_hotspots, name="cad_api_ai_hotspots"),
     path("api/case-types/", cad_api_case_types, name="cad_api_case_types"),
+    
 
     # ==========================
     # JSON for dashboard

@@ -1,0 +1,313 @@
+{% extends "portal/base_portal.html" %}
+{% load static %}
+{% block title %}التذاكر المفتوحة{% endblock %}
+{% block extra_head %}
+<style>
+  :root{
+    --ecr-primary:#0b0140;
+    --ecr-accent:#E31E24;
+    --ecr-bg:#f6f7fb;
+    --ecr-surface:#ffffff;
+    --ecr-text:#0f172a;
+    --ecr-muted:#64748b;
+    --ecr-border:#e2e8f0;
+    --ecr-success:#16a34a;
+    --ecr-warn:#f97316;
+    --ecr-danger:#dc2626;
+    --ecr-info:#2563eb;
+    --ecr-radius:18px;
+    --ecr-shadow:0 12px 28px rgba(15,23,42,.08);
+  }
+  .st-wrap{ padding: 18px 18px 28px; }
+  .st-hero{
+    background: linear-gradient(135deg, rgba(11,1,64,.96), rgba(11,1,64,.78));
+    color:#fff;
+    border-radius: var(--ecr-radius);
+    box-shadow: var(--ecr-shadow);
+    padding: 18px 18px;
+    position: relative;
+    overflow:hidden;
+  }
+  .st-hero::after{
+    content:"";
+    position:absolute; inset:-40px -60px auto auto;
+    width:220px; height:220px;
+    background: radial-gradient(circle at 30% 30%, rgba(227,30,36,.75), rgba(227,30,36,0) 60%);
+    transform: rotate(18deg);
+    opacity:.9;
+  }
+  .st-hero h1{ margin:0; font-size: 22px; font-weight: 800; letter-spacing:.2px;}
+  .st-hero p{ margin:8px 0 0; color: rgba(255,255,255,.88); font-weight: 500;}
+  .st-actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top: 12px; position:relative; z-index:1;}
+  .st-btn{
+    display:inline-flex; align-items:center; gap:10px;
+    border-radius: 14px;
+    padding: 10px 12px;
+    border: 1px solid rgba(255,255,255,.22);
+    background: rgba(255,255,255,.08);
+    color:#fff; text-decoration:none;
+    font-weight: 700;
+    transition: transform .12s ease, background .12s ease, border-color .12s ease;
+  }
+  .st-btn:hover{ transform: translateY(-1px); background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.32); }
+  .st-btn--solid{ background: rgba(227,30,36,.95); border-color: rgba(227,30,36,.2); }
+  .st-btn--solid:hover{ background: rgba(227,30,36,1); }
+  .st-grid{ display:grid; gap:14px; }
+  .st-grid.kpis{ grid-template-columns: repeat(12, 1fr); margin-top: 14px; }
+  .st-card{
+    background: var(--ecr-surface);
+    border: 1px solid var(--ecr-border);
+    border-radius: var(--ecr-radius);
+    box-shadow: 0 8px 18px rgba(15,23,42,.05);
+  }
+  .st-card-hd{ padding: 14px 14px 10px; border-bottom: 1px solid var(--ecr-border); display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .st-card-hd h2{ margin:0; font-size: 15px; font-weight: 900; color: var(--ecr-text); }
+  .st-card-bd{ padding: 14px; }
+  .st-kpi{ grid-column: span 3; padding: 14px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .st-kpi .meta{ display:flex; flex-direction:column; gap:4px; }
+  .st-kpi .lbl{ color: var(--ecr-muted); font-weight: 800; font-size: 12px; }
+  .st-kpi .val{ color: var(--ecr-text); font-weight: 900; font-size: 22px; }
+  .st-kpi .sub{ color: var(--ecr-muted); font-weight: 700; font-size: 12px; }
+  .st-pill{
+    display:inline-flex; align-items:center; gap:8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--ecr-border);
+    color: var(--ecr-text);
+    font-weight: 800;
+    font-size: 12px;
+    background: rgba(2,6,23,.02);
+    white-space:nowrap;
+  }
+  .st-dot{ width:10px; height:10px; border-radius:999px; background: var(--ecr-info); }
+  .st-dot.success{ background: var(--ecr-success); }
+  .st-dot.warn{ background: var(--ecr-warn); }
+  .st-dot.danger{ background: var(--ecr-danger); }
+  .st-dot.accent{ background: var(--ecr-accent); }
+  .st-filters{
+    display:flex; gap:10px; flex-wrap:wrap; align-items:end;
+  }
+  .st-field{ display:flex; flex-direction:column; gap:6px; min-width: 160px;}
+  .st-field label{ font-size: 12px; font-weight: 900; color: var(--ecr-muted); }
+  .st-input, .st-select, .st-textarea{
+    border: 1px solid var(--ecr-border);
+    border-radius: 14px;
+    padding: 10px 12px;
+    outline: none;
+    background: #fff;
+    font-weight: 700;
+    color: var(--ecr-text);
+  }
+  .st-textarea{ min-height: 110px; resize: vertical; }
+  .st-input:focus, .st-select:focus, .st-textarea:focus{ border-color: rgba(11,1,64,.45); box-shadow: 0 0 0 4px rgba(11,1,64,.10); }
+  .st-submit{
+    border: none;
+    border-radius: 14px;
+    padding: 10px 14px;
+    background: var(--ecr-primary);
+    color:#fff;
+    font-weight: 900;
+    cursor: pointer;
+    transition: transform .12s ease, opacity .12s ease;
+  }
+  .st-submit:hover{ transform: translateY(-1px); opacity: .96; }
+  .st-submit.secondary{ background: #0f172a; }
+  .st-submit.danger{ background: var(--ecr-danger); }
+  .st-table{ width:100%; border-collapse: separate; border-spacing: 0; overflow:hidden; }
+  .st-table th, .st-table td{ padding: 10px 10px; text-align:right; border-bottom:1px solid var(--ecr-border); vertical-align: middle; }
+  .st-table th{ font-size: 12px; color: var(--ecr-muted); font-weight: 900; background: rgba(2,6,23,.02); }
+  .st-table tr:hover td{ background: rgba(2,6,23,.015); }
+  .st-badge{
+    display:inline-flex; align-items:center; gap:8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 900;
+    border:1px solid var(--ecr-border);
+    background: rgba(2,6,23,.02);
+    color: var(--ecr-text);
+  }
+  .st-badge.success{ border-color: rgba(22,163,74,.25); background: rgba(22,163,74,.08); color: #0f5132;}
+  .st-badge.warn{ border-color: rgba(249,115,22,.25); background: rgba(249,115,22,.09); color: #7c2d12;}
+  .st-badge.danger{ border-color: rgba(220,38,38,.25); background: rgba(220,38,38,.09); color: #7f1d1d;}
+  .st-badge.info{ border-color: rgba(37,99,235,.25); background: rgba(37,99,235,.08); color: #1e3a8a;}
+  .st-muted{ color: var(--ecr-muted); font-weight: 700; }
+  .st-row{ display:flex; gap:14px; flex-wrap:wrap; }
+  .st-col{ flex:1 1 340px; min-width: 320px; }
+  .st-legend{ display:flex; gap:10px; flex-wrap:wrap; }
+  .st-help{ font-size: 12px; color: var(--ecr-muted); font-weight: 700; line-height: 1.6; }
+  .st-empty{
+    padding: 18px;
+    border: 1px dashed var(--ecr-border);
+    border-radius: var(--ecr-radius);
+    background: rgba(2,6,23,.02);
+    color: var(--ecr-muted);
+    font-weight: 800;
+  }
+  .st-pager{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
+  .st-page-links{ display:flex; gap:8px; flex-wrap:wrap; }
+  .st-page-link{
+    text-decoration:none;
+    padding: 8px 10px;
+    border-radius: 12px;
+    border: 1px solid var(--ecr-border);
+    background: #fff;
+    color: var(--ecr-text);
+    font-weight: 900;
+  }
+  .st-page-link.active{ background: rgba(11,1,64,.08); border-color: rgba(11,1,64,.25); }
+  @media (max-width: 1100px){
+    .st-kpi{ grid-column: span 6; }
+  }
+  @media (max-width: 700px){
+    .st-wrap{ padding: 14px 12px 24px; }
+    .st-kpi{ grid-column: span 12; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="st-wrap">
+  {% with page_title="التذاكر المفتوحة" page_hint="Open / In Progress / Paused بحسب النظام." %}
+
+  <div class="st-card" style="margin-top:14px;">
+    <div class="st-card-hd">
+      <h2>{{ page_title }}</h2>
+      <span class="st-muted">{{ page_hint|default:"" }}</span>
+    </div>
+    <div class="st-card-bd">
+      <form method="get" class="st-filters">
+        <div class="st-field" style="min-width:240px;">
+          <label>بحث</label>
+          <input class="st-input" type="text" name="q" value="{{ filters.q|default:'' }}" placeholder="رقم التذكرة / العنوان / رقم البلاغ...">
+        </div>
+        <div class="st-field">
+          <label>نوع</label>
+          <select class="st-select" name="kind">
+            <option value="">الكل</option>
+            <option value="INC" {% if filters.kind == "INC" %}selected{% endif %}>INC</option>
+            <option value="REQ" {% if filters.kind == "REQ" %}selected{% endif %}>REQ</option>
+          </select>
+        </div>
+        <div class="st-field">
+          <label>الأولوية</label>
+          <select class="st-select" name="priority">
+            <option value="">الكل</option>
+            {% for p in priorities %}
+              <option value="{{ p.value }}" {% if filters.priority == p.value %}selected{% endif %}>{{ p.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="st-field">
+          <label>متأخرة SLA؟</label>
+          <select class="st-select" name="overdue">
+            <option value="">الكل</option>
+            <option value="1" {% if filters.overdue == "1" %}selected{% endif %}>نعم</option>
+            <option value="0" {% if filters.overdue == "0" %}selected{% endif %}>لا</option>
+          </select>
+        </div>
+        <div class="st-field">
+          <label>من تاريخ</label>
+          <input class="st-input" type="date" name="from" value="{{ filters.from|default:'' }}">
+        </div>
+        <div class="st-field">
+          <label>إلى تاريخ</label>
+          <input class="st-input" type="date" name="to" value="{{ filters.to|default:'' }}">
+        </div>
+        <button class="st-submit" type="submit">تطبيق</button>
+        <a class="st-btn" style="background:#fff;color:var(--ecr-text);border-color:var(--ecr-border);" href="?">إعادة ضبط</a>
+      </form>
+    </div>
+  </div>
+
+  <div class="st-card" style="margin-top:14px;">
+    <div class="st-card-hd">
+      <h2>النتائج</h2>
+      <span class="st-muted">إجمالي: {{ page_obj.paginator.count|default:tickets|length|default:"0" }}</span>
+    </div>
+    <div class="st-card-bd" style="overflow:auto;">
+      <table class="st-table">
+        <thead>
+          <tr>
+            <th style="width:130px;">رقم التذكرة</th>
+            <th>العنوان</th>
+            <th style="width:90px;">النوع</th>
+            <th style="width:140px;">الحالة</th>
+            <th style="width:140px;">الأولوية</th>
+            <th style="width:180px;">المُسند إليه</th>
+            <th style="width:160px;">الإنشاء</th>
+            <th style="width:120px;">SLA</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in page_obj|default:tickets %}
+            <tr>
+              <td>
+                <a href="{% url 'support_tickets:ticket_detail' t.id %}" style="font-weight:900;color:var(--ecr-primary);text-decoration:none;">
+                  {{ t.code|default:t.id }}
+                </a>
+              </td>
+              <td>
+                <div style="font-weight:900;color:var(--ecr-text);">{{ t.title|default:"—" }}</div>
+                <div class="st-muted" style="margin-top:3px;">
+                  {% if t.requester_name %}
+                    {{ t.requester_name }}
+                  {% elif t.requester_email %}
+                    {{ t.requester_email }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </div>
+              </td>
+              <td><span class="st-badge info">{{ t.kind|default:"—" }}</span></td>
+              <td>
+                {% if t.is_closed %}
+                  <span class="st-badge">{{ t.get_status_display|default:"مغلقة" }}</span>
+                {% elif t.is_resolved %}
+                  <span class="st-badge success">{{ t.get_status_display|default:"محلولة" }}</span>
+                {% elif t.is_overdue %}
+                  <span class="st-badge danger">{{ t.get_status_display|default:"متأخرة" }}</span>
+                {% else %}
+                  <span class="st-badge warn">{{ t.get_status_display|default:"مفتوحة" }}</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if t.priority %}<span class="st-badge">{{ t.get_priority_display|default:t.priority }}</span>{% else %}<span class="st-muted">—</span>{% endif %}
+              </td>
+              <td>
+                {% if t.assigned_to %}<strong>{{ t.assigned_to.get_full_name|default:t.assigned_to.username }}</strong>{% else %}<span class="st-muted">غير مسند</span>{% endif %}
+              </td>
+              <td class="st-muted">{{ t.created_at|date:"Y-m-d H:i" }}</td>
+              <td>
+                {% if t.is_overdue %}<span class="st-badge danger">تجاوز</span>{% else %}<span class="st-badge success">ضمن</span>{% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="8"><div class="st-empty">لا توجد تذاكر مطابقة.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="st-card-bd">
+      {% if page_obj %}
+        <div class="st-pager">
+          <div class="st-muted">الصفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}</div>
+          <div class="st-page-links">
+            {% if page_obj.has_previous %}
+              <a class="st-page-link" href="?page={{ page_obj.previous_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}">السابق</a>
+            {% endif %}
+            <span class="st-page-link active">{{ page_obj.number }}</span>
+            {% if page_obj.has_next %}
+              <a class="st-page-link" href="?page={{ page_obj.next_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}">التالي</a>
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+{% endwith %}
+</div>
+{% endblock %}
+
+{% block extra_js %}{% endblock %}

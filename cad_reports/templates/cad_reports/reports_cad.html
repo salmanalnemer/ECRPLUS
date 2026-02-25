@@ -61,19 +61,22 @@
   .input-readonly { background: #f8fafc; color: #e31e24; font-weight: bold; border-color: #fca5a5; }
 
   .btn-submit {
-    background: #e31e24;
+    background: #24bb70;
     color: white;
+    font-family: 'Tajawal';
     padding: 14px;
     border-radius: 8px;
     font-weight: bold;
-    width: 100%;
+    width: 15%;
     border: none;
     cursor: pointer;
     font-size: 1rem;
     transition: 0.3s;
+    margin-right: auto;
+    display: block;
   }
 
-  .btn-submit:hover { background: #b91c1c; }
+  .btn-submit:hover { background: #1a8650; }
 
   .map-toolbar {
     padding: 8px;
@@ -135,7 +138,123 @@
   }
 
   .btn-clear:hover { background: #0f172a; }
+
+  /* =========================
+     Toast (Notifications)
+     ========================= */
+  .toast-wrap{
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+    max-width: 360px;
+  }
+
+  .toast{
+    pointer-events: auto;
+    background: #0f172a;
+    color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    padding: 12px 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    transform: translateY(-8px);
+    opacity: 0;
+    animation: toastIn 200ms ease-out forwards;
+    direction: rtl;
+  }
+
+  .toast .icon{
+    width: 26px;
+    height: 26px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    flex: 0 0 auto;
+    margin-top: 1px;
+  }
+
+  .toast .body{
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .toast .title{
+    font-weight: 900;
+    font-size: 0.9rem;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .toast .msg{
+    font-size: 0.82rem;
+    color: rgba(255,255,255,0.9);
+    line-height: 1.35;
+    word-break: break-word;
+  }
+
+  .toast .close{
+    margin-inline-start: auto;
+    background: transparent;
+    color: rgba(255,255,255,0.8);
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 0 4px;
+  }
+
+/* إشعار نجاح (أخضر) */
+.toast.success{
+  background: #49b45b; /* لون خلفية التوست عند نجاح العملية */
+}
+.toast.success .icon{
+  background: rgba(255,255,255,0.14); /* خلفية أيقونة النجاح (شفافة قليلاً) */
+}
+/* إشعار خطأ (أحمر داكن) */
+.toast.error{
+  background: #be3434; /* لون خلفية إشعار الخطأ */
+}
+.toast.error .icon{
+  background: rgba(255,255,255,0.14); /* خلفية الأيقونة */
+}
+/* إشعار تحذير (برتقالي/بني) */
+.toast.warning{
+  background: #d65e13; /* لون خلفية التحذير */
+}
+.toast.warning .icon{
+  background: rgba(255,255,255,0.14); /* خلفية أيقونة التحذير */
+}
+/* إشعار معلومات (غامق محايد) */
+.toast.info{
+  background: #2046a0; /* لون إشعارات المعلومات العامة */
+}
+.toast.info .icon{
+  background: rgba(255,255,255,0.14); /* خلفية أيقونة المعلومات */
+}
+
+  @keyframes toastIn {
+    to { transform: translateY(0); opacity: 1; }
+  }
+  @keyframes toastOut {
+    to { transform: translateY(-8px); opacity: 0; }
+  }
 </style>
+
+<!-- Toast container -->
+<div class="toast-wrap" id="toastWrap" aria-live="polite" aria-atomic="true"></div>
 
 <div class="page-wrapper">
 
@@ -171,7 +290,7 @@
         <div class="grid-2">
           <div class="field-group">
             <label>رقم البلاغ في نظام  CAD</label>
-            <input name="cad_number" type="number" step="1" min="1" required placeholder="مثال: 1325"
+            <input id="cad_number" name="cad_number" type="number" step="1" min="1" required placeholder="مثال: 1325"
                    oninput="this.value=this.value.replace(/[^0-9]/g,'')">
           </div>
           <div class="field-group">
@@ -183,7 +302,7 @@
         <div class="grid-2">
           <div class="field-group">
             <label>درجة الخطورة</label>
-            <select name="severity" required>
+            <select id="severity" name="severity" required>
               <option value="">— اختر —</option>
               <option value="critical">حرجة</option>
               <option value="medium">متوسطة</option>
@@ -192,7 +311,7 @@
           </div>
           <div class="field-group">
             <label>حالة الوعي</label>
-            <select name="awareness" required>
+            <select id="awareness" name="awareness" required>
               <option value="">— اختر —</option>
               <option value="aware">واعي</option>
               <option value="unaware">غير واعي</option>
@@ -203,7 +322,7 @@
         <div class="grid-2">
           <div class="field-group">
             <label>نوع الحالة</label>
-            <select name="case_type" required>
+            <select id="case_type" name="case_type" required>
               <option value="">— اختر نوع الحالة —</option>
               {% for ct in case_types %}
                 <option value="{{ ct.id }}">{{ ct }}</option>
@@ -212,17 +331,17 @@
           </div>
           <div class="field-group">
             <label>عدد المصابين</label>
-            <input name="injured_count" type="number" min="0" required value="1">
+            <input id="injured_count" name="injured_count" type="number" min="0" required value="1">
           </div>
           <div class="field-group">
             <label>العمر</label>
-            <input name="age" type="number" min="0" required value="">
+            <input id="age" name="age" type="number" min="0" required value="">
           </div>
           <div class="field-group">
           <label>المنطقة</label>
 
           {% if user_group_code in privileged_group_codes %}
-            <select name="region" required>
+            <select id="region" name="region" required>
               <option value="">— اختر المنطقة —</option>
               {% for r in all_regions %}
                 <option value="{{ r.id }}"
@@ -246,6 +365,17 @@
         </div>
         </div>
 
+        
+        <div class="field-group" style="margin-top:5px;">
+          <label>وصف الموقع</label>
+          <input id="location_description" name="location_description" type="text" placeholder="بجوار المسجد / الطريق السريع...">
+        </div>
+        
+        <div class="field-group" style="margin-top:12px;">
+          <label>تفاصيل البلاغ</label>
+          <textarea id="details" name="details" rows="3" required placeholder=" يجب كتابة تفاصيل البلاغ هنا..."></textarea>
+        </div>
+        
         <div class="grid-2">
           <div class="field-group">
             <label>خط العرض (Latitude)</label>
@@ -256,19 +386,8 @@
             <input id="longitude" name="longitude" type="text" readonly class="input-readonly" placeholder="سيتم التحديد من الخريطة">
           </div>
         </div>
-
-        <div class="field-group" style="margin-top:5px;">
-          <label>وصف الموقع</label>
-          <input name="location_description" type="text" placeholder="بجوار المسجد / الطريق السريع...">
-        </div>
-
-        <div class="field-group" style="margin-top:12px;">
-          <label>تفاصيل البلاغ</label>
-          <textarea name="details" rows="3" required placeholder=" يجب كتابة تفاصيل البلاغ هنا..."></textarea>
-        </div>
-
         <button type="submit" class="btn-submit" style="margin-top:15px;">
-          إنشاء البلاغ وترحيله للمستجيب
+         ترحيل
         </button>
       </form>
     </div>
@@ -294,6 +413,56 @@
   let responderCache = new Map();   // id -> responder object
   let respondersTimer = null;
   let infoWindow = null;
+
+  /* =========================
+     Toast helpers
+     ========================= */
+  function escapeHtml(s){
+    return String(s ?? "")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  function showToast(type, title, message, opts = {}){
+    const wrap = document.getElementById("toastWrap");
+    if(!wrap) return;
+
+    const t = (type || "info").toLowerCase();
+    const ttl = escapeHtml(title || "");
+    const msg = escapeHtml(message || "");
+    const duration = Number.isFinite(opts.duration) ? opts.duration : 3500;
+
+    const iconChar = (t === "success") ? "✓" : (t === "error") ? "!" : (t === "warning") ? "⚠" : "i";
+
+    const el = document.createElement("div");
+    el.className = `toast ${t}`;
+    el.innerHTML = `
+      <div class="icon" aria-hidden="true">${iconChar}</div>
+      <div class="body">
+        <div class="title">${ttl}</div>
+        <div class="msg">${msg}</div>
+      </div>
+      <button class="close" type="button" aria-label="إغلاق">×</button>
+    `;
+
+    const closeBtn = el.querySelector(".close");
+    const remove = () => {
+      el.style.animation = "toastOut 180ms ease-in forwards";
+      setTimeout(() => el.remove(), 190);
+    };
+
+    closeBtn.addEventListener("click", remove);
+    wrap.appendChild(el);
+
+    if(duration > 0){
+      setTimeout(() => {
+        if(document.body.contains(el)) remove();
+      }, duration);
+    }
+  }
 
   function initMap() {
     // ✅ إعدادات الخريطة من Django كـ JSON (تجنب مشاكل تعريب الأرقام)
@@ -371,7 +540,7 @@
       position: { lat: Number(lat), lng: Number(lng) },
       map: map,
       animation: google.maps.Animation.DROP,
-      icon: { url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png" },
+      icon: { url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png" },
     });
 
     const t = document.getElementById("cad_received_time");
@@ -405,7 +574,7 @@
   function selectResponderById(responderId){
     const r = responderCache.get(Number(responderId));
     if(!r){
-      alert("تعذر تحديد المستجيب (غير متصل أو لم يتم تحميل بياناته)");
+      showToast("error", "تعذر تحديد المستجيب", "المستجيب غير متصل أو لم يتم تحميل بياناته بعد.");
       return;
     }
     document.getElementById("responder_id").value = String(r.id);
@@ -423,6 +592,7 @@
 
     document.getElementById("selectedResponder").style.display = "flex";
     if(infoWindow){ infoWindow.close(); }
+    showToast("success", "تم اختيار المستجيب", (r.full_name || "تم تحديد المستجيب بنجاح") + " ✅", { duration: 2200 });
   }
 
   function responderInfoHtml(r){
@@ -519,12 +689,45 @@
     respondersTimer = setInterval(fetchOnlineResponders, 10000);
   }
 
+  function setNowToReceivedTime(){
+    const t = document.getElementById("cad_received_time");
+    if(!t) return;
+    const now = new Date();
+    t.value =
+      now.getHours().toString().padStart(2, "0") + ":" +
+      now.getMinutes().toString().padStart(2, "0") + ":" +
+      now.getSeconds().toString().padStart(2, "0");
+  }
+
+  function clearCreateReportFieldsKeepLocation(){
+    // ✅ مسح الحقول بعد نجاح الإنشاء مع الإبقاء على (lat/lng) كما هي
+    const form = document.getElementById("createReportForm");
+    if(!form) return;
+
+    const setVal = (id, v) => { const el = document.getElementById(id); if(el) el.value = v; };
+
+    setVal("cad_number", "");
+    setVal("severity", "");
+    setVal("awareness", "");
+    setVal("case_type", "");
+    setVal("injured_count", "1");
+    setVal("age", "");
+    setVal("location_description", "");
+    setVal("details", "");
+
+    // وقت الاستقبال نعيده لوقت الآن لتسهيل الإدخال
+    setNowToReceivedTime();
+
+    // ✅ إلغاء اختيار المستجيب (مطلوب بعد إنشاء بلاغ صحيح)
+    clearSelectedResponder();
+  }
+
   async function submitCreateReport(ev) {
     ev.preventDefault();
 
     const responderId = document.getElementById("responder_id").value;
     if(!responderId){
-      alert("اختر مستجيب من الخريطة أولاً (المؤشر الأخضر)");
+      showToast("warning", "تنبيه", "اختر مستجيب من الخريطة أولاً (المؤشر الأخضر).");
       return;
     }
 
@@ -570,7 +773,7 @@
       if (!(resp.ok && data && data.ok)) {
         const msg = (data && (data.details || data.detail || data.error)) ? (data.details || data.detail || data.error)
                    : (r1.text ? "فشل إنشاء البلاغ: " + r1.text : "حدث خطأ أثناء إنشاء البلاغ");
-        alert(msg);
+        showToast("error", "فشل إنشاء البلاغ", msg);
         return;
       }
 
@@ -593,22 +796,21 @@
       const data2 = r2.json;
 
       if (resp2.ok && data2 && data2.ok) {
-        alert("تم إنشاء البلاغ وترحيله للمستجيب ✅");
+        showToast("success", "تم بنجاح", "تم إنشاء البلاغ وترحيله للمستجيب ✅");
+        // ✅ مسح الحقول بعد نجاح كامل
+        clearCreateReportFieldsKeepLocation();
       } else {
-        // Permission denied or other server error should be shown clearly
         const msg2 = (data2 && (data2.detail || data2.details || data2.error)) ? (data2.detail || data2.details || data2.error)
                     : (r2.text ? "تم إنشاء البلاغ ✅ لكن تعذر الترحيل: " + r2.text : "تم إنشاء البلاغ ✅ لكن تعذر الترحيل.");
-        alert(msg2);
+        // ✅ إنشاء صحيح = نمسح الحقول أيضًا حسب طلبك (حتى لو فشل الترحيل)
+        showToast("warning", "تم إنشاء البلاغ", msg2);
+        clearCreateReportFieldsKeepLocation();
       }
     } catch (e) {
-      // real network error
-      alert("فشل الاتصال بالخادم");
+      showToast("error", "فشل الاتصال", "تعذر الاتصال بالخادم. تحقق من الشبكة ثم أعد المحاولة.");
     }
   }
 </script>
-
-
-
 
 <script async defer src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap"></script>
 

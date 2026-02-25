@@ -1,0 +1,155 @@
+{% extends "portal/base_portal.html" %}
+{% load static %}
+
+{% block title %}تفاصيل التذكرة{% endblock %}
+
+{% block extra_head %}
+<style>
+  :root{
+    --ecr-primary:#0b0140;
+    --ecr-accent:#E31E24;
+    --ecr-bg:#f6f7fb;
+    --ecr-surface:#ffffff;
+    --ecr-text:#0f172a;
+    --ecr-muted:#64748b;
+    --ecr-border:#e2e8f0;
+    --ecr-radius:18px;
+    --ecr-shadow:0 12px 28px rgba(15,23,42,.08);
+  }
+  .wrap{ padding:18px 18px 28px; }
+  .card{
+    background:var(--ecr-surface);
+    border:1px solid var(--ecr-border);
+    border-radius:var(--ecr-radius);
+    box-shadow:var(--ecr-shadow);
+    padding:18px;
+  }
+  .h{
+    display:flex; gap:12px; align-items:flex-start; justify-content:space-between;
+    flex-wrap:wrap;
+  }
+  .title{ font-weight:900; color:var(--ecr-text); font-size:18px; }
+  .muted{ color:var(--ecr-muted); font-size:13px; margin-top:6px; }
+  .badge{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:6px 10px; border-radius:999px; font-weight:800; font-size:12px;
+    border:1px solid var(--ecr-border);
+    background:#fff;
+  }
+  .grid{
+    margin-top:14px;
+    display:grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap:12px;
+  }
+  .field{
+    grid-column: span 6;
+    border:1px solid var(--ecr-border);
+    border-radius:14px;
+    padding:12px;
+    background:#fff;
+  }
+  @media (max-width: 900px){
+    .field{ grid-column: span 12; }
+  }
+  .label{ color:var(--ecr-muted); font-size:12px; font-weight:800; }
+  .value{ margin-top:6px; color:var(--ecr-text); font-weight:900; }
+  .actions{
+    margin-top:16px;
+    display:flex; gap:10px; flex-wrap:wrap;
+  }
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    padding:10px 14px;
+    border-radius:14px;
+    border:1px solid var(--ecr-border);
+    background:#fff;
+    font-weight:900;
+    cursor:pointer;
+    text-decoration:none;
+    color:var(--ecr-text);
+  }
+  .btn.primary{ background:var(--ecr-primary); color:#fff; border-color:var(--ecr-primary); }
+  .btn.danger{ background:var(--ecr-accent); color:#fff; border-color:var(--ecr-accent); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <div class="card">
+    <div class="h">
+      <div>
+        <div class="title">
+          {{ ticket.code|default:"—" }} — {{ ticket.title|default:"(بدون عنوان)" }}
+        </div>
+        <div class="muted">
+          {{ ticket.created_at|date:"Y-m-d H:i" }}{% if ticket.region %} • {{ ticket.region }}{% endif %}
+        </div>
+      </div>
+
+      <div>
+        <span class="badge">
+          الحالة:
+          {% if ticket.is_closed %}
+            مغلقة
+          {% else %}
+            {{ ticket.status.name|default:ticket.status|default:"—" }}
+          {% endif %}
+        </span>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="field">
+        <div class="label">النوع</div>
+        <div class="value">{{ ticket.kind|default:"—" }}</div>
+      </div>
+
+      <div class="field">
+        <div class="label">المصدر</div>
+        <div class="value">{{ ticket.source|default:"—" }}</div>
+      </div>
+
+      <div class="field">
+        <div class="label">طالب الخدمة</div>
+        <div class="value">
+          {% if ticket.requester_name %}
+            {{ ticket.requester_name }}
+          {% elif ticket.requester %}
+            {% with full=ticket.requester.get_full_name %}
+              {% if full %}{{ full }}{% else %}{{ ticket.requester }}{% endif %}
+            {% endwith %}
+          {% else %}
+            —
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="label">المُسند إليه</div>
+        <div class="value">
+          {% if ticket.assignee %}
+            {% with full=ticket.assignee.get_full_name %}
+              {% if full %}{{ full }}{% else %}{{ ticket.assignee }}{% endif %}
+            {% endwith %}
+          {% else %}
+            غير مسند
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="field" style="grid-column: span 12;">
+        <div class="label">الوصف</div>
+        <div class="value" style="font-weight:700;">
+          {{ ticket.description|linebreaksbr|default:"—" }}
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <a class="btn" href="{% url 'support_tickets:support_tickets_assigned_to_me' %}">رجوع لقائمة التذاكر</a>
+      {# تقدر لاحقًا تربط أزرار الإيقاف/استئناف/إغلاق حسب المسارات عندك #}
+    </div>
+  </div>
+</div>
+{% endblock %}

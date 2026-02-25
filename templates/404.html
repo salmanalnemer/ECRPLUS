@@ -2,132 +2,63 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>خطأ في النظام | ECR</title>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --srca-red: #E31E24;
-            --srca-dark: #8B0000;
-            --text-main: #2D2D2D;
-            --text-secondary: #6c757d;
-        }
+    <title>404 - الصفحة غير موجودة | ECR</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
+    <style>
         body {
             margin: 0;
-            padding: 0;
+            font-family: 'Tajawal', sans-serif;
+            background: linear-gradient(135deg, #0b0140, #1e1b4b);
+            color: white;
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
-            background-color: #fcfcfc;
-            font-family: 'Tajawal', sans-serif;
-            color: var(--text-main);
-        }
-
-        .error-container {
+            height: 100vh;
             text-align: center;
-            max-width: 600px;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.05);
             padding: 40px;
-            background: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-            border-top: 8px solid var(--srca-red);
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            max-width: 500px;
         }
 
-        .error-code {
-            font-size: 100px;
-            font-weight: 700;
-            color: var(--srca-dark);
+        h1 {
+            font-size: 80px;
             margin: 0;
-            line-height: 1;
-            letter-spacing: -2px;
+            color: #ef4444;
         }
 
-        .error-icon {
-            font-size: 4rem;
-            color: var(--srca-red);
-            margin: 20px 0;
+        p {
+            margin-top: 10px;
+            font-size: 18px;
+            color: #ddd;
         }
 
-        .error-title {
-            font-size: 1.8rem;
-            margin-bottom: 15px;
-            color: var(--text-main);
-        }
-
-        .error-message {
-            font-size: 1.1rem;
-            color: var(--text-secondary);
-            margin-bottom: 30px;
-            line-height: 1.6;
-        }
-
-        .action-btns {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-        }
-
-        .btn {
-            padding: 12px 30px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-weight: 700;
-            transition: all 0.3s ease;
-            font-size: 0.95rem;
-        }
-
-        .btn-primary {
-            background-color: var(--srca-red);
+        a {
+            display: inline-block;
+            margin-top: 25px;
+            padding: 12px 25px;
+            background: #E31E24;
             color: white;
-            border: 1px solid var(--srca-red);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: 0.3s;
         }
 
-        .btn-primary:hover {
-            background-color: var(--srca-dark);
-        }
-
-        .btn-outline {
-            background-color: transparent;
-            color: var(--srca-red);
-            border: 1px solid var(--srca-red);
-        }
-
-        .btn-outline:hover {
-            background-color: #fff5f5;
-        }
-
-        .footer-logo {
-            margin-top: 40px;
-            opacity: 0.8;
-            font-weight: 700;
-            font-size: 0.8rem;
-            color: #999;
+        a:hover {
+            background: #b91c1c;
         }
     </style>
 </head>
 <body>
-
-<div class="error-container">
-    <div class="error-code">404</div>
-    <div class="error-icon"><i class="fas fa-search-location"></i></div>
-    <h1 class="error-title">الصفحة المطلوبة غير موجودة</h1>
-    <p class="error-message">
-        نعتذر منك، يبدو أن الرابط الذي تحاول الوصول إليه غير صحيح أو تم نقله. 
-        يرجى التأكد من الرابط أو العودة للرئيسية.
-    </p>
-
-    <div class="action-btns">
-        <a href="/" class="btn btn-primary">العودة للرئيسية</a>
-        <a href="javascript:history.back()" class="btn btn-outline">الرجوع للخلف</a>
+    <div class="card">
+        <h1>404</h1>
+        <p>عذراً، الصفحة التي تحاول الوصول إليها غير موجودة.</p>
+        <a href="/accounts/dashboard/main/">العودة للوحة التحكم</a>
     </div>
-
-    <div class="footer-logo">
-        هيئة الهلال الأحمر السعودي | ECR القطاع الثالث
-    </div>
-</div>
-
 </body>
 </html>

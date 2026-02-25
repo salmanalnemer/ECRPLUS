@@ -1,24 +1,31 @@
 from __future__ import annotations
 
-import secrets
-import string
-from typing import Callable
-
-DIGITS = string.digits
+from django.apps import apps
+from django.db import transaction
 
 
-def _random_digits(n: int = 8) -> str:
-    return "".join(secrets.choice(DIGITS) for _ in range(n))
-
-
-def generate_ticket_code(prefix: str, exists_fn: Callable[[str], bool], digits: int = 8, max_tries: int = 50) -> str:
+def next_sequential_ticket_code(prefix: str, *, width: int = 6) -> str:
     """
-    يولّد كود غير متسلسل باستخدام secrets ويضمن التفرد عبر exists_fn.
-    مثال: INC12345678 / REQ12345678 / ECR12345678
+    يولّد كود متسلسل وآمن للتزامن:
+    - REQ000001
+    - INC000001
+
+    يتم حفظ آخر رقم لكل Prefix في جدول TicketSequence مع select_for_update لضمان عدم التكرار.
+
+    ملاحظة: نستخدم apps.get_model لتجنب circular import أثناء إقلاع Django.
     """
-    prefix = prefix.strip().upper()
-    for _ in range(max_tries):
-        code = f"{prefix}{_random_digits(digits)}"
-        if not exists_fn(code):
-            return code
-    raise RuntimeError("تعذر توليد كود فريد بعد عدة محاولات. راجع الفهرس/القيود أو زد max_tries.")
+    prefix = (prefix or "").strip().upper()
+    if not prefix:
+        raise ValueError("prefix is required")
+
+    TicketSequence = apps.get_model("support_tickets", "TicketSequence")
+
+    with transaction.atomic():
+        seq, _created = TicketSequence.objects.select_for_update().get_or_create(
+            prefix=prefix,
+            defaults={"last_number": 0},
+        )
+        seq.last_number = int(seq.last_number or 0) + 1
+        seq.save(update_fields=["last_number", "updated_at"])
+
+        return f"{prefix}{seq.last_number:0{int(width)}d}"

@@ -264,4 +264,4 @@ register = register_view
 
 @login_required
 def ecr_dashcad(request):
-    return render(request, "portal/ecr_dashcad.html")
+    return render(request, "dashboard/main_dashboard.html")

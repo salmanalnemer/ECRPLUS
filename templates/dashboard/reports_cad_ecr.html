@@ -2,8 +2,8 @@
 {% load static %}
 {% load l10n %}
 {% block content %}
-<title>تقارير CAD + ECR</title>
 
+<title>الخريطة الحية - CAD / ECR / Heatmap</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
@@ -13,366 +13,537 @@
     --line:#e2e8f0;
     --txt:#0f172a;
     --muted:#64748b;
-    --my-yellow: #f59e0b;
-    --my-red: #ef4444;
-    --my-blue: #2563eb;
-    --my-dark: #334155;
-    --shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-    --radius: 12px;
+    --shadow:0 20px 60px rgba(0,0,0,.15);
+
+    --cad:#ef4444;
+    --ecr:#2563eb;
+    --resp:#16a34a;
+
+    --dark:#0b1220;
+    --dark2:#0f172a;
+    --soft:#fbfdff;
   }
 
-  .rc-wrap{ width:100%; min-height: calc(100vh - 80px); background: var(--bg); padding: 15px; direction: rtl; font-family: sans-serif; }
-
-  /* الإحصائيات العلوي */
-  .rc-top{ display:grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 15px; }
-  @media (max-width: 1200px){ .rc-top{ grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 700px){ .rc-top{ grid-template-columns: 1fr; } }
-
-  .rc-stat{ background: var(--card); border:1px solid var(--line); border-radius: 10px; padding: 12px; display:flex; align-items:center; justify-content:space-between; box-shadow: var(--shadow); }
-  .rc-stat .v{ font-size:22px; font-weight:900; color: var(--txt); }
-  .rc-stat .t{ font-size:12px; color: var(--muted); font-weight:800; }
-
-  /* ✅ الشبكة: خريطة يسار + جدول يمين (مع RTL بدون لخبطة) */
-  .rc-grid{
-    display:grid;
-    grid-template-columns: 1fr 920px; /* map left, table right */
-    gap: 15px;
-    direction: ltr; /* ✅ يخلي ترتيب الأعمدة ثابت */
-    align-items: stretch;
-  }
-  @media (max-width: 1100px){ .rc-grid{ grid-template-columns: 1fr; } }
-
-  .rc-card{ background: var(--card); border:1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow:hidden; display:flex; flex-direction:column; direction: rtl; }
-
-  /* الخريطة */
-  #map-canvas{ width:100%; height: 600px; background:#e5e7eb; }
-
-  .card-head{ padding: 12px 15px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; background: #fff; }
-  .card-title{ font-weight:900; font-size:14px; color: var(--my-dark); }
-
-  /* الأزرار بالألوان المطلوبة */
-  .btn-yellow { background: var(--my-yellow); color: #fff; }
-  .btn-red { background: var(--my-red); color: #fff; }
-  .btn-blue { background: var(--my-blue); color: #fff; }
-  .btn-dark { background: var(--my-dark); color: #fff; }
-
-  .rc-btn{ border:none; padding: 8px 15px; border-radius: 8px; font-size: 12px; font-weight: 800; cursor: pointer; transition: 0.2s; display: inline-flex; align-items:center; gap:5px; }
-  .rc-btn:hover{ opacity: 0.92; transform: scale(0.99); }
-
-  /* التبويبات والجدول */
-  .rc-tabs{ display:flex; gap:8px; }
-  .rc-tab{
-    padding: 8px 20px; border-radius: 8px; font-size:13px; font-weight:900;
-    cursor:pointer; background:#f1f5f9; border:1px solid var(--line); color: var(--muted);
-    display:flex; align-items:center; gap:8px;
-  }
-  .rc-tab.active{ background: var(--my-dark); color:#fff; border-color: var(--my-dark); }
-  .rc-tab span{ font-weight:900; }
-
-  /* ✅ سكرول أفقي + رأس ثابت + سكرول عمودي */
-  .rc-table-wrap{
-    overflow: hidden;
-    flex: 1;
-    display:flex;
-    flex-direction:column;
-  }
-  .rc-table-scroll{
-    overflow:auto;              /* ✅ يمين/يسار + فوق/تحت */
-    height: 100%;
-    max-height: 600px;
-  }
-
-  .rc-table{
+  .rc-wrap{
     width:100%;
-    border-collapse: collapse;
-    min-width: 1450px;          /* ✅ يعرض كل الحقول بدون قص */
-  }
-  .rc-table thead th{
-    background:#f8fafc;
-    position: sticky;
-    top:0;
-    z-index: 3;
-    padding: 12px 10px;
-    font-size:11px;
-    color: var(--my-dark);
-    text-align:right;
-    border-bottom: 2px solid var(--line);
-    white-space:nowrap;
-  }
-  .rc-table td{
+    min-height: calc(100vh - 70px);
+    background: var(--bg);
     padding: 10px;
+    direction: rtl;
+  }
+
+  /* ✅ ملاءمة للشاشة: الكرت يملأ المساحة */
+  .rc-card{
+    width:100%;
+    height: calc(100vh - 90px);
+    min-height: 520px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow:var(--shadow);
+    overflow:hidden;
+    position:relative;
+  }
+
+  .rc-card:fullscreen{
+    width:100%;
+    height:100%;
+    border-radius: 0;
+  }
+
+  #map-canvas{
+    width:100%;
+    height:100%;
+    background:#e5e7eb;
+  }
+
+  .map-topbar{
+    position:absolute;
+    top:12px;
+    right:12px;
+    z-index: 2000;
+    display:flex;
+    gap:8px;
+    flex-wrap: wrap;
+    max-width: calc(100% - 24px);
+    align-items: center;
+  }
+
+  .map-btn{
+    background: var(--dark2);
+    color:#fff;
+    border:none;
+    padding:8px 14px;
+    border-radius:12px;
+    font-weight:950;
+    cursor:pointer;
+    font-size:13px;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    box-shadow: 0 12px 30px rgba(2,6,23,.15);
+  }
+  .map-btn:hover{ opacity:.92; transform: translateY(-1px); }
+  .map-btn:active{ transform: translateY(0); }
+
+  .map-btn.secondary{
+    background:#ffffff;
+    color: var(--dark2);
+    border:1px solid var(--line);
+  }
+  .map-btn[disabled]{
+    cursor:not-allowed;
+    opacity:.75;
+    transform:none !important;
+  }
+
+  .pill{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:6px 10px;
+    border-radius: 999px;
+    font-weight:950;
     font-size:12px;
-    border-bottom:1px solid #f1f5f9;
+    border:1px solid var(--line);
+    background:#fff;
+    color: var(--dark2);
+  }
+  .dot{ width:10px;height:10px;border-radius:50%; display:inline-block; }
+  .dot.cad{ background: var(--cad); }
+  .dot.ecr{ background: var(--ecr); }
+  .dot.resp{ background: var(--resp); }
+
+  .legend{
+    position:absolute;
+    bottom:12px;
+    left:12px;
+    z-index:2000;
+    background:#fff;
+    padding:12px;
+    border-radius:14px;
+    box-shadow: var(--shadow);
+    font-size:12px;
+    font-weight:950;
+    min-width: 210px;
+    border: 1px solid var(--line);
+  }
+  .legend .row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:10px;
     color: var(--txt);
-    vertical-align: middle;
-    white-space:nowrap;
+  }
+  .legend .row:last-child{ margin-bottom:0; }
+  .legend img{ width:22px;height:22px;object-fit:contain; }
+  .legend .fallback{
+    width:22px;height:22px;border-radius:8px;
+    display:inline-flex;align-items:center;justify-content:center;
+    color:#fff;font-weight:950;font-size:12px;
   }
 
-  /* أيقونات الإجراءات */
-  .action-icon{
-    width: 32px; height: 32px; border-radius: 6px;
-    display: inline-flex; align-items:center; justify-content:center;
-    cursor:pointer; color:#fff; transition: 0.2s; border:none;
+  /* ✅ فلترة زمنية Inline */
+  .filter-wrap{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:6px 10px;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background:#fff;
   }
-  .action-icon:hover{ transform: translateY(-2px); }
+  .filter-wrap label{
+    font-weight:1000;
+    font-size:12px;
+    color: var(--dark2);
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    white-space: nowrap;
+  }
+  .filter-wrap select, .filter-wrap input{
+    border:1px solid var(--line);
+    border-radius: 10px;
+    padding:6px 8px;
+    font-weight:950;
+    font-size:12px;
+    outline:none;
+    background:#fff;
+    color: var(--dark2);
+  }
+  .filter-wrap .mini-btn{
+    border:none;
+    border-radius: 10px;
+    padding:7px 10px;
+    font-weight:1000;
+    cursor:pointer;
+    background: var(--dark2);
+    color:#fff;
+  }
 
-  .status-pill{ font-size:10px; padding: 3px 8px; border-radius: 5px; font-weight:900; display:inline-block; }
-  .status-open{ background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
-  .status-closed{ background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
-
-  /* ===== Modal (Edit) ===== */
-  .rc-modal-backdrop{
-    position: fixed;
-    inset: 0;
-    background: rgba(15,23,42,.45);
+  /* ===== Modal (جممالي) داخل الكرت ===== */
+  .map-modal-backdrop{
+    position:absolute;
+    inset:0;
+    background: radial-gradient(ellipse at top, rgba(15,23,42,.65), rgba(15,23,42,.45));
     display:none;
     align-items:center;
     justify-content:center;
-    z-index: 9999;
+    z-index: 999999;
     padding: 18px;
+    backdrop-filter: blur(4px);
   }
-  .rc-modal-backdrop.open{ display:flex; }
+  .map-modal-backdrop.open{ display:flex; }
 
-  .rc-modal{
-    width: min(980px, 100%);
-    max-height: 90vh;
-    background: #fff;
-    border:1px solid var(--line);
-    border-radius: 14px;
-    box-shadow: 0 30px 80px rgba(0,0,0,.18);
+  .map-modal{
+    width: min(920px, 96%);
+    max-height: 90%;
+    background:#fff;
+    border-radius: 18px;
     overflow:hidden;
+    box-shadow: 0 40px 120px rgba(0,0,0,.28);
+    direction: rtl;
     display:flex;
     flex-direction:column;
-    direction: rtl;
+    border: 1px solid rgba(226,232,240,.9);
   }
-  .rc-modal-head{
-    padding: 12px 14px;
-    border-bottom:1px solid var(--line);
+
+  .map-modal-head{
+    background: linear-gradient(135deg, var(--dark), var(--dark2));
+    color:#fff;
+    padding: 14px 16px;
     display:flex;
     align-items:center;
     justify-content:space-between;
     gap: 12px;
-    background:#fff;
   }
-  .rc-modal-title{
-    font-weight: 950;
-    color: var(--my-dark);
+
+  .modal-left{
     display:flex;
-    gap:10px;
     align-items:center;
+    gap: 12px;
   }
-  .rc-modal-body{
-    padding: 12px 14px;
+
+  .badge-kind{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 12px;
+    border-radius: 999px;
+    font-weight: 950;
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.18);
+  }
+  .badge-kind .mini-dot{ width:10px;height:10px;border-radius:50%; }
+
+  .map-modal-title{
+    font-size: 14px;
+    font-weight: 1000;
+    line-height: 1.2;
+  }
+  .map-modal-sub{
+    font-size: 12px;
+    opacity:.85;
+    font-weight: 900;
+    margin-top: 2px;
+  }
+
+  .map-modal-close{
+    background: rgba(255,255,255,.12);
+    color:#fff;
+    border:none;
+    border-radius: 12px;
+    padding: 10px 12px;
+    cursor:pointer;
+    font-weight: 950;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+  }
+  .map-modal-close:hover{ background: rgba(255,255,255,.18); }
+
+  .map-modal-body{
+    padding: 14px 16px 16px;
     overflow:auto;
-    background:#fbfdff;
+    background: var(--soft);
   }
 
-  .rc-form-grid{
+  .hero-grid{
     display:grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0,1fr));
     gap: 10px;
+    margin-bottom: 12px;
   }
-  @media (max-width: 900px){ .rc-form-grid{ grid-template-columns: 1fr; } }
+  @media (max-width: 980px){ .hero-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  @media (max-width: 680px){ .hero-grid{ grid-template-columns: 1fr; } }
 
-  .rc-field{
+  .hero-card{
     background:#fff;
     border:1px solid var(--line);
-    border-radius: 10px;
-    padding: 10px;
+    border-radius: 16px;
+    padding: 12px;
+    box-shadow: 0 10px 20px rgba(2,6,23,.06);
   }
-  .rc-field .k{
+  .hero-k{
     font-size:12px;
-    font-weight:900;
+    font-weight: 950;
+    color: var(--muted);
+    margin-bottom: 8px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .hero-v{
+    font-size:14px;
+    font-weight: 1000;
+    color: var(--txt);
+    word-break: break-word;
+  }
+
+  .section-title{
+    margin: 10px 0 10px;
+    font-weight: 1000;
+    color: var(--dark2);
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size: 13px;
+  }
+
+  .detail-grid{
+    display:grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 10px;
+  }
+  @media (max-width: 900px){ .detail-grid{ grid-template-columns: 1fr; } }
+
+  .detail-card{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius: 14px;
+    padding: 10px 12px;
+  }
+  .detail-k{
+    font-size: 12px;
+    font-weight: 950;
     color: var(--muted);
     margin-bottom: 6px;
-    white-space:nowrap;
+    white-space: nowrap;
     overflow:hidden;
     text-overflow: ellipsis;
   }
-  .rc-field input, .rc-field textarea{
-    width:100%;
-    border:1px solid var(--line);
-    border-radius: 10px;
-    padding: 10px 10px;
-    outline:none;
+  .detail-v{
     font-size: 13px;
+    font-weight: 950;
     color: var(--txt);
-    background:#fff;
+    word-break: break-word;
   }
-  .rc-field textarea{ min-height: 80px; resize: vertical; }
 
-  .rc-modal-foot{
-    padding: 12px 14px;
-    border-top:1px solid var(--line);
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap: 10px;
-    background:#fff;
-  }
-  .rc-hint{
-    font-size: 12px;
-    font-weight: 900;
-    color: var(--muted);
-  }
-  .rc-toast{
-    position: fixed;
-    bottom: 16px;
-    left: 16px;
-    background: #0f172a;
-    color: #fff;
+  .toast{
+    position:absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 3000;
+    background: rgba(2,6,23,.86);
+    color:#fff;
     padding: 10px 12px;
-    border-radius: 12px;
-    font-weight: 900;
+    border-radius: 14px;
+    font-weight: 950;
     font-size: 12px;
     display:none;
-    z-index: 10000;
+    box-shadow: 0 18px 50px rgba(0,0,0,.25);
   }
-  .rc-toast.show{ display:block; }
+  .toast.show{ display:block; }
 </style>
 
 <div class="rc-wrap"
-     data-cad-update-url="{{ cad_update_url|default:'' }}"
-     data-ecr-update-url="{{ ecr_update_url|default:'' }}">
-  {{ cases_json|json_script:"ecr-cases-data" }}
+     data-user-region-name="{{ user_region_name|default:'' }}"
+     data-user-region-sw-lat="{{ user_region_sw_lat|default:'' }}"
+     data-user-region-sw-lng="{{ user_region_sw_lng|default:'' }}"
+     data-user-region-ne-lat="{{ user_region_ne_lat|default:'' }}"
+     data-user-region-ne-lng="{{ user_region_ne_lng|default:'' }}">
+
+  {{ cases_json|json_script:"ecr-data" }}
   {{ responders_json|json_script:"responders-data" }}
 
-  <div class="rc-top">
-    <div class="rc-stat">
-      <div><div class="t">CAD مفتوح</div><div class="v" id="stat-cad-open">0</div></div>
-      <i class="fa-solid fa-tower-broadcast" style="color:var(--my-blue)"></i>
-    </div>
-    <div class="rc-stat">
-      <div><div class="t">إجمالي ECR</div><div class="v" id="stat-ecr-total">0</div></div>
-      <i class="fa-solid fa-mobile-screen-button" style="color:var(--my-yellow)"></i>
-    </div>
-    <div class="rc-stat">
-      <div><div class="t">المستجيبين Online</div><div class="v" id="stat-responders">0</div></div>
-      <i class="fa-solid fa-user-check" style="color:var(--my-red)"></i>
-    </div>
-    <div class="rc-stat">
-      <div><div class="t">تحديث تلقائي</div><div class="v" id="stat-last-refresh" style="font-size:16px">—</div></div>
-      <div id="silent-dot" style="width:10px; height:10px; border-radius:50%; background:#ccc;"></div>
-    </div>
-  </div>
+  <div class="rc-card" id="map-card">
+    <div class="toast" id="toast"></div>
 
-  <div class="rc-grid">
-    <!-- ✅ الخريطة يسار -->
-    <div class="rc-card">
-      <div class="card-head">
-        <div class="card-title"><i class="fa-solid fa-map-location-dot"></i> تتبع المواقع</div>
-        <div style="display:flex; gap:5px;">
-          <button class="rc-btn btn-dark" type="button" onclick="fitAllVisible()"><i class="fa-solid fa-compress"></i> ملاءمة</button>
-          <button class="rc-btn btn-yellow" type="button" onclick="manualRefresh()"><i class="fa-solid fa-sync-alt"></i></button>
-        </div>
-      </div>
-      <div id="map-canvas"></div>
-    </div>
-
-    <!-- ✅ الجدول يمين -->
-    <div class="rc-card">
-      <div class="card-head" style="flex-wrap: wrap; gap:10px;">
-        <div class="rc-tabs">
-          <div class="rc-tab active" id="tab-cad" onclick="switchTab('CAD')">CAD <span id="badge-cad">0</span></div>
-          <div class="rc-tab" id="tab-ecr" onclick="switchTab('ECR')">ECR <span id="badge-ecr">0</span></div>
-        </div>
-        <div style="flex:1; min-width:200px; position:relative;">
-          <i class="fa-solid fa-search" style="position:absolute; right:10px; top:10px; color:#94a3b8;"></i>
-          <input id="tab-search" type="text" placeholder="بحث سريع..." oninput="renderActiveTab()"
-                 style="width:100%; padding:8px 35px 8px 10px; border:1px solid var(--line); border-radius:8px; outline:none;">
-        </div>
-      </div>
-
-      <div class="rc-table-wrap" id="table-wrap">
-        <div style="padding:40px; text-align:center; color:var(--muted);">
-          <i class="fa-solid fa-circle-notch fa-spin fa-2x"></i><br>جارِ معالجة البيانات...
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ✅ Modal -->
-<div class="rc-modal-backdrop" id="edit-backdrop" role="dialog" aria-modal="true">
-  <div class="rc-modal">
-    <div class="rc-modal-head">
-      <div class="rc-modal-title">
-        <i class="fa-solid fa-pen-to-square" style="color:var(--my-red)"></i>
-        <span id="edit-title">تعديل</span>
-      </div>
-      <button class="rc-btn btn-dark" type="button" onclick="closeEditModal()">
-        <i class="fa-solid fa-xmark"></i> إغلاق
+    <div class="map-topbar">
+      <button class="map-btn" type="button" onclick="fitAllWithinPolicy('auto')">
+        <i class="fa-solid fa-compress"></i> ملاءمة
       </button>
-    </div>
 
-    <div class="rc-modal-body">
-      <div class="rc-hint" id="edit-hint" style="margin-bottom:10px"></div>
-      <div class="rc-form-grid" id="edit-form"></div>
-    </div>
+      <button class="map-btn" type="button" onclick="manualRefresh()">
+        <i class="fa-solid fa-rotate"></i> تحديث
+      </button>
 
-    <div class="rc-modal-foot">
-      <div class="rc-hint" id="edit-status">—</div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap">
-        <button class="rc-btn btn-yellow" type="button" onclick="resetEditForm()">
-          <i class="fa-solid fa-rotate-left"></i> تراجع
-        </button>
-        <button class="rc-btn btn-blue" type="button" onclick="saveEditForm()">
-          <i class="fa-solid fa-floppy-disk"></i> حفظ
+      <button class="map-btn" type="button" onclick="toggleCardFullscreen()" id="fs-btn">
+        <i class="fa-solid fa-expand"></i> تكبير
+      </button>
+
+      <!-- ✅ دائم تشغيل: حرارية + علامات (مقفلة على ON) -->
+      <button class="map-btn secondary" type="button" disabled title="الحرارية تعمل دائمًا">
+        <i class="fa-solid fa-fire-flame-curved"></i> الخريطة الحرارية: تعمل
+      </button>
+
+      <button class="map-btn secondary" type="button" disabled title="العلامات تظهر دائمًا">
+        <i class="fa-solid fa-location-dot"></i> العلامات: تعمل
+      </button>
+
+      <!-- ✅ فلترة زمنية: اليوم/1/4/8/12/24 ساعة -->
+      <div class="filter-wrap" title="فلترة زمنية">
+        <label><i class="fa-solid fa-clock"></i> الوقت</label>
+
+        <select id="time-preset" onchange="onPresetChange()">
+          <option value="today">اليوم</option>
+          <option value="last_1h">آخر 1 ساعة</option>
+          <option value="last_4h" selected>آخر 4 ساعات</option>
+          <option value="last_8h">آخر 8 ساعات</option>
+          <option value="last_12h">آخر 12 ساعة</option>
+          <option value="last_24h">آخر 24 ساعة</option>
+          <option value="custom">مخصص</option>
+        </select>
+
+        <input id="start-dt" type="datetime-local" style="display:none" />
+        <input id="end-dt" type="datetime-local" style="display:none" />
+
+        <button class="mini-btn" type="button" onclick="applyTimeFilter(true)">
+          تطبيق
         </button>
       </div>
+
+      <span class="pill"><span class="dot cad"></span> CAD: <span id="cnt-cad">0</span></span>
+      <span class="pill"><span class="dot ecr"></span> ECR: <span id="cnt-ecr">0</span></span>
+      <span class="pill"><span class="dot resp"></span> Online: <span id="cnt-resp">0</span></span>
     </div>
+
+    <div id="map-canvas"></div>
+
+    <div class="legend">
+      <div class="row">
+        <img src="{% static 'icons/cad.png' %}" alt="CAD"
+             onerror="this.style.display='none'; this.parentElement.querySelector('.fallback').style.display='inline-flex';">
+        <span class="fallback" style="display:none;background:var(--cad)">C</span>
+        <span>بلاغات CAD</span>
+      </div>
+      <div class="row">
+        <img src="{% static 'icons/ecrmobile.png' %}" alt="ECR"
+             onerror="this.style.display='none'; this.parentElement.querySelector('.fallback').style.display='inline-flex';">
+        <span class="fallback" style="display:none;background:var(--ecr)">E</span>
+        <span>بلاغات ECR</span>
+      </div>
+      <div class="row">
+        <img src="{% static 'icons/responder.png' %}" alt="Responder"
+             onerror="this.style.display='none'; this.parentElement.querySelector('.fallback').style.display='inline-flex';">
+        <span class="fallback" style="display:none;background:var(--resp)">R</span>
+        <span>مستجيب Online</span>
+      </div>
+    </div>
+
+    <!-- ✅ مودال جميل -->
+    <div class="map-modal-backdrop" id="map-modal-backdrop" role="dialog" aria-modal="true">
+      <div class="map-modal">
+        <div class="map-modal-head">
+          <div class="modal-left">
+            <div class="badge-kind" id="badge-kind">
+              <span class="mini-dot" id="badge-dot"></span>
+              <span id="badge-text">—</span>
+            </div>
+            <div>
+              <div class="map-modal-title" id="map-modal-title">تفاصيل</div>
+              <div class="map-modal-sub" id="map-modal-sub">—</div>
+            </div>
+          </div>
+
+          <button class="map-modal-close" type="button" onclick="closeMapModal()">
+            <i class="fa-solid fa-xmark"></i> إغلاق
+          </button>
+        </div>
+
+        <div class="map-modal-body">
+          <div class="hero-grid" id="modal-hero"></div>
+
+          <div class="section-title"><i class="fa-solid fa-list-check"></i> بقية التفاصيل</div>
+          <div class="detail-grid" id="map-modal-body"></div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
-
-<div class="rc-toast" id="rc-toast"></div>
 
 <script>
-  // ==========
-  // Endpoints + Context
-  // ==========
+  // ======================
+  // Configuration
+  // ======================
   const URL_CAD_REPORTS = "{% url 'cad_reports:assigned_reports_json' %}";
 
-  // ✅ مهم: لا تستدعي API الموبايل من الويب (لأنه يحتاج JWT وبالتالي يسبب 403)
-  // الويب سيعتمد على cases_json المحقون داخل الصفحة
-  const URL_ECR_REPORTS = "";
+  // ✅ تحديث صامت كل 30 ثانية
+  const POLL_MS_BASE = 30000; // 30s
+  const POLL_MS_MAX  = 180000;
 
-  let ECR_CASES = JSON.parse(document.getElementById("ecr-cases-data").textContent || "[]");
-  const RESPONDERS = JSON.parse(document.getElementById("responders-data").textContent || "[]");
+  const MAP_CENTER_DEFAULT = {
+    lat: Number("{{ map_center_lat|default:23.8859 }}"),
+    lng: Number("{{ map_center_lng|default:45.0792 }}")
+  };
+  const MAP_ZOOM_DEFAULT = Number("{{ map_zoom|default:6 }}");
 
-  const MAP_CENTER = { lat: Number("{{ map_center_lat|default:23.8859 }}"), lng: Number("{{ map_center_lng|default:45.0792 }}") };
-  const MAP_ZOOM = Number("{{ map_zoom|default:5 }}");
+  // Server injected
+  let ECR_CASES = JSON.parse(document.getElementById("ecr-data").textContent || "[]");
+  let RESPONDERS = JSON.parse(document.getElementById("responders-data").textContent || "[]");
 
-  const WRAP_EL = document.querySelector(".rc-wrap");
-  const CAD_UPDATE_URL_BASE = WRAP_EL?.dataset?.cadUpdateUrl || "";
-  const ECR_UPDATE_URL_BASE = WRAP_EL?.dataset?.ecrUpdateUrl || "";
-
-  // ==========
-  // State
-  // ==========
+  // Runtime state
+  let cadReports = [];
   let map = null;
-  let cadReportsRaw = [];
-  let activeTab = "CAD";
-  let markers = { ecr: [], cad: [] };
-  let refreshTimer = null;
+  let markers = [];
+  let heatmapLayer = null;
 
-  // Edit state
-  let editKind = null;
-  let editOriginal = null;
-  let editCurrent = null;
+  // ✅ دائم تشغيل
+  let showMarkers = true;
+  let showHeatmap = true;
 
-  // ==========
-  // Helpers
-  // ==========
+  let pollTimer = null;
+  let pollMs = POLL_MS_BASE;
+
+  // Avoid redraw if unchanged
+  let lastHashCad = "";
+  let lastHashEcr = "";
+  let lastHashResp = "";
+
+  // icons
+  const ICON_URLS = {
+    cad: "{% static 'icons/ecrb.png' %}",
+    ecr: "{% static 'icons/ecrmobile.png' %}",
+    responder: "{% static 'icons/responlive.png' %}",
+  };
+  let ICONS_READY = { cad: null, ecr: null, responder: null };
+
+  // ====== Region viewport state ======
+  let regionPolicy = "NATIONAL";
+  let regionBounds = null; // google.maps.LatLngBounds
+
+  // ======================
+  // Time Filter state
+  // ======================
+  const TIME_FILTER_KEY = "cad_time_filter_v2";
+  let timeFilter = {
+    preset: "last_4h",
+    startISO: null, // UTC ISO
+    endISO: null    // UTC ISO
+  };
+
   function toast(msg){
-    const el = document.getElementById("rc-toast");
+    const el = document.getElementById("toast");
     el.textContent = msg;
     el.classList.add("show");
-    setTimeout(()=> el.classList.remove("show"), 2200);
+    setTimeout(() => el.classList.remove("show"), 1600);
   }
 
-  function escapeHtml(s){
-    if(s === null || s === undefined) return "";
-    return String(s)
+  function escapeHtml(v){
+    if(v === null || v === undefined) return "";
+    return String(v)
       .replaceAll("&","&amp;")
       .replaceAll("<","&lt;")
       .replaceAll(">","&gt;")
@@ -380,463 +551,590 @@
       .replaceAll("'","&#039;");
   }
 
-  function safeStr(x){
-    if(x === null || x === undefined) return "";
-    return String(x);
+  function fastHash(str){
+    let h = 5381;
+    for(let i=0;i<str.length;i++){
+      h = ((h << 5) + h) + str.charCodeAt(i);
+      h |= 0;
+    }
+    return String(h);
   }
 
-  function isCadOpen(r){
-    if(!r || r.closed === true) return false;
-    if((r.status||"").toString().includes("مفتوح") || (!r.closed_at && !r.closedAt)) return true;
-    return false;
+  function stableStringify(arr){
+    if(!Array.isArray(arr)) return "[]";
+    return arr.map(o => JSON.stringify(o || {})).join("|");
   }
 
-  function setStats(){
-    document.getElementById("stat-ecr-total").textContent = Array.isArray(ECR_CASES) ? ECR_CASES.length : 0;
-    document.getElementById("stat-responders").textContent = Array.isArray(RESPONDERS) ? RESPONDERS.length : 0;
-    document.getElementById("stat-cad-open").textContent = Array.isArray(cadReportsRaw) ? cadReportsRaw.filter(isCadOpen).length : 0;
-    document.getElementById("badge-cad").textContent = Array.isArray(cadReportsRaw) ? cadReportsRaw.length : 0;
-    document.getElementById("badge-ecr").textContent = Array.isArray(ECR_CASES) ? ECR_CASES.length : 0;
+  function fallbackCircle(color){
+    return {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: 8,
+      fillColor: color,
+      fillOpacity: 1,
+      strokeWeight: 2,
+      strokeColor: "#fff"
+    };
   }
 
-  function updateLastRefresh(){
-    const d = new Date();
-    const hh = String(d.getHours()).padStart(2,'0');
-    const mm = String(d.getMinutes()).padStart(2,'0');
-    const ss = String(d.getSeconds()).padStart(2,'0');
-    document.getElementById("stat-last-refresh").textContent = `${hh}:${mm}:${ss}`;
+  function preloadIcon(url){
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(true);
+      img.onerror = () => resolve(false);
+      img.src = url;
+    });
   }
 
-  function setSilent(on){
-    document.getElementById("silent-dot").style.background = on ? "var(--my-yellow)" : "#ccc";
+  async function prepareIcons(){
+    const cadOk = await preloadIcon(ICON_URLS.cad);
+    ICONS_READY.cad = cadOk ? { url: ICON_URLS.cad, scaledSize: new google.maps.Size(30,30) } : fallbackCircle("#ef4444");
+
+    const ecrOk = await preloadIcon(ICON_URLS.ecr);
+    ICONS_READY.ecr = ecrOk ? { url: ICON_URLS.ecr, scaledSize: new google.maps.Size(32,32) } : fallbackCircle("#2563eb");
+
+    const respOk = await preloadIcon(ICON_URLS.responder);
+    ICONS_READY.responder = respOk ? { url: ICON_URLS.responder, scaledSize: new google.maps.Size(34,34) } : fallbackCircle("#16a34a");
   }
 
-  // ==========
-  // Tabs
-  // ==========
-  function switchTab(k){
-    activeTab = k;
-    document.getElementById("tab-cad").classList.toggle("active", k==="CAD");
-    document.getElementById("tab-ecr").classList.toggle("active", k==="ECR");
-    renderActiveTab();
-  }
-  function renderActiveTab(){
-    activeTab === "CAD" ? renderCadTable() : renderEcrTable();
+  function setCounters(){
+    document.getElementById("cnt-cad").textContent = Array.isArray(cadReports) ? cadReports.length : 0;
+    document.getElementById("cnt-ecr").textContent = Array.isArray(ECR_CASES) ? ECR_CASES.length : 0;
+    document.getElementById("cnt-resp").textContent = Array.isArray(RESPONDERS) ? RESPONDERS.length : 0;
   }
 
-  // ==========
-  // Tables (ALL fields) + scroll
-  // ==========
-  function renderCadTable(){
-    const q = (document.getElementById("tab-search").value || "").toLowerCase();
-    const rows = (Array.isArray(cadReportsRaw) ? cadReportsRaw : []).filter(r => JSON.stringify(r||{}).toLowerCase().includes(q));
-    const wrap = document.getElementById("table-wrap");
+  // ======================
+  // ✅ منطق تحديد منطقة المستخدم
+  // ======================
+  function numOrNull(v){
+    const n = parseFloat(v);
+    return Number.isFinite(n) ? n : null;
+  }
 
-    if(rows.length === 0){
-      wrap.innerHTML = `<div style="padding:40px; text-align:center; color:var(--muted);">لا توجد نتائج داخل CAD</div>`;
+  function computeRegionFromDataset(){
+    const wrap = document.querySelector(".rc-wrap");
+    if(!wrap) return;
+
+    const swLat = numOrNull(wrap.dataset.userRegionSwLat);
+    const swLng = numOrNull(wrap.dataset.userRegionSwLng);
+    const neLat = numOrNull(wrap.dataset.userRegionNeLat);
+    const neLng = numOrNull(wrap.dataset.userRegionNeLng);
+
+    if(swLat !== null && swLng !== null && neLat !== null && neLng !== null){
+      regionPolicy = "REGION";
+      regionBounds = new google.maps.LatLngBounds(
+        new google.maps.LatLng(swLat, swLng),
+        new google.maps.LatLng(neLat, neLng)
+      );
       return;
     }
 
-    wrap.innerHTML = `
-      <div class="rc-table-scroll">
-        <table class="rc-table">
-          <thead>
-            <tr>
-              <th>رقم البلاغ</th>
-              <th>نوع الحالة</th>
-              <th>درجة الخطورة</th>
-              <th>تاريخ البلاغ</th>
-              <th>وقت البلاغ</th>
-              <th>رقم الجوال</th>
-              <th>المنطقة</th>
-              <th>الوصف</th>
-              <th>خط العرض</th>
-              <th>خط الطول</th>
-              <th>وقت الإنشاء</th>
-              <th>وقت الإغلاق</th>
-              <th>حالة البلاغ</th>
-              <th style="width:120px">الإجراءات</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows.map(r => {
-              const payload = encodeURIComponent(JSON.stringify(r||{}));
-              const open = isCadOpen(r);
-              const statusHtml = open
-                ? '<span class="status-pill status-open">مفتوح</span>'
-                : '<span class="status-pill status-closed">مغلق</span>';
-
-              return `
-                <tr>
-                    <td><b>${escapeHtml(r.cad_number)}</b></td>
-                    <td>${escapeHtml(r.case_type)}</td>
-                    <td>${escapeHtml(r.severity)}</td>
-                    <td>${escapeHtml(r.report_date)}</td>
-                    <td>${escapeHtml(r.report_time)}</td>
-                    <td>${escapeHtml(r.phone_number)}</td>
-                    <td>${escapeHtml(r.region)}</td>
-                    <td title="${escapeHtml(r.location_text)}">${escapeHtml(r.location_text)}</td>
-                    <td>${escapeHtml(r.latitude)}</td>
-                    <td>${escapeHtml(r.longitude)}</td>
-                    <td>${escapeHtml(r.created_at)}</td>
-                    <td>${escapeHtml(r.closed_at || r.closedAt)}</td>
-                    <td>${statusHtml}</td>
-                    <td>
-                      <button class="action-icon btn-blue" title="عرض بالخريطة" onclick="openCadOnMapEncoded('${payload}')">
-                        <i class="fa-solid fa-location-crosshairs"></i>
-                      </button>
-                      <button class="action-icon btn-red" title="تعديل" onclick="openEditModalEncoded('CAD','${payload}')">
-                        <i class="fa-solid fa-pen-to-square"></i>
-                      </button>
-                    </td>
-                </tr>`;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>`;
+    const name = (wrap.dataset.userRegionName || "").trim();
+    regionPolicy = name ? "REGION" : "NATIONAL";
   }
 
-  function renderEcrTable(){
-    const q = (document.getElementById("tab-search").value || "").toLowerCase();
-    const rows = (Array.isArray(ECR_CASES) ? ECR_CASES : []).filter(r => JSON.stringify(r||{}).toLowerCase().includes(q));
-    const wrap = document.getElementById("table-wrap");
-
-    if(rows.length === 0){
-      wrap.innerHTML = `<div style="padding:40px; text-align:center; color:var(--muted);">لا توجد نتائج داخل ECR</div>`;
+  function applyInitialViewport(){
+    if(regionPolicy === "REGION" && regionBounds){
+      map.fitBounds(regionBounds);
       return;
     }
 
-    wrap.innerHTML = `
-      <div class="rc-table-scroll">
-        <table class="rc-table">
-          <thead>
-            <tr>
-                <th>رقم الحالة</th>
-                <th>المنطقة</th>
-                <th>إسم المريض</th>
-                <th>رقم الجوال</th>
-                <th>نوع الحالة</th>
-                <th>مستجيب الحالة</th>
-                <th>وقت التبليغ</th>
-                <th>خط الطول</th>
-                <th>خط العرض</th>
-                <th style="width:120px">الإجراءات</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows.map(r => {
-              const payload = encodeURIComponent(JSON.stringify(r||{}));
-              return `
-                <tr>
-                    <td><b>${escapeHtml(r.case_number || r.id)}</b></td>
-                    <td>${escapeHtml(r.region)}</td>
-                    <td>${escapeHtml(r.patient_name)}</td>
-                    <td>${escapeHtml(r.phone_number || r.phone)}</td>
-                    <td>${escapeHtml(r.case_type)}</td>
-                    <td>${escapeHtml(r.responder)}</td>
-                    <td>${escapeHtml(r.created || r.created_at)}</td>
-                    <td>${escapeHtml(r.lat)}</td>
-                    <td>${escapeHtml(r.lng)}</td>
-                    <td>
-                      <button class="action-icon btn-blue" title="عرض بالخريطة" onclick="openEcrOnMapEncoded('${payload}')">
-                        <i class="fa-solid fa-street-view"></i>
-                      </button>
-                      <button class="action-icon btn-red" title="تعديل" onclick="openEditModalEncoded('ECR','${payload}')">
-                        <i class="fa-solid fa-file-signature"></i>
-                      </button>
-                    </td>
-                </tr>`;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>`;
+    if(regionPolicy === "REGION"){
+      map.setCenter(MAP_CENTER_DEFAULT);
+      map.setZoom(MAP_ZOOM_DEFAULT || 9);
+      return;
+    }
+
+    map.setCenter(MAP_CENTER_DEFAULT);
+    map.setZoom(MAP_ZOOM_DEFAULT || 6);
   }
 
-  // ==========
-  // Map
-  // ==========
+  function clampBoundsToRegion(bounds){
+    if(!(regionPolicy === "REGION" && regionBounds && bounds)) return bounds;
+    const c = bounds.getCenter();
+    if(!regionBounds.contains(c)) return regionBounds;
+    return bounds;
+  }
+
+  function fitAllWithinPolicy(mode){
+    if(!map) return;
+
+    const b = new google.maps.LatLngBounds();
+    let c = 0;
+
+    const addPoint = (lat, lng) => {
+      if(Number.isNaN(lat) || Number.isNaN(lng)) return;
+      b.extend({lat, lng});
+      c++;
+    };
+
+    (cadReports || []).forEach(r => addPoint(parseFloat(r.latitude), parseFloat(r.longitude)));
+    (ECR_CASES || []).forEach(r => addPoint(parseFloat(r.lat), parseFloat(r.lng)));
+    (RESPONDERS || []).forEach(r => addPoint(parseFloat(r.latitude || r.lat), parseFloat(r.longitude || r.lng)));
+
+    if(c <= 0) return;
+
+    if(mode !== "forceAll"){
+      map.fitBounds(clampBoundsToRegion(b));
+      return;
+    }
+    map.fitBounds(b);
+  }
+
+  // ======================
+  // ✅ Time preset helpers
+  // ======================
+  function toISO(dateObj){
+    return new Date(dateObj.getTime() - (dateObj.getTimezoneOffset()*60000)).toISOString();
+  }
+
+  function setCustomInputsVisible(visible){
+    const s = document.getElementById("start-dt");
+    const e = document.getElementById("end-dt");
+    if(!s || !e) return;
+    s.style.display = visible ? "inline-flex" : "none";
+    e.style.display = visible ? "inline-flex" : "none";
+  }
+
+  function onPresetChange(){
+    const preset = document.getElementById("time-preset").value;
+    setCustomInputsVisible(preset === "custom");
+  }
+
+  function computeWindowFromPreset(preset){
+    const now = new Date();
+    let start = null;
+    let end = null;
+
+    if(preset === "today"){
+      start = new Date(now); start.setHours(0,0,0,0);
+      end = now;
+      return { start, end };
+    }
+
+    if(preset.startsWith("last_")){
+      const hours = parseInt(preset.replace("last_","").replace("h",""), 10);
+      start = new Date(now.getTime() - hours * 3600 * 1000);
+      end = now;
+      return { start, end };
+    }
+
+    if(preset === "custom"){
+      const s = document.getElementById("start-dt")?.value;
+      const e = document.getElementById("end-dt")?.value;
+      if(s) start = new Date(s);
+      if(e) end = new Date(e);
+      return { start, end };
+    }
+
+    return { start:null, end:null };
+  }
+
+  function saveTimeFilter(){
+    try{ localStorage.setItem(TIME_FILTER_KEY, JSON.stringify(timeFilter)); }catch(e){}
+  }
+
+  function loadTimeFilter(){
+    try{
+      const raw = localStorage.getItem(TIME_FILTER_KEY);
+      if(!raw) return;
+      const obj = JSON.parse(raw);
+      if(obj && typeof obj === "object"){
+        timeFilter = { ...timeFilter, ...obj };
+      }
+    }catch(e){}
+  }
+
+  function hydrateTimeUI(){
+    const presetEl = document.getElementById("time-preset");
+    if(presetEl) presetEl.value = timeFilter.preset || "last_4h";
+    setCustomInputsVisible((timeFilter.preset || "") === "custom");
+
+    if(timeFilter.preset === "custom"){
+      const s = document.getElementById("start-dt");
+      const e = document.getElementById("end-dt");
+      if(s && timeFilter.startISO){
+        const d = new Date(timeFilter.startISO);
+        s.value = new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16);
+      }
+      if(e && timeFilter.endISO){
+        const d = new Date(timeFilter.endISO);
+        e.value = new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16);
+      }
+    }
+  }
+
+  function buildCadQueryParams(){
+    // ✅ نرسل start/end (إذا كان الباك يدعمها بيطبق فلترة سيرفر-سايد، وإذا ما يدعمها يتجاهلها)
+    const p = new URLSearchParams();
+    const preset = timeFilter.preset || "last_4h";
+    const win = computeWindowFromPreset(preset);
+    if(win.start) p.set("start", toISO(win.start));
+    if(win.end)   p.set("end", toISO(win.end));
+    return p.toString();
+  }
+
+  // ======================
+  // Modal الجميل
+  // ======================
+  function prettifyKey(k){
+    const mapK = {
+      cad_number: "رقم بلاغ CAD",
+      report_number: "رقم البلاغ",
+      case_number: "رقم حالة ECR",
+      case_type: "نوع الحالة",
+      severity: "الخطورة",
+      region: "المنطقة",
+      phone_number: "رقم الجوال",
+      location_text: "الوصف/الموقع",
+      latitude: "خط العرض",
+      longitude: "خط الطول",
+      lat: "خط العرض",
+      lng: "خط الطول",
+      created_at: "وقت الإنشاء",
+      updated_at: "آخر تحديث",
+      accepted_at: "وقت القبول",
+      dispatched_at: "وقت الإرسال",
+      arrival_time: "وقت الوصول",
+      closed_at: "وقت الإغلاق",
+      is_closed: "مغلق",
+      responder: "المستجيب",
+      patient_name: "اسم المريض",
+      name: "اسم المستجيب",
+      full_name: "اسم المستجيب",
+      username: "المعرف",
+      is_online: "متصل",
+      details: "تفاصيل",
+    };
+    return mapK[k] || k;
+  }
+
+  function pickFirst(obj, keys){
+    for(const k of keys){
+      const v = obj?.[k];
+      if(v !== null && v !== undefined && String(v).trim() !== "") return v;
+    }
+    return "";
+  }
+
+  function openMapModal(kind, obj){
+    const badgeText = document.getElementById("badge-text");
+    const badgeDot  = document.getElementById("badge-dot");
+    const titleEl   = document.getElementById("map-modal-title");
+    const subEl     = document.getElementById("map-modal-sub");
+    const heroEl    = document.getElementById("modal-hero");
+    const bodyEl    = document.getElementById("map-modal-body");
+
+    let label="تفاصيل";
+    let color="#64748b";
+    if(kind === "CAD"){ label="بلاغ CAD"; color="var(--cad)"; }
+    if(kind === "ECR"){ label="بلاغ ECR"; color="var(--ecr)"; }
+    if(kind === "RESPONDER"){ label="مستجيب Online"; color="var(--resp)"; }
+    badgeText.textContent = label;
+    badgeDot.style.background = color;
+
+    const mainId =
+      kind === "CAD" ? pickFirst(obj, ["cad_number","report_number","id"]) :
+      kind === "ECR" ? pickFirst(obj, ["case_number","id"]) :
+      pickFirst(obj, ["name","full_name","username","id"]);
+
+    titleEl.textContent = mainId ? `تفاصيل: ${mainId}` : "تفاصيل";
+
+    const region = pickFirst(obj, ["region","region_name","region_display"]);
+    const created = pickFirst(obj, ["created_at","updated_at","accepted_at","dispatched_at"]);
+    subEl.textContent = [region, created].filter(Boolean).join(" • ") || "—";
+
+    const heroItems = [];
+    if(kind === "CAD"){
+      heroItems.push(["رقم البلاغ", pickFirst(obj, ["cad_number","report_number","id"]), "fa-hashtag"]);
+      heroItems.push(["نوع الحالة", pickFirst(obj, ["case_type","case_type_name"]), "fa-triangle-exclamation"]);
+      heroItems.push(["الوصف", pickFirst(obj, ["location_text","details"]), "fa-location-dot"]);
+      heroItems.push(["الجوال", pickFirst(obj, ["phone_number","phone"]), "fa-phone"]);
+      heroItems.push(["المنطقة", pickFirst(obj, ["region","region_name"]), "fa-map"]);
+      heroItems.push(["آخر تحديث", pickFirst(obj, ["updated_at"]), "fa-clock"]);
+    }else if(kind === "ECR"){
+      heroItems.push(["رقم الحالة", pickFirst(obj, ["case_number","id"]), "fa-hashtag"]);
+      heroItems.push(["اسم المريض", pickFirst(obj, ["patient_name","patient","name"]), "fa-user"]);
+      heroItems.push(["نوع الحالة", pickFirst(obj, ["case_type","medical_condition"]), "fa-stethoscope"]);
+      heroItems.push(["المستجيب", pickFirst(obj, ["responder","responder_name"]), "fa-user-shield"]);
+      heroItems.push(["الجوال", pickFirst(obj, ["phone_number","phone","mobile"]), "fa-phone"]);
+      heroItems.push(["المنطقة", pickFirst(obj, ["region","region_name"]), "fa-map"]);
+    }else{
+      heroItems.push(["الاسم", pickFirst(obj, ["name","full_name","username"]), "fa-user"]);
+      heroItems.push(["المعرف", pickFirst(obj, ["username","id"]), "fa-id-badge"]);
+      heroItems.push(["الحالة", pickFirst(obj, ["is_online","status"]), "fa-signal"]);
+      heroItems.push(["المنطقة", pickFirst(obj, ["region","region_name"]), "fa-map"]);
+      heroItems.push(["آخر تحديث", pickFirst(obj, ["updated_at","last_seen","last_update"]), "fa-clock"]);
+      heroItems.push(["ملاحظات", pickFirst(obj, ["notes","details"]), "fa-note-sticky"]);
+    }
+
+    heroEl.innerHTML = heroItems
+      .filter(x => x[1] !== "")
+      .map(([k,v,icon]) => `
+        <div class="hero-card">
+          <div class="hero-k"><i class="fa-solid ${icon}"></i> ${escapeHtml(k)}</div>
+          <div class="hero-v">${escapeHtml(v)}</div>
+        </div>
+      `).join("") || `<div style="padding:10px;color:var(--muted);font-weight:900;">لا توجد بيانات أساسية.</div>`;
+
+    const keys = Object.keys(obj || {}).sort((a,b)=> a.localeCompare(b));
+    bodyEl.innerHTML = keys.map(k => `
+      <div class="detail-card">
+        <div class="detail-k">${escapeHtml(prettifyKey(k))}</div>
+        <div class="detail-v">${escapeHtml(obj[k])}</div>
+      </div>
+    `).join("");
+
+    document.getElementById("map-modal-backdrop").classList.add("open");
+  }
+
+  function closeMapModal(){
+    document.getElementById("map-modal-backdrop").classList.remove("open");
+  }
+
+  document.getElementById("map-modal-backdrop").addEventListener("click", (e)=>{
+    if(e.target && e.target.id === "map-modal-backdrop") closeMapModal();
+  });
+
+  // ======================
+  // Markers / Heatmap (دائم)
+  // ======================
   function clearMarkers(){
-    [...markers.cad, ...markers.ecr].forEach(m => { try{ m.setMap(null); }catch(e){} });
-    markers.cad = [];
-    markers.ecr = [];
+    markers.forEach(m => { try{ m.setMap(null); }catch(e){} });
+    markers = [];
+  }
+
+  function addMarker(lat, lng, icon, title, payload, kind){
+    const marker = new google.maps.Marker({
+      map: map,
+      position: {lat, lng},
+      title: title || "",
+      icon
+    });
+    marker.addListener("click", () => openMapModal(kind, payload));
+    markers.push(marker);
   }
 
   function drawMarkers(){
     if(!map) return;
     clearMarkers();
 
-    // CAD open only
-    (Array.isArray(cadReportsRaw) ? cadReportsRaw.filter(isCadOpen) : []).forEach(r => {
+    (cadReports || []).forEach(r => {
       const lat = parseFloat(r.latitude);
       const lng = parseFloat(r.longitude);
       if(Number.isNaN(lat) || Number.isNaN(lng)) return;
-      markers.cad.push(new google.maps.Marker({
-        map,
-        position: {lat, lng},
-        title: "CAD " + (r.cad_number || r.report_number || r.id || "")
-      }));
+      addMarker(lat, lng, ICONS_READY.cad, "CAD " + (r.cad_number || r.report_number || r.id || ""), r, "CAD");
     });
 
-    // ECR
-    const iconEcr = { url: "{% static 'icons/ecrmobile.png' %}", scaledSize: new google.maps.Size(30,30) };
-    (Array.isArray(ECR_CASES) ? ECR_CASES : []).forEach(r => {
+    (ECR_CASES || []).forEach(r => {
       const lat = parseFloat(r.lat);
       const lng = parseFloat(r.lng);
       if(Number.isNaN(lat) || Number.isNaN(lng)) return;
-      markers.ecr.push(new google.maps.Marker({
-        map,
-        position: {lat, lng},
-        title: "ECR " + (r.case_number || r.id || ""),
-        icon: iconEcr
-      }));
+      addMarker(lat, lng, ICONS_READY.ecr, "ECR " + (r.case_number || r.id || ""), r, "ECR");
+    });
+
+    (RESPONDERS || []).forEach(r => {
+      const lat = parseFloat(r.latitude || r.lat);
+      const lng = parseFloat(r.longitude || r.lng);
+      if(Number.isNaN(lat) || Number.isNaN(lng)) return;
+      addMarker(lat, lng, ICONS_READY.responder, "Responder " + (r.name || r.full_name || r.username || r.id || ""), r, "RESPONDER");
     });
   }
 
-  function fitAllVisible(){
-    if(!map) return;
-    const b = new google.maps.LatLngBounds();
-    let c = 0;
-    [...markers.cad, ...markers.ecr].forEach(m => {
-      try{ b.extend(m.getPosition()); c++; }catch(e){}
-    });
-    if(c > 0) map.fitBounds(b);
-  }
-
-  function openCadOnMapEncoded(payload){
-    try{
-      const r = JSON.parse(decodeURIComponent(payload));
+  function buildHeatmapData(){
+    const pts = [];
+    (cadReports || []).forEach(r => {
       const lat = parseFloat(r.latitude);
       const lng = parseFloat(r.longitude);
-      if(map && !Number.isNaN(lat) && !Number.isNaN(lng)){
-        map.panTo({lat, lng});
-        map.setZoom(15);
-      }
-    }catch(e){}
-  }
-
-  function openEcrOnMapEncoded(payload){
-    try{
-      const r = JSON.parse(decodeURIComponent(payload));
+      if(!Number.isNaN(lat) && !Number.isNaN(lng)) pts.push(new google.maps.LatLng(lat, lng));
+    });
+    (ECR_CASES || []).forEach(r => {
       const lat = parseFloat(r.lat);
       const lng = parseFloat(r.lng);
-      if(map && !Number.isNaN(lat) && !Number.isNaN(lng)){
-        map.panTo({lat, lng});
-        map.setZoom(15);
-      }
-    }catch(e){}
+      if(!Number.isNaN(lat) && !Number.isNaN(lng)) pts.push(new google.maps.LatLng(lat, lng));
+    });
+    return pts;
   }
 
-  // ==========
-  // Edit Modal (enabled)
-  // ==========
-  function openEditModalEncoded(kind, payload){
-    try{
-      const obj = JSON.parse(decodeURIComponent(payload));
-      openEditModal(kind, obj);
-    }catch(e){
-      toast("تعذر فتح التعديل");
-    }
-  }
-
-  function openEditModal(kind, obj){
-    editKind = kind;
-    editOriginal = JSON.parse(JSON.stringify(obj || {}));
-    editCurrent = JSON.parse(JSON.stringify(obj || {}));
-
-    document.getElementById("edit-title").textContent = `تعديل ${kind} # ${(obj.case_number || obj.cad_number || obj.report_number || obj.id || "")}`;
-    const hint = document.getElementById("edit-hint");
-    const status = document.getElementById("edit-status");
-
-    const base = (kind === "CAD") ? CAD_UPDATE_URL_BASE : ECR_UPDATE_URL_BASE;
-    if(!base){
-      hint.textContent = "⚠️ رابط التعديل غير مفعّل من الباك-إند (ضع cad_update_url / ecr_update_url في context).";
-      status.textContent = "وضع العرض/التعديل محلي داخل المودال فقط.";
+  function ensureHeatmap(){
+    if(!heatmapLayer){
+      heatmapLayer = new google.maps.visualization.HeatmapLayer({
+        data: buildHeatmapData(),
+        map: map,
+        radius: 22
+      });
     }else{
-      hint.textContent = "عدّل القيم ثم اضغط حفظ.";
-      status.textContent = "جاهز للحفظ.";
+      heatmapLayer.setData(buildHeatmapData());
+      heatmapLayer.setMap(map);
     }
-
-    const keys = Object.keys(editCurrent || {}).sort((a,b)=> a.localeCompare(b));
-    const form = document.getElementById("edit-form");
-    form.innerHTML = keys.map(k => {
-      const v = editCurrent[k];
-      const isLong = typeof v === "string" && v.length > 80;
-      if(isLong){
-        return `
-          <div class="rc-field">
-            <div class="k">${escapeHtml(k)}</div>
-            <textarea data-k="${escapeHtml(k)}">${escapeHtml(v)}</textarea>
-          </div>`;
-      }
-      return `
-        <div class="rc-field">
-          <div class="k">${escapeHtml(k)}</div>
-          <input data-k="${escapeHtml(k)}" value="${escapeHtml(safeStr(v))}">
-        </div>`;
-    }).join("");
-
-    // bind change
-    form.querySelectorAll("[data-k]").forEach(el => {
-      el.addEventListener("input", () => {
-        const key = el.getAttribute("data-k");
-        editCurrent[key] = el.value;
-        document.getElementById("edit-status").textContent = "تم تعديل بيانات (غير محفوظ).";
-      });
-    });
-
-    document.getElementById("edit-backdrop").classList.add("open");
   }
 
-  function closeEditModal(){
-    document.getElementById("edit-backdrop").classList.remove("open");
-    editKind = null; editOriginal = null; editCurrent = null;
+  // ======================
+  // Fetch (صامت) + فلترة
+  // ======================
+  async function fetchCadReports(){
+    const qs = buildCadQueryParams();
+    const url = qs ? `${URL_CAD_REPORTS}?${qs}` : URL_CAD_REPORTS;
+
+    const res = await fetch(url, { headers: {"Accept":"application/json"} , credentials:"same-origin"});
+    if(!res.ok) throw new Error("CAD fetch failed");
+    const data = await res.json();
+
+    // يدعم شكلين: [..] أو {items:[..]}
+    const items = Array.isArray(data?.items) ? data.items : (Array.isArray(data) ? data : []);
+    return items;
   }
 
-  function resetEditForm(){
-    if(!editOriginal) return;
-    openEditModal(editKind, editOriginal);
-    toast("تم التراجع عن التعديلات");
+  function dataChanged(){
+    const hCad  = fastHash(stableStringify(cadReports));
+    const hEcr  = fastHash(stableStringify(ECR_CASES));
+    const hResp = fastHash(stableStringify(RESPONDERS));
+
+    const changed = (hCad !== lastHashCad) || (hEcr !== lastHashEcr) || (hResp !== lastHashResp);
+
+    lastHashCad = hCad;
+    lastHashEcr = hEcr;
+    lastHashResp = hResp;
+
+    return changed;
   }
 
-  function getCsrfToken(){
-    // Django CSRF from cookie
-    const name = "csrftoken=";
-    const parts = (document.cookie || "").split(";");
-    for(const p of parts){
-      const t = p.trim();
-      if(t.startsWith(name)) return decodeURIComponent(t.substring(name.length));
-    }
-    return "";
-  }
-
-  async function saveEditForm(){
-    if(!editKind || !editCurrent) return;
-
-    const base = (editKind === "CAD") ? CAD_UPDATE_URL_BASE : ECR_UPDATE_URL_BASE;
-    if(!base){
-      toast("رابط التعديل غير مفعّل من الباك-إند");
-      return;
-    }
-
-    const csrf = getCsrfToken();
-    document.getElementById("edit-status").textContent = "جاري الحفظ...";
+  async function refreshOnceSilent(){
+    if(document.hidden) return;
 
     try{
-      const res = await fetch(base, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          ...(csrf ? {"X-CSRFToken": csrf} : {})
-        },
-        body: JSON.stringify({
-          kind: editKind,
-          id: editCurrent.id || editCurrent.case_number || editCurrent.cad_number || editCurrent.report_number,
-          data: editCurrent
-        })
-      });
+      const nextCad = await fetchCadReports();
+      cadReports = nextCad;
 
-      if(!res.ok){
-        const txt = await res.text();
-        document.getElementById("edit-status").textContent = "فشل الحفظ";
-        toast("فشل الحفظ: " + (txt || res.status));
+      setCounters();
+
+      if(!dataChanged()){
+        ensureHeatmap();
+        pollMs = POLL_MS_BASE;
+        scheduleNextPoll();
         return;
       }
 
-      toast("تم الحفظ بنجاح");
-      document.getElementById("edit-status").textContent = "تم الحفظ ✅";
-      closeEditModal();
-      manualRefresh();
-    }catch(e){
-      document.getElementById("edit-status").textContent = "فشل الحفظ";
-      toast("تعذر الاتصال بالحفظ");
-    }
-  }
-
-  // ==========
-  // Fetch data
-  // ==========
-  async function fetchCadReports(){
-    const res = await fetch(URL_CAD_REPORTS, { headers: {"Accept":"application/json"} });
-    if(!res.ok) throw new Error("CAD fetch failed");
-    const data = await res.json();
-    cadReportsRaw = Array.isArray(data) ? data : [];
-  }
-
-  async function fetchEcrReports(){
-    // ✅ مهم: لا نطلب من /api/ecr/mobile-reports/ من صفحة الويب
-    if(!URL_ECR_REPORTS){
-      return;
-    }
-
-    try{
-      const res = await fetch(URL_ECR_REPORTS, { headers: {"Accept":"application/json"} });
-      if(!res.ok) throw new Error("ECR fetch failed");
-      const data = await res.json();
-      const next = Array.isArray(data) ? data : (Array.isArray(data.results) ? data.results : []);
-      ECR_CASES = (next || []).map(r => ({
-        id: r.id,
-        case_number: r.case_number || r.id,
-        created: r.created || r.created_at || r.createdAt,
-        region: r.region_name || r.region || r.region_display || r.region_text,
-        patient_name: r.patient_name || r.patient || r.name,
-        phone_number: r.phone_number || r.phone || r.mobile,
-        case_type: r.case_type || r.medical_condition || r.condition_name,
-        responder: r.responder_name || r.created_by_name || r.created_by || r.responder,
-        lat: r.lat || r.latitude,
-        lng: r.lng || r.longitude
-      }));
-    }catch(e){
-      // صامت
-    }
-  }
-
-  async function silentRefreshOnce(){
-    setSilent(true);
-    try{
-      await Promise.allSettled([fetchCadReports(), fetchEcrReports()]);
       drawMarkers();
-      setStats();
-      renderActiveTab();
-      updateLastRefresh();
-    }finally{
-      setSilent(false);
+      ensureHeatmap();
+
+      pollMs = POLL_MS_BASE;
+      scheduleNextPoll();
+    }catch(err){
+      pollMs = Math.min(Math.floor(pollMs * 1.7), POLL_MS_MAX);
+      scheduleNextPoll();
     }
+  }
+
+  function scheduleNextPoll(){
+    if(pollTimer) clearTimeout(pollTimer);
+    pollTimer = setTimeout(refreshOnceSilent, pollMs);
   }
 
   function manualRefresh(){
-    silentRefreshOnce().then(() => fitAllVisible());
+    toast("تحديث...");
+    refreshOnceSilent();
   }
 
-  // ==========
-  // Init map
-  // ==========
-  window.initMap = function(){
+  async function applyTimeFilter(showToast){
+    const preset = document.getElementById("time-preset").value;
+    timeFilter.preset = preset;
+
+    const win = computeWindowFromPreset(preset);
+    timeFilter.startISO = win.start ? toISO(win.start) : null;
+    timeFilter.endISO   = win.end ? toISO(win.end) : null;
+    saveTimeFilter();
+
+    try{
+      if(showToast) toast("تطبيق الفلتر...");
+      await refreshOnceSilent();
+      // لا نعمل fit كل مرة
+    }catch(e){
+      toast("تعذر تطبيق الفلتر");
+    }
+  }
+
+  // ======================
+  // Fullscreen للكرت كامل
+  // ======================
+  function isCardFullscreen(){
+    return document.fullscreenElement === document.getElementById("map-card");
+  }
+
+  async function toggleCardFullscreen(){
+    const card = document.getElementById("map-card");
+    try{
+      if(!document.fullscreenElement){
+        await card.requestFullscreen();
+      }else{
+        await document.exitFullscreen();
+      }
+    }catch(e){}
+  }
+
+  document.addEventListener("fullscreenchange", () => {
+    const btn = document.getElementById("fs-btn");
+    if(!btn) return;
+
+    btn.innerHTML = isCardFullscreen()
+      ? '<i class="fa-solid fa-compress"></i> تصغير'
+      : '<i class="fa-solid fa-expand"></i> تكبير';
+
+    setTimeout(() => {
+      try{
+        google.maps.event.trigger(map, "resize");
+        // نثبت viewport حسب السياسة (منطقة/وطني)
+        if(regionPolicy === "REGION" && regionBounds){
+          map.fitBounds(regionBounds);
+        }
+      }catch(e){}
+    }, 220);
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if(document.hidden){
+      if(pollTimer) clearTimeout(pollTimer);
+      pollTimer = null;
+    }else{
+      scheduleNextPoll();
+    }
+  });
+
+  // ======================
+  // Init Map
+  // ======================
+  window.initMap = async function(){
     map = new google.maps.Map(document.getElementById("map-canvas"), {
-      center: MAP_CENTER,
-      zoom: MAP_ZOOM,
-      mapTypeId:"roadmap",
-      gestureHandling:"greedy"
+      center: MAP_CENTER_DEFAULT,
+      zoom: MAP_ZOOM_DEFAULT,
+      mapTypeId: "roadmap",
+      gestureHandling: "greedy",
+      fullscreenControl: false,
+      mapTypeControl: true
     });
 
-    silentRefreshOnce().then(() => {
-      fitAllVisible();
-      if(refreshTimer) clearInterval(refreshTimer);
-      refreshTimer = setInterval(silentRefreshOnce, 15000);
-    });
+    await prepareIcons();
+
+    computeRegionFromDataset();
+    applyInitialViewport();
+
+    // Time filter: load from storage
+    loadTimeFilter();
+    hydrateTimeUI();
+    onPresetChange();
+
+    // أول تحميل حسب الفلتر
+    await applyTimeFilter(false);
+
+    // ملاءمة أول مرة فقط
+    setTimeout(() => {
+      try{ fitAllWithinPolicy("auto"); }catch(e){}
+    }, 350);
+
+    scheduleNextPoll();
   };
-
-  document.addEventListener("DOMContentLoaded", () => {
-    setStats();
-    switchTab("CAD");
-  });
-
-  // اغلاق المودال عند الضغط بالخلف
-  document.getElementById("edit-backdrop").addEventListener("click", (e)=>{
-    if(e.target && e.target.id === "edit-backdrop") closeEditModal();
-  });
 </script>
 
-<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap" async defer></script>
+<!-- ✅ لازم visualization للحرارية -->
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap&libraries=visualization" async defer></script>
 
 {% endblock %}

@@ -32,7 +32,15 @@ User = get_user_model()  # ✅ NEW
 # Helpers
 # ==========================
 
-PRIVILEGED_GROUP_CODES = {"SYSADMIN", "NEMSCC"}
+# ✅ تقسيم الصلاحيات حسب المجموعات
+# - SUPER: يشوف كل المناطق/كامل المملكة
+# - BRANCH: يشوف منطقته فقط
+SUPER_GROUP_CODES = {"SYSADMIN", "NEMSCC"}
+BRANCH_GROUP_CODES = {"BOCM", "ORRB", "BVM", "ITS"}
+
+# ⚠️ ملاحظة: PRIVILEGED_GROUP_CODES نستخدمها هنا فقط لمعنى "SUPER" (على مستوى المملكة)
+# حتى لا تنفتح باقي الشاشات (ECR/Responders/Region dropdown) لمدراء الفروع.
+PRIVILEGED_GROUP_CODES = set(SUPER_GROUP_CODES)
 
 
 def _get_user_group_code(user) -> str:
@@ -57,6 +65,14 @@ def _get_user_group_code(user) -> str:
         pass
 
     return ""
+
+
+def _is_super_user(user) -> bool:
+    return _get_user_group_code(user) in SUPER_GROUP_CODES
+
+
+def _is_branch_user(user) -> bool:
+    return _get_user_group_code(user) in BRANCH_GROUP_CODES
 
 
 def _json_body(request: HttpRequest) -> dict[str, Any]:
@@ -339,7 +355,7 @@ def reports_cad_ecr(request):
         .prefetch_related("services")
         .order_by("-created_at")
     )
-    if viewer_group not in PRIVILEGED_GROUP_CODES:
+    if not _is_super_user(request.user):
         if not viewer_region_id:
             ecr_qs = ecr_qs.none()
         else:
@@ -385,7 +401,7 @@ def reports_cad_ecr(request):
         .filter(responder__region_id__isnull=False)
         .order_by("-last_seen")
     )
-    if viewer_group not in PRIVILEGED_GROUP_CODES:
+    if not _is_super_user(request.user):
         if not viewer_region_id:
             resp_qs = resp_qs.none()
         else:
@@ -411,7 +427,7 @@ def reports_cad_ecr(request):
 
     center_lat, center_lng, zoom = _get_user_map_center(request.user)
 
-    restrict_map = (viewer_group not in PRIVILEGED_GROUP_CODES) and bool(viewer_region_id)
+    restrict_map = (not _is_super_user(request.user)) and bool(viewer_region_id)
     region_bounds = None
 
     context = {
@@ -445,9 +461,12 @@ def cad_reports_reports_page(request):
 
 
 def _apply_viewer_region_filter(qs, user, region_field: str = "region_id"):
-    """Apply region restriction for non-privileged users."""
-    viewer_group = _get_user_group_code(user)
-    if viewer_group in PRIVILEGED_GROUP_CODES:
+    """Apply region restriction.
+
+    - SUPER groups: no restriction (can see all).
+    - All other groups (including branch managers): restricted to user's region.
+    """
+    if _is_super_user(user):
         return qs
 
     viewer_region_id = getattr(user, "region_id", None)
@@ -609,11 +628,11 @@ def reports_ecr_dashboard(request):
         .order_by("-created_at")
     )
 
-    if viewer_group not in PRIVILEGED_GROUP_CODES:
+    if not _is_super_user(request.user):
         if not viewer_region_id:
             qs = qs.none()
         else:
-            qs = qs.filter(Q(region_id=viewer_region_id) | Q(region__isnull=True))
+            qs = qs.filter(region_id=viewer_region_id)
 
     cases_json = []
     for r in qs[:800]:
@@ -684,25 +703,41 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 @authentication_classes([JWTAuthentication, SessionAuthentication])
 @permission_classes([IsAuthenticated])
 def assigned_reports_json(request):
+    """Dashboard JSON for CAD reports.
+
+    سياسة العرض:
+    - SUPER (SYSADMIN/NEMSCC): يرى جميع المناطق، ويستطيع فلترة region_id من الـ GET.
+    - BRANCH (BOCM/ORRB/BVM/ITS): يرى بلاغات منطقته فقط (strict) ولا يرى NULL.
+    - غير ذلك (مثل المستجيب): يرى البلاغات المسندة له فقط ضمن منطقته (strict).
+    """
     viewer_group = _get_user_group_code(request.user)
     viewer_region_id = getattr(request.user, "region_id", None)
 
     qs = CADReport.objects.select_related("case_type", "region", "assigned_responder").order_by("-created_at")
 
-    if viewer_group not in PRIVILEGED_GROUP_CODES:
-        qs = qs.filter(assigned_responder_id=request.user.id)
-        if viewer_region_id:
-            qs = qs.filter(Q(region_id=viewer_region_id) | Q(region__isnull=True))
-    else:
-        if viewer_region_id:
-            qs = qs.filter(Q(region_id=viewer_region_id) | Q(region__isnull=True))
-
+    if _is_super_user(request.user):
+        # فلترة اختيارية من الـ UI (تظهر فقط للـ SUPER بدون region على المستخدم)
         region_filter = (request.GET.get("region_id") or "").strip()
-        if region_filter and (not viewer_region_id):
+        if region_filter:
             try:
                 qs = qs.filter(region_id=int(region_filter))
             except Exception:
                 pass
+
+    elif _is_branch_user(request.user):
+        # ✅ مدير/مشرف فرع: منطقة واحدة فقط + لا نظهر NULL
+        if viewer_region_id:
+            qs = qs.filter(region_id=viewer_region_id)
+        else:
+            qs = qs.none()
+
+    else:
+        # ✅ مستخدم عادي/مستجيب: بلاغاته المسندة له فقط ضمن منطقته
+        qs = qs.filter(assigned_responder_id=request.user.id)
+        if viewer_region_id:
+            qs = qs.filter(region_id=viewer_region_id)
+        else:
+            qs = qs.none()
 
     data = []
     for r in qs[:800]:
@@ -742,8 +777,7 @@ def assigned_reports_json(request):
         )
 
     return Response(data, status=status.HTTP_200_OK)
-
-
+    
 # ==========================
 # CRUD-ish
 # ==========================
@@ -1207,7 +1241,7 @@ def responders_online_json(request: HttpRequest) -> JsonResponse:
 
     qs = qs.filter(responder__user_group__code="ECRMOBIL")
 
-    if viewer_group not in PRIVILEGED_GROUP_CODES:
+    if not _is_super_user(request.user):
         if not viewer_region_id:
             qs = qs.none()
         else:
@@ -1258,3 +1292,5 @@ def ai_hotspots_page(request):
             "can_see_cad_dashboard_link": allowed,
         },
     )
+
+    

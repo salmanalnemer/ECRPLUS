@@ -2,153 +2,275 @@
 {% block title %}تسجيل الدخول - ECR{% endblock %}
 
 {% block content %}
-<div class="auth-container">
-    <header class="auth-header text-center">
-        <div class="brand-logo mb-4">ECR</div>
-        <h2 class="auth-title">مرحباً بك مجدداً</h2>
-        <p class="auth-subtitle">سجل دخولك للمتابعة إلى لوحة التحكم</p>
-    </header>
+  <h1 class="page-title">تسجيل الدخول</h1>
+  <p class="page-sub">من فضلك أدخل رقم الهوية أو البريد الإلكتروني، وكلمة المرور للمتابعة</p>
 
-    <div class="auth-card">
-        <form method="post" novalidate class="modern-form">
-            {% csrf_token %}
-            <input type="hidden" name="next" value="{{ next }}"/>
+  <!-- Toast -->
+  <div id="toast" style="
+    position:fixed;
+    top:18px;
+    right:18px;
+    z-index:9999;
+    min-width:260px;
+    max-width:360px;
+    padding:12px 14px;
+    border-radius:12px;
+    background:#c52222;
+    color:#fff;
+    box-shadow:0 12px 30px rgba(0,0,0,.18);
+    display:none;
+    align-items:center;
+    gap:10px;
+  ">
+    <strong style="font-size:13px;">تنبيه:</strong>
+    <span id="toastMsg"></span>
+  </div>
 
-            <div class="form-group mb-4">
-                <label class="form-label fw-bold">{{ form.identifier.label }}</label>
-                {{ form.identifier }}
-                {% if form.identifier.errors %}
-                <div class="error-msg text-danger small mt-1">
-                    {{ form.identifier.errors|striptags }}
-                </div>
-                {% endif %}
-            </div>
+  {# ✅ نجمع رسائل السيرفر (messages) هنا #}
+  {% if messages %}
+    <div id="serverMessages" class="d-none"
+         data-msg="{% for m in messages %}{{ m|escapejs }}{% if not forloop.last %}||{% endif %}{% endfor %}">
+    </div>
+  {% endif %}
 
-            <div class="form-group mb-2">
-                <div class="d-flex justify-content-between">
-                    <label class="form-label fw-bold">{{ form.password.label }}</label>
-                    <a href="{% url 'accounts_forgot_password' %}" class="forgot-link">نسيت كلمة المرور؟</a>
-                </div>
-                {{ form.password }}
-                {% if form.password.errors %}
-                <div class="error-msg text-danger small mt-1">
-                    {{ form.password.errors|striptags }}
-                </div>
-                {% endif %}
-            </div>
+  <form method="post" novalidate id="loginForm" autocomplete="on">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}"/>
 
-            {% if form.non_field_errors %}
-            <div class="global-error mb-4">
-                {{ form.non_field_errors|striptags }}
-            </div>
-            {% endif %}
+    <div class="mb-4">
+      <label class="form-label">{{ form.identifier.label }}</label>
+      {{ form.identifier }}
 
-            <button class="btn btn-dark w-100 py-3 mt-4 main-btn" type="submit">
-                متابعة
-            </button>
-        </form>
+      <div class="small-help">
+        رقم الهوية: أرقام فقط (10 أرقام). أو بريد إلكتروني صحيح.
+      </div>
+
+      {% if form.identifier.errors %}{{ form.identifier.errors }}{% endif %}
     </div>
 
-    <footer class="auth-footer text-center mt-4">
-        <p class="text-muted small">ليس لديك حساب؟ <a href="{% url 'accounts_register' %}" class="register-link">إنشاء حساب جديد</a></p>
-    </footer>
-</div>
+    <div class="mb-3">
+      <label class="form-label">{{ form.password.label }}</label>
 
-<style>
-    /* الخطوط والألوان العامة */
-    :root {
-        --primary-dark: #1a1a1a;
-        --soft-gray: #f9f9fb;
-        --border-color: #e2e8f0;
-        --text-main: #2d3748;
-        --text-muted: #718096;
-    }
+      <div class="position-relative">
+        {{ form.password }}
 
-    .auth-container {
-        max-width: 420px;
-        margin: 2rem auto;
-        padding: 0 1rem;
-    }
+        <button
+          type="button"
+          id="togglePassword"
+          aria-label="إظهار/إخفاء كلمة المرور"
+          style="
+            position:absolute;
+            left:10px;
+            top:50%;
+            transform:translateY(-50%);
+            border:none;
+            background:transparent;
+            cursor:pointer;
+            padding:6px 8px;
+          "
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+            stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
 
-    .brand-logo {
-        font-size: 2rem;
-        font-weight: 900;
-        letter-spacing: -1px;
-        color: var(--primary-dark);
-    }
+      {% if form.password.errors %}{{ form.password.errors }}{% endif %}
+    </div>
 
-    .auth-title {
-        font-weight: 800;
-        color: var(--text-main);
-        letter-spacing: -0.5px;
-        margin-bottom: 8px;
-    }
+    <div class="mb-4">
+      <a class="link-soft" href="/accounts/forgot-password/">نسيت كلمة المرور؟</a>
+    </div>
 
-    .auth-subtitle {
-        color: var(--text-muted);
-        font-size: 0.95rem;
-    }
+    {% if form.non_field_errors %}{{ form.non_field_errors }}{% endif %}
 
-    /* تصميم الكارد */
-    .auth-card {
-        background: #fff;
-        padding: 2.5rem;
-        border-radius: 12px;
-        border: 1px solid var(--border-color);
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    }
+    <button class="btn-ecr w-100" type="submit">
+      دخول
+    </button>
+  </form>
+{% endblock %}
 
-    /* تنسيق المدخلات - Logic intact, just styling classes */
-    input[type="text"], input[type="email"], input[type="password"], .form-control {
-        width: 100%;
-        padding: 12px 16px;
-        border-radius: 8px;
-        border: 1.5px solid var(--border-color);
-        background-color: var(--soft-gray);
-        transition: all 0.2s ease;
-        font-size: 0.95rem;
-    }
+{% block extra_js %}
+<script>
+(function(){
 
-    input:focus {
-        outline: none;
-        border-color: var(--primary-dark) !important;
-        background-color: #fff !important;
-        box-shadow: 0 0 0 4px rgba(26, 26, 26, 0.05);
-    }
+  const form = document.getElementById('loginForm');
+  const identifier = document.querySelector('input[name="identifier"], input[name$="identifier"]');
+  const password = document.querySelector('input[name="password"], input[name$="password"]');
+  const toggleBtn = document.getElementById('togglePassword');
 
-    /* الأزرار */
-    .main-btn {
-        background-color: var(--primary-dark);
-        border: none;
-        border-radius: 8px;
-        font-weight: 600;
-        transition: transform 0.1s active;
-    }
+  // ===== Toast =====
+  const toast = document.getElementById('toast');
+  const toastMsg = document.getElementById('toastMsg');
+  let toastTimer = null;
 
-    .main-btn:hover {
-        background-color: #000;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    }
+  function showToast(msg){
+    toastMsg.textContent = msg;
+    toast.style.display = 'flex';
+    toast.style.opacity = '1';
 
-    /* الروابط */
-    .forgot-link, .register-link {
-        color: var(--primary-dark);
-        text-decoration: none;
-        font-size: 0.85rem;
-        font-weight: 600;
-    }
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toast.style.opacity = '0';
+      setTimeout(()=> toast.style.display='none', 200);
+    }, 3000);
+  }
 
-    .forgot-link:hover, .register-link:hover {
-        text-decoration: underline;
-    }
+  function stripDangerous(str){
+    return (str || '')
+      .replace(/[<>]/g,'')
+      .replace(/["']/g,'')
+      .replace(/`/g,'')
+      .trim();
+  }
 
-    .global-error {
-        background-color: #fff5f5;
-        color: #c53030;
-        padding: 12px;
-        border-radius: 8px;
-        font-size: 0.85rem;
-        border: 1px solid #feb2b2;
+  // ✅ المطلوب: منع الرموز غير المسموحة والسماح فقط: حروف/أرقام و . و - و _ و @
+  // هذا يحقق طلبك بالكامل (ويرفض !#$%^&*)(,.{}":/*؟ وغيرها)
+  const INVALID_IDENTIFIER_CHARS = /[^A-Za-z0-9._@-]/g;
+
+  function sanitizeIdentifier(val){
+    return (val || '').replace(INVALID_IDENTIFIER_CHARS, '');
+  }
+
+  function isEmail(val){
+    // يسمح يبدأ برقم أو حرف، ويسمح . _ - في الجزء الأول
+    // دومين يسمح حروف/أرقام/-
+    // امتداد 2+ أحرف
+    return /^[A-Za-z0-9][A-Za-z0-9._-]*@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$/.test(val);
+  }
+
+  function isNationalId(val){
+    return /^\d{10}$/.test(val);
+  }
+
+  // ✅ تغيير الاتجاه تلقائياً:
+  // - لو فيه @ أو فيه أحرف أو فيه ._- => اعتبره "إيميل" => LTR + left
+  // - لو أرقام فقط => RTL + right
+  function updateIdentifierDirection(v){
+    const val = (v || '').trim();
+    const looksLikeEmail = val.includes('@') || /[A-Za-z]/.test(val) || /[._-]/.test(val);
+
+    if(looksLikeEmail){
+      identifier.style.direction = 'ltr';
+      identifier.style.textAlign = 'left';
+      identifier.setAttribute('dir','ltr');
+    }else{
+      identifier.style.direction = 'rtl';
+      identifier.style.textAlign = 'right';
+      identifier.setAttribute('dir','rtl');
     }
-</style>
+  }
+
+  if(identifier){
+    identifier.setAttribute('autocomplete','username');
+    identifier.setAttribute('maxlength','120');
+
+    // خلي الوضع الافتراضي RTL (لأن الواجهة عربية)
+    updateIdentifierDirection(identifier.value || '');
+
+    // منع إدخال الرموز غير المسموحة قدر الإمكان
+    identifier.addEventListener('beforeinput', function(e){
+      const data = e.data;
+      if(typeof data === 'string' && INVALID_IDENTIFIER_CHARS.test(data)){
+        e.preventDefault();
+        showToast('ممنوع استخدام رموز غير مسموحة. المسموح فقط: الأحرف/الأرقام و . و - و _ و @');
+        return;
+      }
+    });
+
+    // تنظيف + (حل مشكلة الرقم ثم @) + تغيير الاتجاه لحظياً
+    identifier.addEventListener('input', function(){
+      let v = stripDangerous(identifier.value);
+
+      const before = v;
+      v = v.replace(/\s+/g,'');           // نحذف المسافات
+      v = sanitizeIdentifier(v);          // نحذف أي رمز غير مسموح
+
+      if(before !== v){
+        showToast('تم حذف رموز غير مسموحة. المسموح فقط: الأحرف/الأرقام و . و - و _ و @');
+      }
+
+      // ✅ مهم: لا تقصه لأرقام إلا إذا "لا يوجد @" وكان كله أرقام
+      // حتى يسمح للبريد الذي يبدأ برقم هوية ثم @
+      if(!v.includes('@') && /^\d+$/.test(v)){
+        v = v.slice(0,10);
+      }else{
+        v = v.slice(0,120);
+      }
+
+      identifier.value = v;
+
+      // ✅ تغيير الاتجاه مباشرة
+      updateIdentifierDirection(v);
+    });
+
+    // عند التركيز/البلور أيضًا (لضمان الثبات)
+    identifier.addEventListener('focus', ()=> updateIdentifierDirection(identifier.value));
+    identifier.addEventListener('blur',  ()=> updateIdentifierDirection(identifier.value));
+  }
+
+  if(password){
+    password.setAttribute('autocomplete','current-password');
+  }
+
+  // toggle password
+  if(toggleBtn && password){
+    toggleBtn.addEventListener('click', function(){
+      const isHidden = password.type === 'password';
+      password.type = isHidden ? 'text' : 'password';
+    });
+  }
+
+  // ✅ 1) رسائل Django messages
+  const msgHolder = document.getElementById('serverMessages');
+  const msgRaw = msgHolder ? (msgHolder.getAttribute('data-msg') || '') : '';
+  if(msgRaw){
+    showToast(msgRaw.split('||')[0]);
+  }
+
+  // ✅ 2) أخطاء الفورم من السيرفر
+  const nonField = `{% if form.non_field_errors %}{% for e in form.non_field_errors %}{{ e|escapejs }}{% if not forloop.last %} | {% endif %}{% endfor %}{% endif %}`.trim();
+  const idErr    = `{% if form.identifier.errors %}{% for e in form.identifier.errors %}{{ e|escapejs }}{% if not forloop.last %} | {% endif %}{% endfor %}{% endif %}`.trim();
+  const passErr  = `{% if form.password.errors %}{% for e in form.password.errors %}{{ e|escapejs }}{% if not forloop.last %} | {% endif %}{% endfor %}{% endif %}`.trim();
+
+  if(nonField){ showToast(nonField); }
+  else if(idErr){ showToast(idErr); }
+  else if(passErr){ showToast(passErr); }
+
+  // ===== Client Validation =====
+  if(form){
+    form.addEventListener('submit', function(e){
+      if(identifier){
+        let v = stripDangerous(identifier.value);
+        v = v.replace(/\s+/g,'');
+        v = sanitizeIdentifier(v);
+
+        // نفس منطق القص
+        if(!v.includes('@') && /^\d+$/.test(v)){
+          v = v.slice(0,10);
+        }else{
+          v = v.slice(0,120);
+        }
+
+        identifier.value = v;
+        updateIdentifierDirection(v);
+      }
+
+      if(password) password.value = stripDangerous(password.value);
+
+      const idVal = identifier?.value.trim();
+
+      if(idVal && !(isEmail(idVal) || isNationalId(idVal))){
+        e.preventDefault();
+        showToast('الرجاء إدخال رقم هوية صحيح (10 أرقام) أو بريد إلكتروني صحيح (يسمح أن يبدأ برقم).');
+        identifier.focus();
+        return;
+      }
+    });
+  }
+
+})();
+</script>
 {% endblock %}
