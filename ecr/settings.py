@@ -271,34 +271,37 @@ RESPONDER_ONLINE_WINDOW_SECONDS = env_int("RESPONDER_ONLINE_WINDOW_SECONDS", 350
 # -----------------------------------------------------------------------------
 # إعدادات البريد الإلكتروني (SMTP) - تعمل للتطوير والإنتاج
 # -----------------------------------------------------------------------------
-# - الإنتاج: لو SMTP مفعل وكلمة المرور ناقصة => نوقف (عشان ما يصير فشل صامت)
-# - التطوير: لو كلمة المرور ناقصة => نخلي Console backend (بدون كسر السيرفر)
+# الهدف: منع SSL WRONG_VERSION_NUMBER بتثبيت المنطق:
+# - port 587 => STARTTLS
+# - port 465 => SSL
 EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
 
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.hostinger.com")
-EMAIL_PORT = env_int("EMAIL_PORT", 465)  # ✅ Hostinger الشائع: 465 SSL (أو 587 TLS)
+EMAIL_PORT = env_int("EMAIL_PORT", 587)  # ✅ افتراضيًا 587 لأنك تستخدمه على Render
 
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "support@ecrzone.com")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 
-EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", False)
-EMAIL_USE_SSL = env_bool("EMAIL_USE_SSL", False)
+# اقرأ القيم من ENV بشكل صحيح
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True if EMAIL_PORT == 587 else False)
+EMAIL_USE_SSL = env_bool("EMAIL_USE_SSL", True if EMAIL_PORT == 465 else False)
 
-# ✅ لو ما تحددت صراحة، اختر تلقائيًا حسب البورت
-if (os.getenv("EMAIL_USE_TLS") is None) and (os.getenv("EMAIL_USE_SSL") is None):
-    if EMAIL_PORT == 465:
-        EMAIL_USE_SSL = True
+# ✅ تثبيت صريح حسب المنفذ (إذا ENV ما حددت صراحة)
+if os.getenv("EMAIL_USE_TLS") is None and os.getenv("EMAIL_USE_SSL") is None:
+    if EMAIL_PORT == 587:
+        EMAIL_USE_TLS = True
+        EMAIL_USE_SSL = False
+    elif EMAIL_PORT == 465:
         EMAIL_USE_TLS = False
-    elif EMAIL_PORT == 587:
+        EMAIL_USE_SSL = True
+    else:
+        # منفذ غير معروف: افتراض آمن (بدون SSL)
         EMAIL_USE_TLS = True
         EMAIL_USE_SSL = False
 
-# ✅ منع تعارض TLS/SSL بدون كسر الـ deploy
+# ✅ منع التعارض بشكل صارم (عشان لا يرجع خطأ SSL)
 if EMAIL_USE_TLS and EMAIL_USE_SSL:
-    if EMAIL_PORT == 465:
-        EMAIL_USE_TLS = False
-    else:
-        EMAIL_USE_SSL = False
+    raise ValueError("Misconfig: EMAIL_USE_TLS and EMAIL_USE_SSL cannot both be True. Choose one based on port (587 TLS / 465 SSL).")
 
 # ✅ في التطوير: إذا ما فيه كلمة مرور، لا نوقف السيرفر
 if DEBUG and not EMAIL_HOST_PASSWORD:
