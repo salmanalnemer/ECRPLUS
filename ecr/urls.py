@@ -13,7 +13,7 @@ from accounts.password_reset_views import (
     PasswordResetVerifyView,
     PasswordResetConfirmView,
 )
-
+from django.views.generic import RedirectView
 
 # -----------------------------------------------------------------------------
 # Custom Error Handlers
@@ -39,6 +39,7 @@ handler403 = custom_403
 # URL Patterns
 # -----------------------------------------------------------------------------
 urlpatterns = [
+    path("", RedirectView.as_view(url="/accounts/login/", permanent=False), name="home"),
     path("admin/", admin.site.urls),
 
     # Web Apps
