@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: ecr-web
+    env: python
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
+    startCommand: gunicorn ecr.wsgi:application
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: ecr.settings
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+
+databases:
+  - name: ecr-db
+    plan: free
