@@ -11,13 +11,38 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ✅ حمّل .env من جذر المشروع بشكل صريح (مهم على ويندوز)
 load_dotenv(BASE_DIR / ".env")
 
+
+# -----------------------------------------------------------------------------
+# Helpers
+# -----------------------------------------------------------------------------
+def env_bool(name: str, default: bool = False) -> bool:
+    """
+    قراءة boolean من Environment بشكل آمن.
+    يقبل: 1/0, true/false, yes/no, on/off
+    """
+    v = os.getenv(name)
+    if v is None:
+        return default
+    return v.strip().lower() in ("1", "true", "yes", "on")
+
+
+def env_int(name: str, default: int) -> int:
+    v = os.getenv(name)
+    if v is None or not str(v).strip():
+        return default
+    try:
+        return int(v)
+    except ValueError:
+        return default
+
+
 # -----------------------------------------------------------------------------
 # إعدادات التطوير (غير مناسبة للإنتاج)
 # -----------------------------------------------------------------------------
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-change-this-in-production")
 
 # ✅ DEBUG يقرأ من .env (DJANGO_DEBUG=True/False)
-DEBUG = os.getenv("DJANGO_DEBUG", "False").strip().lower() == "true"
+DEBUG = env_bool("DJANGO_DEBUG", False)
 
 ALLOWED_HOSTS = [
     "127.0.0.1",
@@ -27,6 +52,7 @@ ALLOWED_HOSTS = [
     "www.ecrzone.com",
     ".onrender.com",
 ]
+
 
 # -----------------------------------------------------------------------------
 # التطبيقات المثبتة
@@ -56,6 +82,7 @@ INSTALLED_APPS = [
     "support_tickets.apps.SupportTicketsConfig",
 ]
 
+
 # -----------------------------------------------------------------------------
 # الوسطاء (Middleware)
 # -----------------------------------------------------------------------------
@@ -74,6 +101,7 @@ MIDDLEWARE = [
     # ✅ منع الكاش لصفحات المستخدم المسجّل (يحل الرجوع للخلف بعد logout)
     "accounts.middleware.NoCacheForAuthenticatedMiddleware",
 ]
+
 
 # -----------------------------------------------------------------------------
 # إعداد الروابط والقوالب
@@ -97,15 +125,33 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "ecr.wsgi.application"
 
+
 # -----------------------------------------------------------------------------
-# قاعدة البيانات
+# قاعدة البيانات (Dev: SQLite) (Prod: Postgres via DATABASE_URL)
 # -----------------------------------------------------------------------------
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+# ✅ ملاحظة: يحتاج تثبيت dj-database-url و psycopg
+import dj_database_url  # noqa: E402
+
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+
+if DATABASE_URL:
+    # ✅ إنتاج (Render غالبًا يمرر DATABASE_URL)
+    DATABASES = {
+        "default": dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=env_int("DB_CONN_MAX_AGE", 600),
+            ssl_require=env_bool("DB_SSL_REQUIRE", True),
+        )
     }
-}
+else:
+    # ✅ تطوير محلي (SQLite)
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+
 
 # -----------------------------------------------------------------------------
 # سياسة كلمات المرور (أمن سيبراني)
@@ -119,6 +165,7 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
+
 
 # -----------------------------------------------------------------------------
 # التعريب والتوقيت
@@ -135,17 +182,22 @@ LANGUAGES = [
 
 LOCALE_PATHS = [BASE_DIR / "locale"]
 
+
 # -----------------------------------------------------------------------------
 # ملفات static
 # -----------------------------------------------------------------------------
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+# ✅ في الإنتاج (Render) غالبًا تحتاج STATIC_ROOT لـ collectstatic
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
 
 # -----------------------------------------------------------------------------
 # نوع المفتاح الأساسي الافتراضي
 # -----------------------------------------------------------------------------
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "accounts.User"
+
 
 # -----------------------------------------------------------------------------
 # مسارات تسجيل الدخول/الخروج
@@ -159,6 +211,7 @@ AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
 ]
 
+
 # -----------------------------------------------------------------------------
 # Session / Cookies Security
 # -----------------------------------------------------------------------------
@@ -166,6 +219,7 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
 
 # -----------------------------------------------------------------------------
 # Cache (OTP / عام)
@@ -176,6 +230,7 @@ CACHES = {
         "LOCATION": "ecr-otp-cache",
     }
 }
+
 
 # -----------------------------------------------------------------------------
 # REST Framework + JWT
@@ -199,39 +254,64 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=int(os.getenv("JWT_ACCESS_MINUTES", "60"))),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=int(os.getenv("JWT_REFRESH_DAYS", "14"))),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=env_int("JWT_ACCESS_MINUTES", 60)),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=env_int("JWT_REFRESH_DAYS", 14)),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
+
 # -----------------------------------------------------------------------------
 # إعدادات تتبع المستجيبين
 # -----------------------------------------------------------------------------
-RESPONDER_ONLINE_WINDOW_SECONDS = int(os.getenv("RESPONDER_ONLINE_WINDOW_SECONDS", "3500"))
+RESPONDER_ONLINE_WINDOW_SECONDS = env_int("RESPONDER_ONLINE_WINDOW_SECONDS", 3500)
+
 
 # -----------------------------------------------------------------------------
-# إعدادات البريد الإلكتروني (SMTP)
+# إعدادات البريد الإلكتروني (SMTP) - تعمل للتطوير والإنتاج
 # -----------------------------------------------------------------------------
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+# - الإنتاج: لو SMTP مفعل وكلمة المرور ناقصة => نوقف (عشان ما يصير فشل صامت)
+# - التطوير: لو كلمة المرور ناقصة => نخلي Console backend (بدون كسر السيرفر)
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
 
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.hostinger.com")
-EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
-EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() == "true"
-EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False").lower() == "true"
-
-if EMAIL_USE_TLS and EMAIL_USE_SSL:
-    raise ValueError("Invalid email config: Do not enable both EMAIL_USE_TLS and EMAIL_USE_SSL at the same time.")
+EMAIL_PORT = env_int("EMAIL_PORT", 465)  # ✅ Hostinger الشائع: 465 SSL (أو 587 TLS)
 
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "support@ecrzone.com")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
-if not EMAIL_HOST_PASSWORD:
-    raise ValueError("EMAIL_HOST_PASSWORD is missing. Please set it in your .env file.")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", False)
+EMAIL_USE_SSL = env_bool("EMAIL_USE_SSL", False)
+
+# ✅ لو ما تحددت صراحة، اختر تلقائيًا حسب البورت
+if (os.getenv("EMAIL_USE_TLS") is None) and (os.getenv("EMAIL_USE_SSL") is None):
+    if EMAIL_PORT == 465:
+        EMAIL_USE_SSL = True
+        EMAIL_USE_TLS = False
+    elif EMAIL_PORT == 587:
+        EMAIL_USE_TLS = True
+        EMAIL_USE_SSL = False
+
+# ✅ منع تعارض TLS/SSL بدون كسر الـ deploy
+if EMAIL_USE_TLS and EMAIL_USE_SSL:
+    if EMAIL_PORT == 465:
+        EMAIL_USE_TLS = False
+    else:
+        EMAIL_USE_SSL = False
+
+# ✅ في التطوير: إذا ما فيه كلمة مرور، لا نوقف السيرفر
+if DEBUG and not EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
+
+# ✅ في الإنتاج: كلمة المرور لازم تكون موجودة لو SMTP شغال
+if (not DEBUG) and (EMAIL_BACKEND.endswith("smtp.EmailBackend")) and not EMAIL_HOST_PASSWORD:
+    raise ValueError("EMAIL_HOST_PASSWORD is missing. Please set it in your environment variables (.env / Render env).")
 
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", f"ECR <{EMAIL_HOST_USER}>")
 SERVER_EMAIL = os.getenv("SERVER_EMAIL", DEFAULT_FROM_EMAIL)
-EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "20"))
+EMAIL_TIMEOUT = env_int("EMAIL_TIMEOUT", 20)
+
 
 # -----------------------------------------------------------------------------
 # إعدادات أمان للإنتاج (تُفعّل تلقائيًا عند DEBUG=False)
@@ -248,26 +328,27 @@ if not DEBUG:
     X_FRAME_OPTIONS = "DENY"
 
     # HSTS
-    SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "0"))
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = os.getenv("SECURE_HSTS_INCLUDE_SUBDOMAINS", "False").lower() == "true"
-    SECURE_HSTS_PRELOAD = os.getenv("SECURE_HSTS_PRELOAD", "False").lower() == "true"
+    SECURE_HSTS_SECONDS = env_int("SECURE_HSTS_SECONDS", 0)
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", False)
+    SECURE_HSTS_PRELOAD = env_bool("SECURE_HSTS_PRELOAD", False)
 else:
     # ✅ في التطوير: لا تحول لـ HTTPS أبدًا
     SECURE_SSL_REDIRECT = False
-
-    # ✅ (اختياري) إذا تبي تظهر صفحات 404/500 المخصصة في التطوير:
     # DEBUG_PROPAGATE_EXCEPTIONS = False
+
 
 # -----------------------------------------------------------------------------
 # Google Maps
 # -----------------------------------------------------------------------------
 GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
 
+
 # -----------------------------------------------------------------------------
 # Media
 # -----------------------------------------------------------------------------
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
 
 # -----------------------------------------------------------------------------
 # دعم فني
