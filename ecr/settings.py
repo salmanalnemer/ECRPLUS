@@ -87,6 +87,7 @@ INSTALLED_APPS = [
 # الوسطاء (Middleware)
 # -----------------------------------------------------------------------------
 MIDDLEWARE = [
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
 
@@ -338,12 +339,10 @@ else:
     SECURE_SSL_REDIRECT = False
     # DEBUG_PROPAGATE_EXCEPTIONS = False
 
-
 # -----------------------------------------------------------------------------
 # Google Maps
 # -----------------------------------------------------------------------------
 GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
-
 
 # -----------------------------------------------------------------------------
 # Media
@@ -351,8 +350,16 @@ GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-
 # -----------------------------------------------------------------------------
 # دعم فني
 # -----------------------------------------------------------------------------
 SUPPORT_TICKETS_SLA_STOP_DURING_PAUSE = True
+
+#-----------------------------------------------------------------------------
+# إعدادات التخزين لملفات static (Whitenoise للإنتاج)
+#-----------------------------------------------------------------------------
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    }
+}
