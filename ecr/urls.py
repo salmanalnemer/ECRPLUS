@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib import admin
+from django.http import HttpResponse
 from django.urls import path, include
 from django.conf.urls.static import static
 from django.conf.urls import handler404, handler500, handler403
@@ -34,14 +35,15 @@ handler404 = custom_404
 handler500 = custom_500
 handler403 = custom_403
 
-
+def healthz(_request):
+    return HttpResponse("ok", content_type="text/plain")
 # -----------------------------------------------------------------------------
 # URL Patterns
 # -----------------------------------------------------------------------------
 urlpatterns = [
     path("", RedirectView.as_view(url="/accounts/login/", permanent=False), name="root"),
     path("sansecr/", admin.site.urls),
-
+    path("healthz/", healthz),
     # Web Apps
     path("accounts/", include("accounts.urls")),
     path("cad/", include(("cad_reports.urls", "cad_reports"), namespace="cad_reports")),

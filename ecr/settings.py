@@ -323,7 +323,12 @@ if not DEBUG:
     # ✅ في الإنتاج: اجبر HTTPS (لا تفعله في التطوير)
     SECURE_SSL_REDIRECT = True
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-
+    USE_X_FORWARDED_HOST = True
+    
+    CSRF_TRUSTED_ORIGINS = [
+    "https://ecrzone.com",
+    "https://www.ecrzone.com",
+]
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 
