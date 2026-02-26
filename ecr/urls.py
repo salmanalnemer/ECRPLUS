@@ -16,6 +16,7 @@ from accounts.password_reset_views import (
 )
 from django.views.generic import RedirectView
 
+
 # -----------------------------------------------------------------------------
 # Custom Error Handlers
 # -----------------------------------------------------------------------------
@@ -35,15 +36,24 @@ handler404 = custom_404
 handler500 = custom_500
 handler403 = custom_403
 
+
+# -----------------------------------------------------------------------------
+# Health Check (Render)
+# -----------------------------------------------------------------------------
 def healthz(_request):
     return HttpResponse("ok", content_type="text/plain")
+
+
 # -----------------------------------------------------------------------------
 # URL Patterns
 # -----------------------------------------------------------------------------
 urlpatterns = [
     path("", RedirectView.as_view(url="/accounts/login/", permanent=False), name="root"),
     path("sansecr/", admin.site.urls),
+
+    # ✅ Render health check
     path("healthz/", healthz),
+
     # Web Apps
     path("accounts/", include("accounts.urls")),
     path("cad/", include(("cad_reports.urls", "cad_reports"), namespace="cad_reports")),
