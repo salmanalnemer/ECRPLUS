@@ -186,10 +186,9 @@ LOCALE_PATHS = [BASE_DIR / "locale"]
 # -----------------------------------------------------------------------------
 # ملفات static
 # -----------------------------------------------------------------------------
-STATIC_URL = "static/"
-STATICFILES_DIRS = [BASE_DIR / "static"]
-# ✅ في الإنتاج (Render) غالبًا تحتاج STATIC_ROOT لـ collectstatic
-STATIC_ROOT = BASE_DIR / "staticfiles"
+STATIC_URL = "/static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]   # للتطوير
+STATIC_ROOT = BASE_DIR / "staticfiles"     # للإنتاج + collectstatic
 
 
 # -----------------------------------------------------------------------------

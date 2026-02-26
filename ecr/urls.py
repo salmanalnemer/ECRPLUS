@@ -39,7 +39,7 @@ handler403 = custom_403
 # URL Patterns
 # -----------------------------------------------------------------------------
 urlpatterns = [
-    path("", RedirectView.as_view(url="/accounts/login/", permanent=False), name="home"),
+    path("", RedirectView.as_view(url="/accounts/login/", permanent=False), name="root"),
     path("admin/", admin.site.urls),
 
     # Web Apps
