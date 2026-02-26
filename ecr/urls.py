@@ -1,35 +1,58 @@
+from __future__ import annotations
+
+import logging
+
 from django.conf import settings
 from django.contrib import admin
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseNotFound, HttpResponseForbidden, HttpResponseServerError
 from django.urls import path, include
 from django.conf.urls.static import static
-from django.conf.urls import handler404, handler500, handler403
 from django.shortcuts import render
+from django.views.generic import RedirectView
 
 from rest_framework_simplejwt.views import TokenRefreshView
 from accounts.jwt_views import NationalIdTokenObtainPairView
-
 from accounts.password_reset_views import (
     PasswordResetRequestView,
     PasswordResetVerifyView,
     PasswordResetConfirmView,
 )
-from django.views.generic import RedirectView
 
+logger = logging.getLogger(__name__)
 
 # -----------------------------------------------------------------------------
-# Custom Error Handlers
+# Custom Error Handlers (Production-safe)
 # -----------------------------------------------------------------------------
 def custom_404(request, exception):
-    return render(request, "404.html", status=404)
-
-
-def custom_500(request):
-    return render(request, "500.html", status=500)
+    # سجل 404 (مفيد لتتبع روابط مكسورة)
+    logger.warning("404 Not Found: path=%s", getattr(request, "path", ""))
+    try:
+        return render(request, "404.html", status=404)
+    except Exception:
+        return HttpResponseNotFound("404 Not Found")
 
 
 def custom_403(request, exception):
-    return render(request, "403.html", status=403)
+    # سجل 403 (صلاحيات)
+    logger.warning("403 Forbidden: path=%s", getattr(request, "path", ""))
+    try:
+        return render(request, "403.html", status=403)
+    except Exception:
+        return HttpResponseForbidden("403 Forbidden")
+
+
+def custom_500(request):
+    """
+    ✅ الأهم:
+    - يسجّل الاستثناء الحقيقي في Logs (Render / gunicorn)
+    - ويحاول يعرض 500.html
+    - ولو 500.html نفسها فيها مشكلة، يرجع نص بسيط بدل انهيار إضافي
+    """
+    logger.exception("500 Internal Server Error: path=%s", getattr(request, "path", ""))
+    try:
+        return render(request, "500.html", status=500)
+    except Exception:
+        return HttpResponseServerError("500 Internal Server Error")
 
 
 handler404 = custom_404
@@ -48,10 +71,13 @@ def healthz(_request):
 # URL Patterns
 # -----------------------------------------------------------------------------
 urlpatterns = [
+    # Root -> Login
     path("", RedirectView.as_view(url="/accounts/login/", permanent=False), name="root"),
+
+    # Admin (مسار مخصص)
     path("sansecr/", admin.site.urls),
 
-    # ✅ Render health check
+    # Render health check
     path("healthz/", healthz),
 
     # Web Apps
@@ -73,6 +99,6 @@ urlpatterns = [
     path("api/auth/password-reset/confirm/", PasswordResetConfirmView.as_view(), name="password_reset_confirm"),
 ]
 
-# Media in development
+# Media in development only
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
