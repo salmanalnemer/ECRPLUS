@@ -1,18 +1,22 @@
 from __future__ import annotations
 
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, logout
 from django.db import transaction
+
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
+
+from responders.models import ResponderLocation
 
 User = get_user_model()
 
-from responders.models import ResponderLocation
+
+User = get_user_model()
 
 
 class MeView(APIView):
@@ -109,7 +113,6 @@ class LocationSharingView(APIView):
         if enabled is None:
             return Response({"enabled": ["هذا الحقل مطلوب."]}, status=status.HTTP_400_BAD_REQUEST)
 
-        # ✅ تحويل enabled إلى Boolean بشكل آمن (يدعم true/false و 1/0 و yes/no)
         def _to_bool(v):
             if isinstance(v, bool):
                 return v
@@ -120,7 +123,6 @@ class LocationSharingView(APIView):
                 return True
             if s in {"false", "0", "no", "n", "off"}:
                 return False
-            # أي قيمة أخرى تعتبر خطأ في الإدخال
             raise ValueError("قيمة enabled غير صالحة. استخدم true/false أو 1/0.")
 
         try:
@@ -128,22 +130,19 @@ class LocationSharingView(APIView):
         except ValueError as e:
             return Response({"enabled": [str(e)]}, status=status.HTTP_400_BAD_REQUEST)
 
-        # ✅ حفظ الحالة في قاعدة البيانات إذا كان الحقل موجوداً في User
         if hasattr(request.user, "location_sharing_enabled"):
             try:
                 request.user.location_sharing_enabled = enabled_bool
                 request.user.save(update_fields=["location_sharing_enabled"])
 
-                # ✅ إذا تم إيقاف المشاركة: احذف آخر موقع محفوظ فوراً
                 if enabled_bool is False:
                     ResponderLocation.objects.filter(responder=request.user).delete()
+
             except Exception:
-                # لا نكسر الـ API لو حصل خطأ غير متوقع أثناء الحفظ
                 return Response({"detail": "تعذر حفظ حالة مشاركة الموقع."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
-            # إن لم يكن الحقل موجوداً، نرجّع رسالة واضحة
             return Response(
-                {"detail": "حقل location_sharing_enabled غير موجود في نموذج المستخدم. أضفه في accounts/models.py ثم نفّذ migrations."},
+                {"detail": "حقل location_sharing_enabled غير موجود في نموذج المستخدم."},
                 status=status.HTTP_501_NOT_IMPLEMENTED,
             )
 
@@ -151,41 +150,27 @@ class LocationSharingView(APIView):
 
 
 class LogoutAPIView(APIView):
-    """Logout for mobile/API clients.
-
-    المطلوب (حسب سلوك التطبيق):
-    - حذف آخر موقع محفوظ للمستجيب فوراً (حتى يختفي من خريطة/قائمة المتصلين).
-    - إيقاف مشاركة الموقع على مستوى السيرفر (location_sharing_enabled = False).
-    - (اختياري) إذا أرسل العميل refresh token: يتم Blacklist له لإبطال الجلسة نهائياً.
-    """
     permission_classes = [IsAuthenticated]
 
     @transaction.atomic
     def post(self, request):
-        # 1) احذف آخر موقع محفوظ
+        # حذف آخر موقع للمستجيب
         ResponderLocation.objects.filter(responder=request.user).delete()
 
-        # 2) أوقف مشاركة الموقع على السيرفر (Defensive)
+        # إيقاف مشاركة الموقع
         if hasattr(request.user, "location_sharing_enabled"):
-            try:
-                request.user.location_sharing_enabled = False
-                request.user.save(update_fields=["location_sharing_enabled"])
-            except Exception:
-                # لا نكسر logout بسبب فشل تحديث الحقل
-                pass
+            request.user.location_sharing_enabled = False
+            request.user.save(update_fields=["location_sharing_enabled"])
 
-        # 3) (اختياري) ابطال refresh token إذا كان المشروع مفعل blacklist
-        refresh = request.data.get("refresh") if isinstance(getattr(request, "data", None), dict) else None
+        # إبطال refresh token (اختياري)
+        refresh = request.data.get("refresh")
         if refresh:
             try:
                 token = RefreshToken(refresh)
-                # blacklist() موجود عندما يكون token_blacklist ضمن INSTALLED_APPS
                 token.blacklist()
             except TokenError:
-                # توكن غير صالح/منتهي/مسبقاً ضمن blacklist
                 pass
-            except Exception:
-                # لا نكسر logout لأي سبب
-                pass
+
+        logout(request)
 
         return Response({"ok": True}, status=status.HTTP_200_OK)
