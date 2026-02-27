@@ -7,6 +7,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.tokens import RefreshToken
+
 User = get_user_model()
 
 from responders.models import ResponderLocation
@@ -150,23 +153,39 @@ class LocationSharingView(APIView):
 class LogoutAPIView(APIView):
     """Logout for mobile/API clients.
 
-    - Deletes responder last known location immediately so it disappears from admin/map.
-    - Optionally can be extended to blacklist refresh tokens if SimpleJWT blacklist is enabled.
+    المطلوب (حسب سلوك التطبيق):
+    - حذف آخر موقع محفوظ للمستجيب فوراً (حتى يختفي من خريطة/قائمة المتصلين).
+    - إيقاف مشاركة الموقع على مستوى السيرفر (location_sharing_enabled = False).
+    - (اختياري) إذا أرسل العميل refresh token: يتم Blacklist له لإبطال الجلسة نهائياً.
     """
     permission_classes = [IsAuthenticated]
 
     @transaction.atomic
     def post(self, request):
-        # Delete stored location so responder won't appear as connected/located.
+        # 1) احذف آخر موقع محفوظ
         ResponderLocation.objects.filter(responder=request.user).delete()
 
-        # Also flip sharing off (defensive) if field exists.
+        # 2) أوقف مشاركة الموقع على السيرفر (Defensive)
         if hasattr(request.user, "location_sharing_enabled"):
             try:
                 request.user.location_sharing_enabled = False
                 request.user.save(update_fields=["location_sharing_enabled"])
             except Exception:
-                # Don't fail logout if field update fails
+                # لا نكسر logout بسبب فشل تحديث الحقل
+                pass
+
+        # 3) (اختياري) ابطال refresh token إذا كان المشروع مفعل blacklist
+        refresh = request.data.get("refresh") if isinstance(getattr(request, "data", None), dict) else None
+        if refresh:
+            try:
+                token = RefreshToken(refresh)
+                # blacklist() موجود عندما يكون token_blacklist ضمن INSTALLED_APPS
+                token.blacklist()
+            except TokenError:
+                # توكن غير صالح/منتهي/مسبقاً ضمن blacklist
+                pass
+            except Exception:
+                # لا نكسر logout لأي سبب
                 pass
 
         return Response({"ok": True}, status=status.HTTP_200_OK)
