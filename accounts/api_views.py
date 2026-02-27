@@ -9,6 +9,8 @@ from rest_framework.views import APIView
 
 User = get_user_model()
 
+from responders.models import ResponderLocation
+
 
 class MeView(APIView):
     permission_classes = [IsAuthenticated]
@@ -128,6 +130,10 @@ class LocationSharingView(APIView):
             try:
                 request.user.location_sharing_enabled = enabled_bool
                 request.user.save(update_fields=["location_sharing_enabled"])
+
+                # ✅ إذا تم إيقاف المشاركة: احذف آخر موقع محفوظ فوراً
+                if enabled_bool is False:
+                    ResponderLocation.objects.filter(responder=request.user).delete()
             except Exception:
                 # لا نكسر الـ API لو حصل خطأ غير متوقع أثناء الحفظ
                 return Response({"detail": "تعذر حفظ حالة مشاركة الموقع."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -139,3 +145,28 @@ class LocationSharingView(APIView):
             )
 
         return Response({"enabled": enabled_bool}, status=status.HTTP_200_OK)
+
+
+class LogoutAPIView(APIView):
+    """Logout for mobile/API clients.
+
+    - Deletes responder last known location immediately so it disappears from admin/map.
+    - Optionally can be extended to blacklist refresh tokens if SimpleJWT blacklist is enabled.
+    """
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def post(self, request):
+        # Delete stored location so responder won't appear as connected/located.
+        ResponderLocation.objects.filter(responder=request.user).delete()
+
+        # Also flip sharing off (defensive) if field exists.
+        if hasattr(request.user, "location_sharing_enabled"):
+            try:
+                request.user.location_sharing_enabled = False
+                request.user.save(update_fields=["location_sharing_enabled"])
+            except Exception:
+                # Don't fail logout if field update fails
+                pass
+
+        return Response({"ok": True}, status=status.HTTP_200_OK)

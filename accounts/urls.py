@@ -2,7 +2,7 @@ from django.urls import path
 from . import views
 from .views import ecr_dashcad
 from django.contrib.auth.views import LogoutView
-from .api_views import MeView, ChangePasswordView, LocationSharingView
+from .api_views import MeView, ChangePasswordView, LocationSharingView, LogoutAPIView
 
 
 urlpatterns = [
@@ -21,4 +21,5 @@ urlpatterns = [
     path("api/me/", MeView.as_view(), name="api_me"),
     path("api/change-password/", ChangePasswordView.as_view(), name="api_change_password"),
     path("api/location-sharing/", LocationSharingView.as_view(), name="api_location_sharing"),
+    path("api/logout/", LogoutAPIView.as_view(), name="api_logout"),
 ]
