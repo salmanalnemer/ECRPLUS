@@ -56,5 +56,5 @@ urlpatterns = [
     path("api/location-sharing/", LocationSharingView.as_view(), name="api_location_sharing"),
 
     # ✅ API logout للتطبيق
-    path("api/logout/", LogoutAPI.as_view(), name="api_logout"),
+    path("logout/", LogoutAPI.as_view(), name="api_logout"),
 ]
