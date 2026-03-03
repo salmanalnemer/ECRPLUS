@@ -197,18 +197,18 @@
         <a href="{% url 'cad_reports:main_dashboard_page' %}" class="nav-item">
             <i class="fas fa-chart-line"></i> الداشبورد
         </a>
-        <a href="{% url 'cad_reports:page' %}" class="nav-item">
+        <a href="{% url 'cad_reports:page' %}" class="nav-item" target="_blank" rel="noopener noreferrer">
             <i class="fas fa-location-dot"></i> إنشاء بلاغ (مرتبط بـ CAD)
         </a>
 
         </li>
         {% if can_see_cad_dashboard_link %}
-        <a href="/cad/dashboard/cad/" class="nav-item">
+        <a href="/cad/dashboard/cad/" class="nav-item" target="_blank" rel="noopener noreferrer">
             <i class="fas fa-chart-line"></i> لوحة CAD
         </a>
         {% endif %}
 
-        <a href="{% url 'cad_reports:reports_cad_dashboard' %}" class="nav-item">
+        <a href="{% url 'cad_reports:reports_cad_dashboard' %}" class="nav-item" target="_blank" rel="noopener noreferrer">
             <i class="fas fa-ambulance text-danger"></i>
             بلاغات CAD
         </a>
@@ -216,31 +216,31 @@
             <i class="fas fa-ambulance text-danger"></i>
             بلاغات مرتبطة بـ CAD
         </a>-->
-        <a href="/api/ecr/dashboard/ecr-reports/" class="nav-item">
+        <a href="/api/ecr/dashboard/ecr-reports/" class="nav-item" target="_blank" rel="noopener noreferrer">
             <i class="fas fa-mobile-alt text-primary"></i>
             بلاغات ECR
         </a>
-        <a href="{% url 'cad_reports:reports_cad_ecr' %}" class="nav-item">
+        <a href="{% url 'cad_reports:reports_cad_ecr' %}" class="nav-item" target="_blank" rel="noopener noreferrer">
             <i class="fas fa-triangle-exclamation"></i> الخريطة الحية 
         </a>
-        <a href="{% url 'responders:show_all_responders' %}" class="nav-item">
+        <a href="{% url 'responders:show_all_responders' %}" class="nav-item" target="_blank" rel="noopener noreferrer">
             <i class="fas fa-user-md"></i> المستجيبون
         </a>
-        <div style="margin: 15px 10px 5px 10px; font-size: 0.65rem; color: #cbd5e1; font-weight: 700; text-transform: uppercase;">
+        <div style="margin: 15px 10px 5px 10px; font-size: 0.65rem; color: #cbd5e1; font-weight: 700; text-transform: uppercase;" target="_blank" rel="noopener noreferrer">
         التحليلات والبيانات
         </div>
         </a>
-         <a href="{% url 'cad_reports:cad_ai_hotspots_page' %}" class="nav-item">
+         <a href="{% url 'cad_reports:cad_ai_hotspots_page' %}" class="nav-item" target="_blank" rel="noopener noreferrer">
             <i class="fa-solid fa-fire-flame-curved"></i>  تحليل البلاغات
         </a>
-        <a href="/portal/analytics/" class="nav-item">
+        <a href="/portal/analytics/" class="nav-item" target="_blank" rel="noopener noreferrer">
             <i class="fas fa-chart-pie"></i> مؤشرات الأداء (KPIs)
         </a>
 
-        <a href="/portal/reports/" class="nav-item">
+        <a href="/portal/reports/" class="nav-item" target="_blank" rel="noopener noreferrer">
             <i class="fas fa-file-invoice"></i> التقارير الدورية
         </a>
-        <a href="/portal/notifications/" class="nav-item">
+        <a href="/portal/notifications/" class="nav-item" target="_blank" rel="noopener noreferrer">
             <i class="fas fa-bell"></i> الإشعارات 
         </a>
 
@@ -273,7 +273,7 @@
         <i class="fas fa-check-circle"></i> التذاكر المغلقة
         </a>-->
 
-        <div style="margin: 15px 10px; border-top: 1px solid #f1f5f9;"></div>
+        <div style="margin: 15px 10px; border-top: 1px solid #f1f5f9;" target="_blank" rel="noopener noreferrer"></div>
         
         <a href="/portal/settings/" class="nav-item">
             <i class="fas fa-sliders"></i> الإعدادات

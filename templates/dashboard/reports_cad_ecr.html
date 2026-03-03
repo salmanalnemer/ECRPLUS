@@ -414,9 +414,18 @@
         </button>
       </div>
 
-      <span class="pill"><span class="dot cad"></span> CAD: <span id="cnt-cad">0</span></span>
-      <span class="pill"><span class="dot ecr"></span> ECR: <span id="cnt-ecr">0</span></span>
-      <span class="pill"><span class="dot resp"></span> Online: <span id="cnt-resp">0</span></span>
+      <button class="map-btn secondary" id="btn-cad" onclick="toggleCad()">
+        <i class="fa-solid fa-truck-medical"></i> CAD
+      </button>
+
+      <button class="map-btn secondary" id="btn-ecr" onclick="toggleEcr()">
+        <i class="fa-solid fa-mobile-screen"></i> ECR
+      </button>
+
+      <span class="pill">
+        <span class="dot resp"></span>
+        المستجيبون: <span id="cnt-resp">0</span>
+      </span>
     </div>
 
     <div id="map-canvas"></div>
@@ -501,16 +510,47 @@
   let heatmapLayer = null;
 
   // ✅ دائم تشغيل
-  let showMarkers = true;
-  let showHeatmap = true;
-
-  let pollTimer = null;
-  let pollMs = POLL_MS_BASE;
+  let showMarkers = true; // العلامات تمثل البلاغات والمستجيبين، وهي ضرورية دومًا لمتابعة الحالات، فخليها ON دائمًا بدون زر إخفاء
+  let showHeatmap = true; // الخريطة الحرارية تمثل كثافة البلاغات، وهي مهمة دومًا لفهم الوضع العام، فخليها ON دائمًا بدون زر إخفاء
+  let showCad = true; // CAD ممكن يكون تقنيًا أثقل شوي من ECR بسبب كثرة البلاغات، فخليها ON/OFF
+  let showEcr = true; // ECR أخف، فخليها ON دائمًا بدون زر إخفاء (لأنها تمثل الحالات الحرجة اللي لازم تتابعها دومًا)
+  let pollTimer = null; // لتحديث البيانات بشكل دوري
+  let pollMs = POLL_MS_BASE; // الوقت الحالي بين كل تحديث وتاليه، بيزيد تدريجيًا إذا ما في تغييرات، وبيرجع للصفر إذا في تغييرات (لتحسين الأداء وتقليل الضغط على السيرفر إذا ما في نشاط)
 
   // Avoid redraw if unchanged
-  let lastHashCad = "";
-  let lastHashEcr = "";
-  let lastHashResp = "";
+  let lastHashCad = ""; // لتخزين هاش سريع للبيانات الحالية لبلاغات CAD، حتى نقدر نقرر إذا نرسم الخريطة من جديد أو لا (لأن رسم الخريطة ممكن يكون مكلف إذا في آلاف البلاغات)
+  let lastHashEcr = ""; // نفس الشيء لبلاغات ECR، حتى لو كانت أقل عددًا، ممكن يكون في تغييرات كثيرة فيها بسبب تحديث الحالات، فمهم نراقبها بشكل منفصل
+  let lastHashResp = ""; // نفس الشيء للمستجيبين، لأنهم ممكن يتغيروا كثيرًا (اتصال/انقطاع، تحديث الموقع)، فمراقبتهم بشكل منفصل تساعدنا نرسم الخريطة فقط لما يكون في تغييرات فعلية في بياناتهم
+  function toggleCad(){
+  showCad = !showCad;
+
+  const btn = document.getElementById("btn-cad");
+
+  if(btn){
+    btn.style.opacity = showCad ? "1" : ".5";
+  }
+  if(typeof updateFilterButtons === "function") updateFilterButtons();
+  drawMarkers();
+}
+
+function toggleEcr(){
+  showEcr = !showEcr;
+
+  const btn = document.getElementById("btn-ecr");
+
+  if(btn){
+    btn.style.opacity = showEcr ? "1" : ".5";
+  }
+  if(typeof updateFilterButtons === "function") updateFilterButtons();
+  drawMarkers();
+}
+
+  function updateFilterButtons(){
+    const btnCad = document.getElementById("btn-cad");
+    const btnEcr = document.getElementById("btn-ecr");
+    if(btnCad) btnCad.style.opacity = showCad ? "1" : ".5";
+    if(btnEcr) btnEcr.style.opacity = showEcr ? "1" : ".5";
+  }
 
   // icons
   const ICON_URLS = {
@@ -597,9 +637,14 @@
   }
 
   function setCounters(){
-    document.getElementById("cnt-cad").textContent = Array.isArray(cadReports) ? cadReports.length : 0;
-    document.getElementById("cnt-ecr").textContent = Array.isArray(ECR_CASES) ? ECR_CASES.length : 0;
-    document.getElementById("cnt-resp").textContent = Array.isArray(RESPONDERS) ? RESPONDERS.length : 0;
+    // ✅ تحديث العدادات بدون كسر السكربت إذا تغيّر الـ DOM
+    const elCad  = document.getElementById("cnt-cad");
+    const elEcr  = document.getElementById("cnt-ecr");
+    const elResp = document.getElementById("cnt-resp");
+
+    if(elCad)  elCad.textContent  = Array.isArray(cadReports) ? cadReports.length : 0;
+    if(elEcr)  elEcr.textContent  = Array.isArray(ECR_CASES) ? ECR_CASES.length : 0;
+    if(elResp) elResp.textContent = Array.isArray(RESPONDERS) ? RESPONDERS.length : 0;
   }
 
   // ======================
@@ -863,8 +908,8 @@
       heroItems.push(["المعرف", pickFirst(obj, ["username","id"]), "fa-id-badge"]);
       heroItems.push(["الحالة", pickFirst(obj, ["is_online","status"]), "fa-signal"]);
       heroItems.push(["المنطقة", pickFirst(obj, ["region","region_name"]), "fa-map"]);
-      heroItems.push(["آخر تحديث", pickFirst(obj, ["updated_at","last_seen","last_update"]), "fa-clock"]);
       heroItems.push(["ملاحظات", pickFirst(obj, ["notes","details"]), "fa-note-sticky"]);
+      heroItems.push(["آخر تحديث", pickFirst(obj, ["updated_at","last_seen","last_update"]), "fa-clock"]);
     }
 
     heroEl.innerHTML = heroItems
@@ -915,30 +960,62 @@
   }
 
   function drawMarkers(){
-    if(!map) return;
-    clearMarkers();
+  if(!map) return;
 
+  clearMarkers();
+
+  // CAD
+  if(showCad){
     (cadReports || []).forEach(r => {
       const lat = parseFloat(r.latitude);
       const lng = parseFloat(r.longitude);
       if(Number.isNaN(lat) || Number.isNaN(lng)) return;
-      addMarker(lat, lng, ICONS_READY.cad, "CAD " + (r.cad_number || r.report_number || r.id || ""), r, "CAD");
-    });
 
+      addMarker(
+        lat,
+        lng,
+        ICONS_READY.cad,
+        "CAD " + (r.cad_number || r.report_number || r.id || ""),
+        r,
+        "CAD"
+      );
+    });
+  }
+
+  // ECR
+  if(showEcr){
     (ECR_CASES || []).forEach(r => {
       const lat = parseFloat(r.lat);
       const lng = parseFloat(r.lng);
       if(Number.isNaN(lat) || Number.isNaN(lng)) return;
-      addMarker(lat, lng, ICONS_READY.ecr, "ECR " + (r.case_number || r.id || ""), r, "ECR");
-    });
 
-    (RESPONDERS || []).forEach(r => {
-      const lat = parseFloat(r.latitude || r.lat);
-      const lng = parseFloat(r.longitude || r.lng);
-      if(Number.isNaN(lat) || Number.isNaN(lng)) return;
-      addMarker(lat, lng, ICONS_READY.responder, "Responder " + (r.name || r.full_name || r.username || r.id || ""), r, "RESPONDER");
+      addMarker(
+        lat,
+        lng,
+        ICONS_READY.ecr,
+        "ECR " + (r.case_number || r.id || ""),
+        r,
+        "ECR"
+      );
     });
   }
+
+  // Responders (دائماً ظاهر)
+  (RESPONDERS || []).forEach(r => {
+    const lat = parseFloat(r.latitude || r.lat);
+    const lng = parseFloat(r.longitude || r.lng);
+    if(Number.isNaN(lat) || Number.isNaN(lng)) return;
+
+    addMarker(
+      lat,
+      lng,
+      ICONS_READY.responder,
+      "Responder " + (r.name || r.full_name || r.username || r.id || ""),
+      r,
+      "RESPONDER"
+    );
+  });
+}
 
   function buildHeatmapData(){
     const pts = [];
@@ -1121,6 +1198,12 @@
     loadTimeFilter();
     hydrateTimeUI();
     onPresetChange();
+
+    // ✅ عرض المستجيبين وبلاغات ECR مباشرة من البيانات المحقونة (بدون انتظار Fetch)
+    setCounters();
+    if(typeof updateFilterButtons === "function") updateFilterButtons();
+    drawMarkers();
+    ensureHeatmap();
 
     // أول تحميل حسب الفلتر
     await applyTimeFilter(false);
