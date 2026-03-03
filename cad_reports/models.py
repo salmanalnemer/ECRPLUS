@@ -420,7 +420,69 @@ class CADReport(models.Model):
         self.full_clean()
         self.save(update_fields=["is_closed", "closed_at", "closed_by", "closed_source", "updated_at"])
 
+class CADReportActivity(models.Model):
+    """سجل الإجراءات + الدردشة للبلاغ (Timeline + Chat)."""
 
+    class Kind(models.TextChoices):
+        SYSTEM = "system", "إجراء نظام"
+        MESSAGE = "message", "رسالة/ملاحظة"
+
+    class Action(models.TextChoices):
+        CREATED = "created", "تم إنشاء البلاغ"
+        DISPATCHED = "dispatched", "تم ترحيل البلاغ"
+        ACCEPTED = "accepted", "تم قبول البلاغ"
+        ARRIVED = "arrived", "تم الوصول"
+        CLOSED = "closed", "تم إغلاق البلاغ"
+        NOTE = "note", "ملاحظة"
+
+    report = models.ForeignKey(
+        "cad_reports.CADReport",
+        on_delete=models.CASCADE,
+        related_name="activities",
+        verbose_name="البلاغ",
+    )
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="cad_report_activities",
+        verbose_name="المنفّذ/الكاتب",
+        null=True,
+        blank=True,
+        help_text="قد يكون فارغًا لبعض إجراءات النظام الآلية.",
+    )
+
+    kind = models.CharField(
+        "النوع",
+        max_length=20,
+        choices=Kind.choices,
+        default=Kind.SYSTEM,
+        db_index=True,
+    )
+
+    action = models.CharField(
+        "الإجراء",
+        max_length=30,
+        choices=Action.choices,
+        default=Action.NOTE,
+        db_index=True,
+    )
+
+    message = models.TextField("النص", blank=True)
+
+    created_at = models.DateTimeField("وقت الإنشاء", auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = "سجل بلاغ CAD"
+        verbose_name_plural = "سجلات بلاغات CAD"
+        ordering = ["created_at"]
+        indexes = [
+            models.Index(fields=["report", "created_at"]),
+            models.Index(fields=["report", "action", "created_at"]),
+        ]
+
+    def __str__(self) -> str:  # pragma: no cover
+        return f"{self.report} - {self.action} - {self.created_at:%Y-%m-%d | %H:%M}"
 
 class UserDeviceToken(models.Model):
     """FCM device token per user (for CAD mobile background alerts)."""

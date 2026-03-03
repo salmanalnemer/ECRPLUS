@@ -1,0 +1,165 @@
+{% load static %}
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>تفعيل الحساب - رمز OTP</title>
+</head>
+
+<body style="margin:0;background:#ececec;font-family:Tahoma,Arial,sans-serif;">
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;">
+    <div style="width:100%;max-width:520px;background:#ffffff;border-radius:18px;box-shadow:0 14px 40px rgba(0,0,0,.25);overflow:hidden;">
+
+      <div style="padding:18px 20px;background:#111827;color:#fff;">
+        <div style="font-size:18px;font-weight:800;">ECR منصة مستجيب الحالات الطارئة</div>
+        <div style="font-size:13px;opacity:.9;margin-top:4px;">تفعيل الحساب عبر رمز OTP</div>
+      </div>
+
+      <div style="padding:22px 20px;">
+        <p style="margin:0 0 10px;color:#111827;line-height:1.8;">
+          أدخل رمز التفعيل المرسل إلى بريدك الإلكتروني لإكمال التفعيل.
+        </p>
+
+        {% if messages %}
+          <div style="margin:12px 0;">
+            {% for message in messages %}
+              <div style="padding:10px 12px;border-radius:12px;background:#fef3c7;color:#92400e;margin-bottom:8px;">
+                {{ message }}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if form.non_field_errors %}
+          <div style="padding:10px 12px;border-radius:12px;background:#fee2e2;color:#991b1b;margin:12px 0;">
+            {{ form.non_field_errors }}
+          </div>
+        {% endif %}
+
+        <form method="post" autocomplete="one-time-code" style="margin-top:14px;">
+          {% csrf_token %}
+
+          <label style="display:block;margin-bottom:8px;color:#374151;font-size:13px;">رمز OTP</label>
+
+          <!-- حقل مخفي يحمل القيمة النهائية -->
+          <input type="hidden" name="otp" id="otpHidden" value="">
+
+          <!-- صناديق OTP -->
+          <div dir="ltr" style="display:flex;gap:10px;justify-content:center;margin:12px 0 8px;">
+            {% for i in "123456" %}
+              <input
+                inputmode="numeric"
+                pattern="[0-9]*"
+                maxlength="1"
+                class="otpBox"
+                style="width:48px;height:54px;border-radius:12px;border:1px solid #d1d5db;text-align:center;font-size:22px;font-weight:800;outline:none;"
+              />
+            {% endfor %}
+          </div>
+
+          {% if form.otp.errors %}
+            <div style="color:#b91c1c;font-size:12px;margin:6px 0 0;">
+              {{ form.otp.errors }}
+            </div>
+          {% endif %}
+
+          <button type="submit"
+                  style="width:100%;margin-top:14px;padding:12px 14px;border:0;border-radius:12px;background:#16a34a;color:#fff;font-weight:800;font-size:14px;cursor:pointer;">
+            تفعيل الحساب
+          </button>
+        </form>
+
+        <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:14px;">
+          <a href="{% url 'accounts:register' %}"
+             style="color:#2563eb;text-decoration:none;font-size:13px;">
+            رجوع للتسجيل
+          </a>
+
+          <!-- إعادة الإرسال -->
+          <form method="post" action="{% url 'accounts:resend_activation_otp' uidb64 token %}" style="margin:0;">
+            {% csrf_token %}
+            <button type="submit" id="resendBtn"
+                    style="padding:10px 12px;border-radius:12px;border:1px solid #e5e7eb;background:#f9fafb;cursor:pointer;font-weight:700;font-size:13px;">
+              إعادة إرسال الرمز
+              <span id="countdown" style="margin-right:6px;color:#6b7280;"></span>
+            </button>
+          </form>
+        </div>
+
+        <div style="margin-top:14px;color:#6b7280;font-size:12px;line-height:1.8;">
+          للحماية: لا تشارك الرمز مع أي شخص.
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function () {
+  // OTP boxes behavior
+  const boxes = Array.from(document.querySelectorAll('.otpBox'));
+  const hidden = document.getElementById('otpHidden');
+
+  function syncHidden() {
+    hidden.value = boxes.map(b => (b.value || '')).join('');
+  }
+
+  boxes.forEach((box, idx) => {
+    box.addEventListener('input', (e) => {
+      box.value = (box.value || '').replace(/\D/g, '').slice(0, 1);
+      syncHidden();
+      if (box.value && idx < boxes.length - 1) boxes[idx + 1].focus();
+    });
+
+    box.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !box.value && idx > 0) {
+        boxes[idx - 1].focus();
+      }
+    });
+
+    box.addEventListener('paste', (e) => {
+      const text = (e.clipboardData || window.clipboardData).getData('text') || '';
+      const digits = text.replace(/\D/g, '').slice(0, boxes.length).split('');
+      if (!digits.length) return;
+      e.preventDefault();
+      digits.forEach((d, i) => { boxes[i].value = d; });
+      syncHidden();
+      const last = Math.min(digits.length, boxes.length) - 1;
+      if (last >= 0) boxes[last].focus();
+    });
+  });
+
+  if (boxes[0]) boxes[0].focus();
+
+  // resend cooldown countdown (values come from view context)
+  const cooldown = parseInt("{{ resend_cooldown|default:30 }}", 10);
+  let remaining = parseInt("{{ resend_remaining|default:0 }}", 10);
+
+  const btn = document.getElementById('resendBtn');
+  const cd = document.getElementById('countdown');
+
+  function renderCountdown() {
+    if (!btn || !cd) return;
+    if (remaining > 0) {
+      btn.disabled = true;
+      btn.style.opacity = "0.6";
+      cd.textContent = `(${remaining}s)`;
+    } else {
+      btn.disabled = false;
+      btn.style.opacity = "1";
+      cd.textContent = "";
+    }
+  }
+
+  renderCountdown();
+  if (remaining > 0) {
+    const t = setInterval(() => {
+      remaining -= 1;
+      renderCountdown();
+      if (remaining <= 0) clearInterval(t);
+    }, 1000);
+  }
+})();
+</script>
+</body>
+</html>

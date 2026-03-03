@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+
+from django.shortcuts import render
 import json
 import logging
 from datetime import timedelta
@@ -261,7 +263,7 @@ def _report_to_dict(r: CADReport) -> dict[str, Any]:
 def _get_report_by_cad(cad_number: str) -> CADReport:
     cad = str(cad_number or "").strip()
     return get_object_or_404(
-        CADReport.objects.select_related("case_type", "region", "assigned_responder"),
+        CADReport.objects.select_related("case_type", "assigned_responder"),
         cad_number=cad,
     )
 
@@ -309,186 +311,115 @@ def _get_user_map_center(user):
 # Pages
 # ==========================
 
-@login_required
-@permission_required("cad_reports.can_view_cad_report", raise_exception=True)
-@require_GET
-def reports_cad_page(request):
-    case_types = CaseType.objects.filter(is_active=True)
+def _safe_mobile_related_fields(model) -> list[str]:
+    """
+    select_related آمن: لا يضيف 'region' إلا إذا كان موجود فعلياً.
+    """
+    base = ["created_by", "medical_condition"]
+    try:
+        names = {f.name for f in model._meta.get_fields()}
+        if "region" in names:
+            base.append("region")
+    except Exception:
+        pass
+    return base
 
-    user_group_code = _get_user_group_code(request.user)
-    all_regions = None
-    if user_group_code in PRIVILEGED_GROUP_CODES:
-        all_regions = Region.objects.all().order_by("name_ar")
 
-    region = getattr(request.user, "region", None)
-
-    center_lat = None
-    center_lng = None
-    zoom = 13
-
-    user_region_name = ""
-    if region:
-        user_region_name = getattr(region, "name_ar", None) or str(region)
-
-        try:
-            if getattr(region, "center_lat", None) is not None:
-                center_lat = float(region.center_lat)
-        except Exception:
-            center_lat = None
-
-        try:
-            if getattr(region, "center_lng", None) is not None:
-                center_lng = float(region.center_lng)
-        except Exception:
-            center_lng = None
-
-        try:
-            if getattr(region, "default_zoom", None) is not None:
-                zoom = int(region.default_zoom)
-        except Exception:
-            zoom = 13
-
-    map_config = {
-        "lat": center_lat,
-        "lng": center_lng,
-        "zoom": zoom,
-        "regionName": user_region_name,
-    }
-
-    return render(
-        request,
-        "cad_reports/reports_cad.html",
-        {
-            "case_types": case_types,
-            "google_maps_api_key": getattr(settings, "GOOGLE_MAPS_API_KEY", ""),
-            "map_config": map_config,
-            "user_group_code": user_group_code,
-            "privileged_group_codes": PRIVILEGED_GROUP_CODES,
-            "all_regions": all_regions,
-        },
-    )
+def _get_user_region_id(user):
+    try:
+        rid = getattr(user, "region_id", None)
+        if rid:
+            return int(rid)
+    except Exception:
+        pass
+    try:
+        prof = getattr(user, "profile", None)
+        rid = getattr(prof, "region_id", None) if prof else None
+        if rid:
+            return int(rid)
+    except Exception:
+        pass
+    return None
 
 
 @login_required
-@permission_required("cad_reports.can_view_cad_report", raise_exception=True)
 @require_GET
 def reports_cad_ecr(request):
-    """Dashboard (الخريطة الحية) - ECR Mobile Reports"""
-    viewer_region_id = getattr(request.user, "region_id", None)
+    """
+    صفحة CAD/ECR: تعرض بلاغات ECR (MobileReport) داخل لوحة CAD بدون كسر إذا لم يوجد region.
+    """
+    from ecr_reports.models import MobileReport  # import داخلي لتفادي circular imports
 
-    # MobileReport ما عنده region_id نهائياً، المنطقة عند user (created_by.region)
+    related = _safe_mobile_related_fields(MobileReport)
     ecr_qs = (
-        MobileReport.objects.select_related("medical_condition", "created_by", "created_by__region")
+        MobileReport.objects
+        .select_related(*related)
         .prefetch_related("services")
-        .order_by("-created_at")
+        .order_by("-created_at", "-id")
     )
 
-    if not _is_super_user(request.user):
-        if not viewer_region_id:
-            ecr_qs = ecr_qs.none()
-        else:
-            ecr_qs = ecr_qs.filter(created_by__region_id=viewer_region_id)
+    viewer_region_id = _get_user_region_id(request.user)
+    if viewer_region_id:
+        try:
+            names = {f.name for f in MobileReport._meta.get_fields()}
+            if "region" in names:
+                ecr_qs = ecr_qs.filter(region_id=viewer_region_id)
+            else:
+                # fallback فقط إذا User لديه region_id (اختياري)
+                ecr_qs = ecr_qs.filter(created_by__region_id=viewer_region_id)
+        except Exception:
+            pass
 
-    def _user_display(u):
-        if not u:
-            return ""
-        # User عندك فيه full_name وليس get_full_name()
-        return (getattr(u, "full_name", None) or getattr(u, "email", None) or str(u)).strip()
-
-    cases_json = []
+    # بناء JSON للواجهة
+    cases = []
     for r in ecr_qs[:500]:
-        region_obj = getattr(getattr(r, "created_by", None), "region", None)
-        region_name = (
-            getattr(region_obj, "name_ar", None)
-            or getattr(region_obj, "name", None)
-            or "-"
-        )
+        u = getattr(r, "created_by", None)
+        created_by_name = "—"
+        if u:
+            try:
+                created_by_name = (u.get_full_name() or "").strip() if hasattr(u, "get_full_name") else ""
+            except Exception:
+                created_by_name = ""
+            if not created_by_name:
+                created_by_name = (getattr(u, "full_name", "") or "").strip()
+            if not created_by_name:
+                created_by_name = str(u)
 
-        cases_json.append(
-            {
-                "id": r.id,
-                "case_number": r.id,
-                "created": _format_dt(r.created_at),
-                "status": "جديد",
+        cond_name = ""
+        try:
+            cond = getattr(r, "medical_condition", None)
+            cond_name = getattr(cond, "name", "") if cond else ""
+        except Exception:
+            cond_name = ""
 
-                # المنطقة من created_by.region وليس من report
-                "region": region_name,
+        region_name = ""
+        try:
+            if hasattr(r, "region") and r.region:
+                region_name = getattr(r.region, "name", "") or str(r.region)
+        except Exception:
+            region_name = ""
 
-                "lat": float(r.latitude) if r.latitude is not None else None,
-                "lng": float(r.longitude) if r.longitude is not None else None,
+        cases.append({
+            "id": r.id,
+            "latitude": float(r.latitude) if r.latitude is not None else None,
+            "longitude": float(r.longitude) if r.longitude is not None else None,
+            "gender": r.gender,
+            "medical_condition": cond_name,
+            "medical_condition_id": getattr(r, "medical_condition_id", None),
+            "notes": r.notes or "",
+            "created_at": timezone.localtime(r.created_at).isoformat() if r.created_at else None,
+            "created_by": created_by_name,
+            "region": region_name,
+        })
 
-                # MobileReport لا يحتوي بيانات مريض؛ نعرض اسم المستجيب كمعلومة بديلة
-                "patient_name": _user_display(getattr(r, "created_by", None)),
+    cases_json = json.dumps(cases, ensure_ascii=False)
 
-                # حقول غير موجودة في MobileReport: نعطي defaults آمنة عشان الـ JS ما ينكسر
-                "nationality": "-",
-                "age": None,
-                "phone": "",
-                "phone_number": "",
+    # ✅ عدّل اسم التمبلت هنا لو مختلف عندك
+    return render(request, "dashboard/reports_cad_ecr.html", {
+        "cases_json": cases_json,
+        "count": len(cases),
+    })
 
-                # موجود
-                "gender": r.get_gender_display() if hasattr(r, "get_gender_display") else (getattr(r, "gender", "") or "-"),
-                "case_type": (r.medical_condition.name if r.medical_condition else "-"),
-                "services": [s.name for s in r.services.all()],
-
-                # غير موجودة: defaults
-                "ambulance_requested": False,
-                "ambulance_caller": "-",
-
-                # اسم المستجيب
-                "responder": _user_display(getattr(r, "created_by", None)),
-                "patient_status": "-",
-
-                # ملاحظات (موجودة)
-                "notes": getattr(r, "notes", "") or "",
-            }
-        )
-
-    # باقي الكود عندك للمستجيبين المتصلين يبقى كما هو…
-    cutoff = _online_cutoff()
-    resp_qs = (
-        ResponderLocation.objects.select_related("responder", "responder__region", "responder__user_group")
-        .filter(last_seen__gte=cutoff)
-        .filter(responder__user_group__code="ECRMOBIL")
-        .filter(responder__region_id__isnull=False)
-        .order_by("-last_seen")
-    )
-    if not _is_super_user(request.user):
-        if not viewer_region_id:
-            resp_qs = resp_qs.none()
-        else:
-            resp_qs = resp_qs.filter(responder__region_id=viewer_region_id)
-
-    responders_json = []
-    for loc in resp_qs[:500]:
-        u = getattr(loc, "responder", None)
-        rg = getattr(u, "region", None) if u else None
-        responders_json.append(
-            {
-                "id": getattr(u, "id", None),
-                "name": _user_display(u),
-                "region": getattr(rg, "name_ar", None) or getattr(rg, "name", None) or "-",
-                "lat": float(loc.latitude) if loc.latitude is not None else None,
-                "lng": float(loc.longitude) if loc.longitude is not None else None,
-                "last_seen": _format_dt(loc.last_seen),
-            }
-        )
-
-    center_lat, center_lng, zoom = _get_user_map_center(request.user)
-
-    return render(
-        request,
-        "dashboard/reports_cad_ecr.html",
-        {
-            "google_maps_api_key": getattr(settings, "GOOGLE_MAPS_API_KEY", ""),
-            "map_center_lat": center_lat,
-            "map_center_lng": center_lng,
-            "map_zoom": zoom,
-            "cases_json": cases_json,
-            "responders_json": responders_json,
-        },
-    )
-@login_required
 def cad_reports_reports_page(request):
     context = {
         "google_maps_api_key": getattr(settings, "GOOGLE_MAPS_API_KEY", ""),
@@ -689,7 +620,8 @@ def reports_ecr_dashboard(request):
                 or "-",
                 "lat": float(r.latitude) if r.latitude is not None else None,
                 "lng": float(r.longitude) if r.longitude is not None else None,
-                "patient_name": getattr(r.created_by, "username", "") if r.created_by_id else "",                "national_id": getattr(r, "national_id", None),
+                "patient_name": r.patient_name,
+                "national_id": getattr(r, "national_id", None),
                 "phone": r.patient_phone,
                 "age": r.age,
                 "nationality": r.get_nationality_display(),
@@ -756,7 +688,7 @@ def assigned_reports_json(request):
     viewer_group = _get_user_group_code(request.user)
     viewer_region_id = getattr(request.user, "region_id", None)
 
-    qs = CADReport.objects.select_related("case_type", "region", "assigned_responder").order_by("-created_at")
+    qs = CADReport.objects.select_related("case_type", "assigned_responder").order_by("-created_at")
 
     if _is_super_user(request.user):
         # فلترة اختيارية من الـ UI (تظهر فقط للـ SUPER بدون region على المستخدم)
@@ -1385,3 +1317,15 @@ def cad_activity_history(request, report_id: int):
         })
 
     return JsonResponse({"items": items})
+
+
+    from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+
+
+@login_required
+def reports_cad_page(request):
+    """
+    صفحة إنشاء بلاغ CAD
+    """
+    return render(request, "dashboard/reports_cad.html")

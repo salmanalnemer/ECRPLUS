@@ -1,0 +1,11 @@
+مرحباً {{ user.full_name|default:user.get_full_name|default:user.username }}،
+
+تم إنشاء حسابك في منصة ECR.
+لتفعيل الحساب، استخدم رمز التفعيل التالي:
+
+{{ activation_code }}
+
+أو افتح الرابط التالي (إن وجد):
+{{ activation_url|default:"" }}
+
+إذا لم تقم بإنشاء هذا الحساب، تجاهل هذه الرسالة.

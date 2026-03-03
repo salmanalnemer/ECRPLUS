@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ar">
+<head>
+  <meta charset="utf-8" />
+  <title>WS Test</title>
+</head>
+<body>
+  <h3>WebSocket Test</h3>
+  <button id="btn">Connect + Send "hello"</button>
+  <pre id="log"></pre>
+
+  <script>
+    const logEl = document.getElementById("log");
+    const log = (x) => { logEl.textContent += x + "\n"; };
+
+    document.getElementById("btn").addEventListener("click", () => {
+      const ws = new WebSocket("ws://127.0.0.1:8000/ws/cad/88/");
+      ws.onopen = () => { log("OPEN"); ws.send(JSON.stringify({message:"hello"})); };
+      ws.onmessage = (e) => log("MESSAGE: " + e.data);
+      ws.onerror = (e) => log("ERROR");
+      ws.onclose = (e) => log("CLOSE: " + e.code);
+    });
+  </script>
+</body>
+</html>

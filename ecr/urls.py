@@ -9,6 +9,7 @@ from django.urls import path, include
 from django.conf.urls.static import static
 from django.shortcuts import render
 from django.views.generic import RedirectView
+from django.views.generic import TemplateView
 
 from rest_framework_simplejwt.views import TokenRefreshView
 from accounts.jwt_views import NationalIdTokenObtainPairView
@@ -97,6 +98,8 @@ urlpatterns = [
     path("api/auth/password-reset/request/", PasswordResetRequestView.as_view(), name="password_reset_request"),
     path("api/auth/password-reset/verify/", PasswordResetVerifyView.as_view(), name="password_reset_verify"),
     path("api/auth/password-reset/confirm/", PasswordResetConfirmView.as_view(), name="password_reset_confirm"),
+    # مسار اختبار WebSocket (يمكن حذفه لاحقًا)
+    path("ws-test/", TemplateView.as_view(template_name="ws_test.html"), name="ws_test"),
 ]
 
 # Media in development only

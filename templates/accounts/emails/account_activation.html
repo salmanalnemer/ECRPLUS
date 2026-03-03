@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <title>رمز تفعيل الحساب - ECR</title>
+</head>
+<body style="font-family: Tahoma, Arial; line-height:1.8">
+  <h2>🔐 رمز تفعيل حسابك</h2>
+
+  <p>مرحبًا {{ user.full_name|default:"مستخدم" }}،</p>
+
+  <p>رمز التفعيل الخاص بك هو:</p>
+  <div style="font-size:24px;font-weight:bold;letter-spacing:3px">
+    {{ activation_code }}
+  </div>
+
+  <p>أو يمكنك فتح صفحة إدخال الرمز عبر الرابط:</p>
+  <p><a href="{{ activation_url }}">{{ activation_url }}</a></p>
+
+  <p style="color:#666">إذا لم تطلب إنشاء حساب، تجاهل هذه الرسالة.</p>
+</body>
+</html>

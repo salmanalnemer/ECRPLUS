@@ -36,59 +36,58 @@
     margin: 0 auto;
   }
 
-  /* ===== Hero Section ===== */
   .ecr-hero {
     background: linear-gradient(135deg, #fafafa );
     border-radius: var(--radius);
-    padding: 32px;
+    padding: 28px;
     color: rgb(102, 102, 102);
-    margin-bottom: 24px;
+    margin-bottom: 18px;
     box-shadow: var(--shadow);
+    border: 1px solid var(--border);
   }
 
   .ecr-hero h1 {
-    font-size: 24px;
+    font-size: 22px;
     font-weight: 900;
-    margin: 0 0 8px 0;
+    margin: 0 0 6px 0;
   }
 
   .ecr-hero p {
     margin: 0;
-    opacity: 0.8;
-    font-size: 14px;
+    opacity: 0.85;
+    font-size: 13px;
   }
 
-  /* ===== Stats Cards ===== */
   .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 24px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
   }
 
   .stat-card {
     background: var(--bg-card);
     border-radius: var(--radius);
-    padding: 20px;
+    padding: 18px;
     box-shadow: var(--shadow);
     border: 1px solid var(--border);
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 14px;
   }
 
   .stat-icon {
-    width: 50px;
-    height: 50px;
+    width: 48px;
+    height: 48px;
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 20px;
+    font-size: 18px;
   }
 
   .stat-info h3 {
-    font-size: 24px;
+    font-size: 22px;
     font-weight: 900;
     margin: 0;
     line-height: 1;
@@ -98,20 +97,19 @@
     font-size: 12px;
     color: var(--text-muted);
     margin: 4px 0 0 0;
-    font-weight: 600;
+    font-weight: 700;
   }
 
-  .stat-total .stat-icon { background: rgba(96, 246, 59, 0.1); color: var(--info); }
-  .stat-ambulance .stat-icon { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
-  .stat-997 .stat-icon { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
-  .stat-closed .stat-icon { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+  .stat-total .stat-icon { background: rgba(79, 70, 229, 0.10); color: var(--primary); }
+  .stat-today .stat-icon { background: rgba(59, 130, 246, 0.10); color: var(--info); }
+  .stat-male .stat-icon { background: rgba(16, 185, 129, 0.10); color: var(--success); }
+  .stat-female .stat-icon { background: rgba(245, 158, 11, 0.10); color: var(--warning); }
 
-  /* ===== Filters ===== */
   .filters-bar {
     background: var(--bg-card);
     border-radius: var(--radius);
-    padding: 20px;
-    margin-bottom: 24px;
+    padding: 18px;
+    margin-bottom: 18px;
     box-shadow: var(--shadow);
     border: 1px solid var(--border);
   }
@@ -125,20 +123,20 @@
 
   .filter-group {
     flex: 1;
-    min-width: 150px;
+    min-width: 180px;
   }
 
   .filter-label {
     display: block;
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 800;
     color: var(--text-muted);
     margin-bottom: 6px;
   }
 
   .filter-input, .filter-select {
     width: 90%;
-    padding: 10px 14px;
+    padding: 10px 12px;
     border-radius: 10px;
     border: 1px solid var(--border);
     background: #f8fafc;
@@ -156,25 +154,7 @@
     background: var(--primary);
     color: white;
     border: none;
-    padding: 10px 24px;
-    border-radius: 10px;
-    font-weight: 700;
-    cursor: pointer;
-    height: 42px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .btn-filter:hover {
-    background: var(--primary-dark);
-  }
-
-  .btn-secondary {
-    background: #0f172a;
-    color: white;
-    border: none;
-    padding: 10px 18px;
+    padding: 10px 22px;
     border-radius: 10px;
     font-weight: 800;
     cursor: pointer;
@@ -184,11 +164,22 @@
     gap: 8px;
   }
 
-  .btn-secondary:hover {
-    opacity: 0.95;
+  .btn-filter:hover { background: var(--primary-dark); }
+
+  .btn-secondary {
+    background: #0f172a;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-weight: 900;
+    cursor: pointer;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
   }
 
-  /* ===== Table ===== */
   .table-container {
     background: var(--bg-card);
     border-radius: var(--radius);
@@ -198,32 +189,28 @@
   }
 
   .table-header {
-    padding: 16px 20px;
+    padding: 14px 18px;
     border-bottom: 1px solid var(--border);
     background: #f8fafc;
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 10px;
   }
 
   .table-title {
-    font-size: 15px;
-    font-weight: 800;
+    font-size: 14px;
+    font-weight: 900;
     margin: 0;
     display: flex;
     align-items: center;
     gap: 8px;
   }
 
-  .table-title i {
-    color: var(--primary);
-  }
+  .table-title i { color: var(--primary); }
 
-  .table-responsive {
-    overflow-x: auto;
-  }
+  .table-responsive { overflow-x: auto; }
 
   .ecr-table {
     width: 100%;
@@ -234,185 +221,70 @@
 
   .ecr-table th {
     text-align: right;
-    padding: 14px 16px;
+    padding: 12px 14px;
     color: var(--text-muted);
-    font-weight: 700;
+    font-weight: 900;
     border-bottom: 2px solid var(--border);
     background: #fff;
     font-size: 12px;
   }
 
   .ecr-table td {
-    padding: 14px 16px;
+    padding: 12px 14px;
     border-bottom: 1px solid var(--border);
     vertical-align: middle;
   }
 
-  .ecr-table tr:hover td {
-    background: #f8fafc;
+  .ecr-table tr:hover td { background: #f8fafc; }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--text-main);
   }
 
-  /* ===== Status Badges ===== */
-  .status-badge {
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 700;
+  .chip.gray { background: rgba(100, 116, 139, 0.08); color: var(--text-muted); }
+  .chip.blue { background: rgba(59, 130, 246, 0.10); color: var(--info); border-color: rgba(59, 130, 246, 0.18); }
+  .chip.green { background: rgba(16, 185, 129, 0.10); color: var(--success); border-color: rgba(16, 185, 129, 0.18); }
+  .chip.yellow { background: rgba(245, 158, 11, 0.12); color: var(--warning); border-color: rgba(245, 158, 11, 0.22); }
+
+  .chips-wrap { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .map-link {
+    color: var(--info);
+    text-decoration: none;
+    font-weight: 900;
+    font-size: 12px;
     display: inline-flex;
     align-items: center;
     gap: 6px;
   }
 
-  .status-red {
-    background: rgba(239, 68, 68, 0.1);
-    color: var(--danger);
-  }
+  .map-link:hover { text-decoration: underline; }
 
-  .status-yellow {
-    background: rgba(245, 158, 11, 0.1);
-    color: var(--warning);
-  }
-
-  .status-green {
-    background: rgba(16, 185, 129, 0.1);
-    color: var(--success);
-  }
-
-  .status-gray {
-    background: rgba(100, 116, 139, 0.1);
-    color: var(--text-muted);
-  }
-
-  /* ===== Vitals Group ===== */
-  .vitals-group {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  .vital-item {
-    background: #f1f5f9;
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 600;
-  }
-
-  .vital-item i {
-    margin-left: 4px;
-    opacity: 0.6;
-  }
-
-  /* ===== Action Buttons ===== */
-  .action-btn {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    background: white;
-    color: var(--text-muted);
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-    margin-left: 4px;
-  }
-
-  .action-btn:hover {
-    background: var(--primary);
-    color: white;
-    border-color: var(--primary);
-  }
-
-  .action-btn.view:hover { background: var(--info); border-color: var(--info); }
-  .action-btn.edit:hover { background: var(--warning); border-color: var(--warning); }
-  .action-btn.delete:hover { background: var(--danger); border-color: var(--danger); }
-
-  /* ===== Yes/No Badges ===== */
-  .yes-badge {
-    color: var(--success);
-    font-weight: 700;
-    font-size: 12px;
-  }
-
-  .no-badge {
-    color: var(--text-muted);
-    font-weight: 700;
-    font-size: 12px;
-  }
-
-  /* ===== Map Link ===== */
-  .map-link {
-    color: var(--info);
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 12px;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .map-link:hover {
-    text-decoration: underline;
-  }
-
-  /* ===== Empty State ===== */
   .empty-state {
-    padding: 60px 20px;
+    padding: 50px 18px;
     text-align: center;
     color: var(--text-muted);
   }
 
-  .empty-state i {
-    font-size: 48px;
-    margin-bottom: 16px;
-    opacity: 0.3;
-  }
+  .empty-state i { font-size: 46px; margin-bottom: 14px; opacity: 0.25; }
 
-  .empty-state p {
-    font-size: 14px;
-    margin: 0;
-  }
-
-  /* ===== Last Updated ===== */
-  .last-updated {
-    font-size: 12px;
-    color: var(--text-muted);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .last-updated i {
-    color: var(--success);
-  }
-
-  /* ===== Pagination ===== */
   .pagination-bar {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 12px;
-    padding: 14px 20px;
+    gap: 10px;
+    padding: 12px 18px;
     border-top: 1px solid var(--border);
     background: #fff;
-    flex-wrap: wrap;
-  }
-
-  .pagination-info {
-    font-size: 12px;
-    color: var(--text-muted);
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: 700;
-  }
-
-  .pagination-actions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
     flex-wrap: wrap;
   }
 
@@ -422,7 +294,7 @@
     color: var(--text-main);
     padding: 8px 12px;
     border-radius: 10px;
-    font-weight: 800;
+    font-weight: 900;
     cursor: pointer;
     display: inline-flex;
     gap: 8px;
@@ -431,10 +303,7 @@
     font-size: 12px;
   }
 
-  .page-btn:hover {
-    border-color: var(--primary);
-    color: var(--primary);
-  }
+  .page-btn:hover { border-color: var(--primary); color: var(--primary); }
 
   .page-btn.disabled {
     opacity: 0.5;
@@ -442,70 +311,11 @@
     pointer-events: none;
   }
 
-  /* ===== Responsive ===== */
-  @media (max-width: 1024px) {
-    .ecr-table {
-      font-size: 12px;
-    }
-    .ecr-table th,
-    .ecr-table td {
-      padding: 10px 12px;
-    }
-  }
-
   @media (max-width: 768px) {
-    .stats-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
-    .filters-row {
-      flex-direction: column;
-    }
-    .filter-group {
-      width: 100%;
-    }
-    .btn-filter {
-      width: 100%;
-      justify-content: center;
-    }
-  }
-
-  /* ===== Tooltip ===== */
-  .tooltip-container {
-    position: relative;
-    display: inline-block;
-  }
-
-  .tooltip-container:hover .tooltip-text {
-    visibility: visible;
-    opacity: 1;
-  }
-
-  .tooltip-text {
-    visibility: hidden;
-    opacity: 0;
-    background: #1e293b;
-    color: white;
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-size: 11px;
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    white-space: nowrap;
-    transition: opacity 0.2s;
-    z-index: 100;
-  }
-
-  .tooltip-text::after {
-    content: '';
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    margin-left: -5px;
-    border-width: 5px;
-    border-style: solid;
-    border-color: #1e293b transparent transparent transparent;
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .filters-row { flex-direction: column; }
+    .filter-group { width: 100%; }
+    .btn-filter, .btn-secondary { width: 100%; justify-content: center; }
   }
 </style>
 {% endblock %}
@@ -513,112 +323,91 @@
 {% block content %}
 <div class="ecr-container">
 
-  <!-- Hero Section -->
-  <div class="ecr-hero">
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
-      <div>
-        <h1><i class="fa fa-ambulance"></i> بلاغات ECR (تطبيق الجوال)</h1>
-        <p> متابعة توثيق الحالات المرضية المرسلة من المستجيبين</p>
-      </div>
-      <div class="last-updated">
-        <i class="fa fa-clock"></i>
-        آخر تحديث: {{ stats.last_updated|default_if_none:"—" }}
-      </div>
-    </div>
-  </div>
-
-  <!-- Stats Cards -->
   <div class="stats-grid">
     <div class="stat-card stat-total">
       <div class="stat-icon"><i class="fa fa-file-medical"></i></div>
       <div class="stat-info">
         <h3>{{ stats.total|default_if_none:"0" }}</h3>
-        <p>إجمالي البلاغات</p>
+        <p>إجمالي الحالات</p>
       </div>
     </div>
 
-    <div class="stat-card stat-ambulance">
-      <div class="stat-icon"><i class="fa fa-ambulance"></i></div>
+    <div class="stat-card stat-today">
+      <div class="stat-icon"><i class="fa fa-calendar-day"></i></div>
       <div class="stat-info">
-        <h3>{{ stats.open|default_if_none:"0" }}</h3>
-        <p>تم طلب إسعاف</p>
+        <h3>{{ stats.today|default_if_none:"0" }}</h3>
+        <p>بلاغات اليوم</p>
       </div>
     </div>
 
-    <div class="stat-card stat-997">
-      <div class="stat-icon"><i class="fa fa-phone-volume"></i></div>
+    <div class="stat-card stat-male">
+      <div class="stat-icon"><i class="fa fa-mars"></i></div>
       <div class="stat-info">
-        <h3>{{ stats.urgent|default_if_none:"0" }}</h3>
-        <p>توثيق 997</p>
+        <h3>{{ stats.male|default_if_none:"0" }}</h3>
+        <p>ذكور</p>
       </div>
     </div>
 
-    <div class="stat-card stat-closed">
-      <div class="stat-icon"><i class="fa fa-check-circle"></i></div>
+    <div class="stat-card stat-female">
+      <div class="stat-icon"><i class="fa fa-venus"></i></div>
       <div class="stat-info">
-        <h3>{{ stats.closed|default_if_none:"0" }}</h3>
-        <p>بلاغات مسجلة</p>
+        <h3>{{ stats.female|default_if_none:"0" }}</h3>
+        <p>إناث</p>
       </div>
     </div>
   </div>
 
-  <!-- Filters -->
   <form method="get" class="filters-bar" id="filtersForm">
     <div class="filters-row">
       <div class="filter-group">
         <label class="filter-label"><i class="fa fa-search"></i> بحث</label>
-        <input class="filter-input" type="text" id="searchInput" name="search" placeholder="رقم البلاغ، اسم المريض، الهوية..." value="{{ request.GET.search|default:'' }}">
+        <input class="filter-input" type="text" name="search" placeholder=" رقم الحالة / نوع الحالة / ملاحظات" value="{{ request.GET.search|default:'' }}">
       </div>
+
       <div class="filter-group">
         <label class="filter-label"><i class="fa fa-calendar"></i> من تاريخ</label>
         <input class="filter-input" type="date" name="from" value="{{ request.GET.from|default:'' }}">
       </div>
+
       <div class="filter-group">
         <label class="filter-label"><i class="fa fa-calendar"></i> إلى تاريخ</label>
         <input class="filter-input" type="date" name="to" value="{{ request.GET.to|default:'' }}">
       </div>
+
       <div class="filter-group">
-        <label class="filter-label"><i class="fa fa-exclamation-triangle"></i> الحالة</label>
-        <select class="filter-select" name="status" id="statusSelect">
+        <label class="filter-label"><i class="fa fa-venus-mars"></i> الجنس</label>
+        <select class="filter-select" name="gender">
           <option value="">الكل</option>
-          <option value="red" {% if request.GET.status == "red" %}selected{% endif %}>حرجة</option>
-          <option value="yellow" {% if request.GET.status == "yellow" %}selected{% endif %}>متوسطة</option>
-          <option value="green" {% if request.GET.status == "green" %}selected{% endif %}>مستقرة</option>
+          <option value="male" {% if request.GET.gender == 'male' %}selected{% endif %}>ذكر</option>
+          <option value="female" {% if request.GET.gender == 'female' %}selected{% endif %}>أنثى</option>
         </select>
       </div>
 
-      {# تثبيت حجم الصفحة = 10 دائماً #}
+      <div class="filter-group">
+        <label class="filter-label"><i class="fa fa-notes-medical"></i> نوع الحالة</label>
+        <select class="filter-select" name="condition">
+          <option value="">الكل</option>
+          {% for c in conditions %}
+            <option value="{{ c.id }}" {% if request.GET.condition == c.id|stringformat:'s' %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
       <input type="hidden" name="page_size" value="10">
 
-      <div class="filter-group" style="flex: 0 0 auto; display:flex; gap:10px;">
-        <button class="btn-filter" type="submit">
-          <i class="fa fa-filter"></i> تطبيق
-        </button>
-        <button class="btn-secondary" type="button" id="clearFiltersBtn" title="مسح الفلاتر">
-          <i class="fa fa-eraser"></i> مسح
-        </button>
+      <div class="filter-group" style="flex:0 0 auto; display:flex; gap:10px;">
+        <button class="btn-filter" type="submit"><i class="fa fa-filter"></i> تطبيق</button>
+        <button class="btn-secondary" type="button" id="clearFiltersBtn" title="مسح الفلاتر"><i class="fa fa-eraser"></i> مسح</button>
       </div>
     </div>
   </form>
 
-  <!-- Table -->
   <div class="table-container">
     <div class="table-header">
-      <h3 class="table-title"><i class="fa fa-list"></i> قائمة البلاغات</h3>
-      <div style="display: flex; gap: 8px; align-items:center; flex-wrap:wrap;">
-        <button class="action-btn" title="تصدير Excel" type="button" onclick="exportExcel()">
-          <i class="fa fa-file-excel"></i>
-        </button>
-        <button class="action-btn" title="تصدير PDF" type="button" onclick="exportPdf()">
-          <i class="fa fa-file-pdf"></i>
-        </button>
-        <button class="action-btn" title="تحديث" type="button" onclick="refreshPage()">
-          <i class="fa fa-sync-alt"></i>
-        </button>
-        <div class="last-updated" style="margin-right:10px;">
-          <i class="fa fa-layer-group"></i>
-          عرض 10 فقط + تنقل (السابق/التالي)
-        </div>
+      <h3 class="table-title"><i class="fa fa-list"></i> قائمة رقم الحالةات</h3>
+      <div style="font-size:12px; font-weight:900; color: var(--text-muted); display:flex; gap:8px; align-items:center;">
+        <i class="fa fa-layer-group"></i>
+        عرض 10 فقط + تنقل (السابق/التالي)
       </div>
     </div>
 
@@ -627,153 +416,87 @@
       <table class="ecr-table" id="reportsTable">
         <thead>
           <tr>
-            <th style="min-width: 80px;"># البلاغ</th>
-            <th style="min-width: 100px;">الحالة</th>
-            <th style="min-width: 150px;">المريض</th>
-            <th style="min-width: 120px;">الهوية</th>
-            <th style="min-width: 100px;">الجوال</th>
-            <th style="min-width: 80px;">العمر/الجنس</th>
-            <th style="min-width: 200px;">العلامات الحيوية</th>
-            <th style="min-width: 120px;">الحالة الطبية</th>
-            <th style="min-width: 80px;">إسعاف</th>
-            <th style="min-width: 80px;">997</th>
-            <th style="min-width: 100px;">المنطقة</th>
-            <th style="min-width: 120px;">التاريخ</th>
-            <th style="min-width: 100px;">الموقع</th>
-            <th style="min-width: 120px;">الإجراءات</th>
+            <th style="min-width: 30px;"># رقم الحالة</th>
+            <th style="min-width: 160px;">المستجيب</th>
+            <th style="min-width: 130px;">نوع الحالة</th>
+            <th style="min-width: 260px;">الخدمات</th>
+            <th style="min-width: 100px;">الجنس</th>
+            <th style="min-width: 300px;">ملاحظات</th>
+            <th style="min-width: 150px;">التاريخ</th>
+            <th style="min-width: 130px;">الموقع</th>
           </tr>
         </thead>
         <tbody>
           {% for r in reports %}
-          {% with region_label=r.region.name_ar|default_if_none:r.region %}
           <tr>
-            <td style="font-weight: 700; color: var(--primary);">{{ r.id }}</td>
+            <td style="font-weight: 900; color: var(--primary);">{{ r.id }}</td>
+
             <td>
-              {% if r.ui_status_class == "red" %}
-                <span class="status-badge status-red"><i class="fa fa-circle"></i> {{ r.ui_status_label }}</span>
-              {% elif r.ui_status_class == "yellow" %}
-                <span class="status-badge status-yellow"><i class="fa fa-circle"></i> {{ r.ui_status_label }}</span>
-              {% elif r.ui_status_class == "green" %}
-                <span class="status-badge status-green"><i class="fa fa-circle"></i> {{ r.ui_status_label }}</span>
-              {% else %}
-                <span class="status-badge status-gray"><i class="fa fa-circle"></i> {{ r.ui_status_label }}</span>
+              <div style="font-weight: 900;">{{ r.created_by_display|default_if_none:"—" }}</div>
+              {% if r.created_by_handle %}
+                <div style="font-size: 11px; color: var(--text-muted);">{{ r.created_by_handle }}</div>
               {% endif %}
             </td>
+
             <td>
-              <div style="font-weight: 600;">{{ r.patient_name|default_if_none:"—" }}</div>
-              <div style="font-size: 11px; color: var(--text-muted);">{{ r.created_by.full_name|default_if_none:"—" }}</div>
+              <span class="chip blue"><i class="fa fa-notes-medical"></i>{{ r.medical_condition.name|default_if_none:"—" }}</span>
             </td>
-            <td>{{ r.national_id|default_if_none:"—" }}</td>
-            <td dir="ltr">{{ r.patient_phone|default_if_none:"—" }}</td>
+
             <td>
-              <div>{{ r.age|default_if_none:"—" }} سنة</div>
-              <div style="font-size: 11px; color: var(--text-muted);">{{ r.get_gender_display|default_if_none:"—" }}</div>
-            </td>
-            <td>
-              <div class="vitals-group">
-                {% if r.temperature %}
-                <span class="vital-item tooltip-container">
-                  <i class="fa fa-thermometer-half"></i>{{ r.temperature }}°
-                  <span class="tooltip-text">درجة الحرارة</span>
-                </span>
-                {% endif %}
-                {% if r.pulse_rate %}
-                <span class="vital-item tooltip-container">
-                  <i class="fa fa-heartbeat"></i>{{ r.pulse_rate }}
-                  <span class="tooltip-text">النبض</span>
-                </span>
-                {% endif %}
-                {% if r.blood_pressure %}
-                <span class="vital-item tooltip-container">
-                  <i class="fa fa-tint"></i>{{ r.blood_pressure }}
-                  <span class="tooltip-text">ضغط الدم</span>
-                </span>
-                {% endif %}
-                {% if r.respiratory_rate %}
-                <span class="vital-item tooltip-container">
-                  <i class="fa fa-lungs"></i>{{ r.respiratory_rate }}
-                  <span class="tooltip-text">التنفس</span>
-                </span>
-                {% endif %}
-                {% if r.blood_sugar %}
-                <span class="vital-item tooltip-container">
-                  <i class="fa fa-drop"></i>{{ r.blood_sugar }}
-                  <span class="tooltip-text">السكر</span>
-                </span>
+              <div class="chips-wrap">
+                {% if r.services.all %}
+                  {% for s in r.services.all %}
+                    <span class="chip gray"><i class="fa fa-kit-medical"></i>{{ s.name }}</span>
+                  {% empty %}
+                    <span class="chip gray">—</span>
+                  {% endfor %}
+                {% else %}
+                  <span class="chip gray">—</span>
                 {% endif %}
               </div>
             </td>
+
             <td>
-              <div style="font-weight: 600;">{{ r.medical_condition.name|default_if_none:"—" }}</div>
-              <div style="font-size: 11px; color: var(--text-muted); max-width: 150px; overflow: hidden; text-overflow: ellipsis;">
-                {{ r.notes|default_if_none:"—" }}
+              {% if r.gender == 'male' %}
+                <span class="chip green"><i class="fa fa-mars"></i> ذكر</span>
+              {% elif r.gender == 'female' %}
+                <span class="chip yellow"><i class="fa fa-venus"></i> أنثى</span>
+              {% else %}
+                <span class="chip gray">—</span>
+              {% endif %}
+            </td>
+
+            <td style="white-space: normal; max-width: 380px;">
+              <div style="font-weight: 700; color: var(--text-main);">
+                {{ r.notes|default_if_none:""|default:"—" }}
               </div>
             </td>
-            <td>
-              {% if r.called_ambulance %}
-                <span class="yes-badge"><i class="fa fa-check"></i> نعم</span>
-              {% else %}
-                <span class="no-badge"><i class="fa fa-times"></i> لا</span>
-              {% endif %}
-            </td>
-            <td>
-              {% if r.send_to_997 %}
-                <span class="yes-badge"><i class="fa fa-check"></i> نعم</span>
-              {% else %}
-                <span class="no-badge"><i class="fa fa-times"></i> لا</span>
-              {% endif %}
-            </td>
-            <td>{{ region_label|default_if_none:"—" }}</td>
+
             <td>{{ r.created_at|date:"Y-m-d H:i" }}</td>
+
             <td>
-              {% if r.latitude and r.longitude %}
-                <a href="https://maps.google.com/?q={{ r.latitude }},{{ r.longitude }}"
-                   target="_blank"
-                   class="map-link">
-                  <i class="fa fa-map-marker-alt"></i> عرض
-                </a>
-              {% else %}
+                {% if r.latitude and r.longitude %}
+                  <a href="https://maps.google.com/?q={{ r.latitude|stringformat:'f' }},{{ r.longitude|stringformat:'f' }}"
+                    target="_blank"
+                    class="map-link">
+                    <i class="fa fa-map-marker-alt"></i> عرض
+                  </a>
+                {% else %}
                 <span style="color: var(--text-muted);">—</span>
               {% endif %}
             </td>
-            <td>
-              <div class="tooltip-container">
-                <button class="action-btn view" title="عرض التفاصيل" type="button">
-                  <i class="fa fa-eye"></i>
-                </button>
-                <span class="tooltip-text">عرض</span>
-              </div>
-              <div class="tooltip-container">
-                <button class="action-btn" title="نسخ نص 997" type="button" onclick="copy997Text({{ r.id }})">
-                  <i class="fa fa-copy"></i>
-                </button>
-                <span class="tooltip-text">نسخ 997</span>
-              </div>
-              <div class="tooltip-container">
-                <button class="action-btn edit" title="تعديل" type="button">
-                  <i class="fa fa-edit"></i>
-                </button>
-                <span class="tooltip-text">تعديل</span>
-              </div>
-            </td>
           </tr>
-          {% endwith %}
           {% endfor %}
         </tbody>
       </table>
 
-      {# ===== Pagination (Prev/Next) - يعمل إذا reports هو Page من Django Paginator ===== #}
       <div class="pagination-bar" id="paginationBar">
-        <div class="pagination-info">
+        <div style="font-size:12px; color: var(--text-muted); font-weight:900; display:flex; gap:8px; align-items:center;">
           <i class="fa fa-info-circle"></i>
-          {% if reports.paginator %}
-            صفحة {{ reports.number }} من {{ reports.paginator.num_pages }} — إجمالي {{ reports.paginator.count }} بلاغ
-          {% else %}
-            عرض النتائج الحالية
-          {% endif %}
+          صفحة {{ reports.number }} من {{ reports.paginator.num_pages }} — إجمالي {{ reports.paginator.count }} بلاغ
         </div>
 
-        <div class="pagination-actions">
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
           {% if reports.has_previous %}
             <a class="page-btn" href="#" onclick="goToPage({{ reports.previous_page_number }}); return false;">
               <i class="fa fa-chevron-right"></i> السابق
@@ -795,7 +518,7 @@
       {% else %}
       <div class="empty-state">
         <i class="fa fa-inbox"></i>
-        <p>لا توجد بلاغات للعرض حالياً</p>
+        <p style="margin:0; font-weight:900;">لا توجد بلاغات للعرض حالياً</p>
       </div>
       {% endif %}
     </div>
@@ -804,125 +527,19 @@
 </div>
 
 <script>
-// ==============================
-// Helpers: QueryString utilities
-// ==============================
-function getQueryParams() {
-  const url = new URL(window.location.href);
-  return url.searchParams;
-}
-
-function setQueryParam(key, value) {
-  const url = new URL(window.location.href);
-  if (value === null || value === undefined || value === '') {
-    url.searchParams.delete(key);
-  } else {
-    url.searchParams.set(key, value);
-  }
-  return url;
-}
-
-function removeQueryParam(key) {
-  const url = new URL(window.location.href);
-  url.searchParams.delete(key);
-  return url;
-}
-
-function navigateToUrl(url) {
-  window.location.href = url.toString();
-}
-
-// ==============================
-// Filtering "حسب الجدول"
-// (فلترة إضافية داخل الصفحة على 10 صفوف المعروضة)
-// ==============================
-(function initClientSideTableFilter() {
-  const searchInput = document.getElementById('searchInput');
-  const table = document.getElementById('reportsTable');
-  if (!searchInput || !table) return;
-
-  function normalize(s) {
-    return (s || '').toString().trim().toLowerCase();
-  }
-
-  function filterRows() {
-    const term = normalize(searchInput.value);
-    const rows = table.querySelectorAll('tbody tr');
-    if (!rows || rows.length === 0) return;
-
-    rows.forEach((tr) => {
-      const text = normalize(tr.innerText);
-      tr.style.display = term === '' || text.includes(term) ? '' : 'none';
-    });
-  }
-
-  // فلترة لحظية + ما تلغي فلترة السيرفر (اللي بالـ GET)
-  searchInput.addEventListener('input', filterRows);
-})();
-
-// ==============================
-// Excel / PDF export (يحافظ على الفلاتر)
-// يعتمد على السيرفر: إذا استقبل export=excel يرجع ملف Excel
-// وإذا export=pdf يرجع PDF (اختياري)
-// ==============================
-function exportExcel() {
-  const url = new URL(window.location.href);
-  url.searchParams.set('export', 'excel');
-  // غالباً عند التصدير نبي كل النتائج حسب الفلاتر بدون page
-  url.searchParams.delete('page');
-  navigateToUrl(url);
-}
-
-function exportPdf() {
-  const url = new URL(window.location.href);
-  url.searchParams.set('export', 'pdf');
-  url.searchParams.delete('page');
-  navigateToUrl(url);
-}
-
-// ==============================
-// Pagination: 10 فقط + السابق/التالي
-// ==============================
 function goToPage(pageNumber) {
   const url = new URL(window.location.href);
   url.searchParams.set('page', pageNumber);
-  // تثبيت حجم الصفحة 10
   url.searchParams.set('page_size', '10');
-  // لا نصدر أثناء التنقل
-  url.searchParams.delete('export');
-  navigateToUrl(url);
+  window.location.href = url.toString();
 }
 
-// ==============================
-// Actions
-// ==============================
-function refreshPage() {
-  // تحديث بدون فقد الفلاتر (نفس الرابط)
-  const url = new URL(window.location.href);
-  // لا نثبت export أثناء التحديث
-  url.searchParams.delete('export');
-  navigateToUrl(url);
-}
-
-// Clear filters (يرجع للصفحة بدون أي GET)
 function clearFilters() {
   const url = new URL(window.location.href);
-  url.search = ''; // remove all params
-  navigateToUrl(url);
+  url.search = '';
+  window.location.href = url.toString();
 }
 
 document.getElementById('clearFiltersBtn')?.addEventListener('click', clearFilters);
-
-// Copy 997 Text Function
-function copy997Text(reportId) {
-  // Implement your copy logic here
-  alert('تم نسخ نص توثيق 997 للبلاغ #' + reportId);
-}
-
-// Auto-refresh every 60 seconds
-setTimeout(function() {
-  // تحديث بدون export
-  refreshPage();
-}, 60000);
 </script>
 {% endblock %}

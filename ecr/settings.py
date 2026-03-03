@@ -72,6 +72,7 @@ INSTALLED_APPS = [
     "notifications.apps.NotificationsConfig",
     "responders.apps.RespondersConfig",
     "support_tickets.apps.SupportTicketsConfig",
+    'channels',
 ]
 
 
@@ -118,7 +119,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "ecr.wsgi.application"
-
+ASGI_APPLICATION = "ecr.asgi.application"
 
 # -----------------------------------------------------------------------------
 # قاعدة البيانات (Dev: SQLite) (Prod: Postgres via DATABASE_URL)
@@ -354,5 +355,11 @@ SUPPORT_TICKETS_SLA_STOP_DURING_PAUSE = True
 STORAGES = {
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    }
+}
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
     }
 }

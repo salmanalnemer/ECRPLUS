@@ -14,13 +14,19 @@
     <link rel="icon" href="/static/favicon.ico">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+    
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+
     <!-- ✅ أي CSS إضافي خاص بالصفحات الفرعية (مثل Bootstrap Icons) -->
     {% block extra_head %}{% endblock %}
 
     <style>
         
         :root {
-            --srca-red: #E31E24;
+            --srca-red: #5c00a3;
             --srca-bg: #F4F7F9;
             --srca-text-main: #333333;
             --srca-text-muted: #64748b;
@@ -104,7 +110,7 @@
         }
         
         .nav-item.active { 
-            background: #d6000eb7; 
+            background: #5c00a3; 
             color: #ffffff; 
             font-weight: 700;
         }
@@ -202,7 +208,7 @@
         </a>
         {% endif %}
 
-        <a href="/cad/dashboard/cad/" class="nav-item">
+        <a href="{% url 'cad_reports:reports_cad_dashboard' %}" class="nav-item">
             <i class="fas fa-ambulance text-danger"></i>
             بلاغات CAD
         </a>
@@ -210,7 +216,7 @@
             <i class="fas fa-ambulance text-danger"></i>
             بلاغات مرتبطة بـ CAD
         </a>-->
-        <a href="/api/ecr/dashboard/ecr/" class="nav-item">
+        <a href="/api/ecr/dashboard/ecr-reports/" class="nav-item">
             <i class="fas fa-mobile-alt text-primary"></i>
             بلاغات ECR
         </a>

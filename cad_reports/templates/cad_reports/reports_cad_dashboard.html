@@ -1,0 +1,1919 @@
+{% extends "portal/base_portal.html" %}
+{% load static %}
+{% load l10n %}
+{% block content %}
+<title>بلاغات CAD</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+
+<style>
+  :root{
+    --bg:#f4f6f9;
+    --card:#ffffff;
+    --line:#d9e1ec;
+    --txt:#0b1220;
+    --muted:#5b6b82;
+
+    --primary:#1e40af;      /* رسمي */
+    --primary-weak:rgba(30,64,175,.10);
+    --success:#166534;
+    --success-weak:rgba(22,101,52,.10);
+    --danger:#b91c1c;
+    --danger-weak:rgba(185,28,28,.10);
+    --warning:#92400e;
+    --warning-weak:rgba(146,64,14,.12);
+
+    --shadow-sm:0 2px 10px rgba(2,6,23,.06);
+    --shadow:0 10px 26px rgba(2,6,23,.08);
+
+    --radius:14px;
+    --radius-sm:12px;
+  }
+
+  body{ background: var(--bg); color: var(--txt); font-family: "Tajawal", system-ui, -apple-system, "Segoe UI", Arial, sans-serif; }
+  .wrap{ padding: 20px; max-width: 1500px; margin: 0 auto; }
+
+  /* Top header */
+  .page-title{
+    display:flex; align-items:flex-start; justify-content:space-between;
+    gap:14px; margin-bottom: 14px;
+    direction: rtl;
+  }
+  .page-title h1{
+    margin:0;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--txt);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    letter-spacing: .2px;
+  }
+  .page-title .sub{
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 12.5px;
+    margin-top: 6px;
+    line-height: 1.6;
+  }
+
+  /* Stats */
+  .stats{
+    display:grid;
+    grid-template-columns: repeat(4, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+    direction: rtl;
+  }
+  .stat{
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    box-shadow: var(--shadow-sm);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap: 12px;
+  }
+  .stat .k{ color: var(--muted); font-weight: 700; font-size: 12px; }
+  .stat .v{ color: var(--txt); font-weight: 800; font-size: 20px; }
+  .stat i{ font-size: 18px; color: var(--primary); opacity:.95; }
+
+  /* Main layout */
+  .grid{
+    display:grid;
+    grid-template-columns: 1.2fr 1fr;
+    grid-template-areas: "map table";
+    gap: 12px;
+    height: calc(100vh - 210px);
+    min-height: 560px;
+  }
+
+  .panel{
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow:hidden;
+    display:flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .panel-h{
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--line);
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    direction: rtl;
+    background:#fff;
+  }
+  .panel-h .h{
+    font-weight: 800;
+    color: var(--txt);
+    display:flex;
+    gap: 10px;
+    align-items:center;
+  }
+  .panel-h .row{ display:flex; align-items:center; gap: 10px; }
+
+  .panel-b{
+    padding: 12px;
+    overflow:auto;
+    min-height: 0;
+  }
+
+  #panelMap{ grid-area: map; }
+  #panelTable{ grid-area: table; }
+
+  #map{
+    width:100%;
+    height: 100%;
+    min-height: 540px;
+    background: #e2e8f0;
+  }
+
+  /* Table */
+  table{
+    width:100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    direction: rtl;
+  }
+  thead th{
+    position: sticky;
+    top: 0;
+    background: #f8fafc;
+    z-index: 2;
+    border-bottom: 1px solid var(--line);
+    padding: 10px 10px;
+    text-align: right;
+    font-weight: 700;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  tbody td{
+    padding: 10px 10px;
+    border-bottom: 1px solid rgba(217,225,236,0.9);
+    font-weight: 600;
+    color: var(--txt);
+    font-size: 13px;
+  }
+  tbody tr:hover{ background: rgba(30,64,175,0.05); }
+
+  /* Pills */
+  .pill{
+    display:inline-flex;
+    gap: 8px;
+    align-items:center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(148,163,184,0.55);
+    background: rgba(148,163,184,0.10);
+    font-weight: 700;
+    font-size: 12px;
+    color: #334155;
+    white-space: nowrap;
+  }
+  .pill.ready{
+    background: var(--success-weak);
+    border-color: rgba(22,101,52,.25);
+    color: var(--success);
+  }
+  .pill.closed{
+    background: var(--danger-weak);
+    border-color: rgba(185,28,28,.25);
+    color: var(--danger);
+  }
+  .pill.open{
+    background: var(--warning-weak);
+    border-color: rgba(146,64,14,.25);
+    color: var(--warning);
+  }
+
+  .cad-link{
+    border: none;
+    background: transparent;
+    color: var(--primary);
+    font-weight: 700;
+    cursor:pointer;
+    text-decoration: underline;
+  }
+
+  /* Modal */
+  .modal{
+    position: fixed;
+    inset: 0;
+    background: rgba(2,6,23,0.55);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding: 18px;
+    z-index: 9999;
+  }
+  .modal.show{ display:flex; }
+  .mcard{
+    width: min(1200px, 96vw);
+    max-height: min(92vh, 900px);
+    background: #fff;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow:hidden;
+    display:flex;
+    flex-direction: column;
+  }
+  .mhead{
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--line);
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    direction: rtl;
+    background:#fff;
+  }
+  .mhead .ttl{
+    display:flex; align-items:center; gap: 10px;
+    font-weight: 800; color: var(--txt);
+  }
+  .mclose{
+    border:1px solid rgba(148,163,184,0.55);
+    background: rgba(148,163,184,0.10);
+    border-radius: 12px;
+    padding: 8px 10px;
+    cursor:pointer;
+    font-weight: 700;
+  }
+
+  .mbody{
+    padding: 12px;
+    overflow:auto;
+    min-height: 0;
+  }
+
+  .modalLayout{
+    display:grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 12px;
+    direction: rtl;
+    align-items: start;
+  }
+
+  .fieldsPane{
+    display:flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+  }
+  .mapPane{
+    position: sticky;
+    top: 12px;
+    display:flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .sectionCard{
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+    overflow:hidden;
+  }
+  .sectionHead{
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    background:#fff;
+  }
+  .sectionHead .h{
+    font-weight: 800;
+    display:flex;
+    align-items:center;
+    gap: 10px;
+    color: var(--txt);
+  }
+  .sectionBody{
+    padding: 12px;
+  }
+
+  .mTable{
+    width:100%;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  .mTable tbody{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .mRow{
+    border: 1px solid rgba(217,225,236,0.95);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    background: #fff;
+    box-shadow: 0 6px 16px rgba(2,6,23,.05);
+  }
+  .mRow .k{
+    color: var(--muted);
+    font-weight: 700;
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+  .mRow .v{
+    color: var(--txt);
+    font-weight: 700;
+    font-size: 13px;
+    line-height: 1.6;
+    word-break: break-word;
+  }
+
+  .btn{
+    border: 1px solid rgba(148,163,184,0.55);
+    background: rgba(148,163,184,0.10);
+    border-radius: 12px;
+    padding: 9px 12px;
+    cursor:pointer;
+    font-weight: 700;
+    display:inline-flex;
+    align-items:center;
+    gap: 8px;
+  }
+  .btn-primary{
+    border-color: rgba(30,64,175,0.35);
+    background: var(--primary-weak);
+    color: var(--primary);
+  }
+  .btn-warning{
+    border-color: rgba(146,64,14,0.30);
+    background: var(--warning-weak);
+    color: var(--warning);
+  }
+  .btn-danger{
+    border-color: rgba(185,28,28,0.30);
+    background: var(--danger-weak);
+    color: var(--danger);
+  }
+  .btn:disabled{
+    opacity: 0.55;
+    cursor:not-allowed;
+  }
+
+  .t-accept{
+    border-color: rgba(22,101,52,0.30);
+    background: var(--success-weak);
+    color: var(--success);
+  }
+  .t-arrive{
+    border-color: rgba(2,132,199,0.28);
+    background: rgba(2,132,199,.10);
+    color: #075985;
+  }
+
+  .mInput{
+    width: 100%;
+    border: 1px solid rgba(148,163,184,0.55);
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-weight: 600;
+    outline:none;
+    background: #fff;
+  }
+  .mInput:focus{
+    border-color: rgba(30,64,175,.45);
+    box-shadow: 0 0 0 4px rgba(30,64,175,.10);
+  }
+  textarea.mInput{ resize: vertical; min-height: 110px; }
+
+  .timeGrid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .msg{
+    margin-top: 10px;
+    font-weight: 700;
+    color: #334155;
+  }
+  .msg.err{ color: var(--danger); }
+
+  /* Hidden separator kept */
+  .sep{ display:none; height:1px; background:var(--line); margin: 12px 0; }
+
+  /* Modal map */
+  #modalMapWrap{
+    border:1px solid var(--line);
+    border-radius: var(--radius);
+    overflow:hidden;
+    box-shadow: var(--shadow-sm);
+    background:#fff;
+  }
+  #modalMapHead{
+    padding:10px 12px;
+    border-bottom:1px solid var(--line);
+    display:flex; justify-content:space-between; align-items:center;
+    direction: rtl;
+    background:#fff;
+  }
+  #modalMap{
+    width:100%;
+    height: 520px;
+  }
+
+  /* Activity */
+  .activityList{
+    display:flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 320px;
+    overflow:auto;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: #f8fafc;
+  }
+  .activityItem{ display:flex; gap:10px; align-items:flex-start; }
+  .activityAvatar{
+    width:32px; height:32px;
+    border-radius:999px;
+    background: rgba(30,64,175,.10);
+    border:1px solid rgba(30,64,175,.18);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color: var(--primary);
+    flex: 0 0 32px;
+  }
+  .activityBubble{
+    flex:1;
+    background:#fff;
+    border:1px solid rgba(217,225,236,.95);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    box-shadow: 0 6px 14px rgba(2,6,23,.05);
+  }
+  .activityMeta{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+  .activityMeta .kind{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(148,163,184,.55);
+    background: rgba(148,163,184,.12);
+    color: #334155;
+    font-weight: 700;
+    font-size: 11px;
+  }
+  .activityText{
+    color: var(--txt);
+    font-weight: 600;
+    font-size: 13px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .activityComposer{
+    margin-top: 10px;
+    display:flex;
+    gap: 10px;
+    align-items:flex-start;
+    flex-wrap:wrap;
+  }
+  .activityComposer textarea{ flex: 1 1 340px; min-height: 84px; }
+
+  /* Responsive */
+  @media (max-width: 1050px){
+    .grid{
+      grid-template-columns: 1fr;
+      grid-template-areas: "map" "table";
+      height:auto;
+    }
+    .stats{ grid-template-columns: repeat(2, minmax(160px, 1fr)); }
+    #map{ min-height: 420px; height: 420px; }
+
+    .modalLayout{ grid-template-columns: 1fr; }
+    .mapPane{ position: static; }
+    .mTable tbody{ grid-template-columns: 1fr; }
+    #modalMap{ height: 320px; }
+    .timeGrid{ grid-template-columns: 1fr; }
+  }
+
+  /* Toast */
+  .toast{
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 280px;
+    max-width: min(92vw, 640px);
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-weight: 700;
+    color: #fff;
+    z-index: 99999;
+    box-shadow: 0 12px 28px rgba(2,6,23,.20);
+    direction: rtl;
+    text-align: center;
+    opacity: 0;
+    transition: opacity .25s ease, transform .25s ease;
+    pointer-events: none;
+  }
+  .toast.show{
+    opacity: 1;
+    transform: translateX(-50%) translateY(-6px);
+  }
+
+  /* Sound banner (more formal) */
+  .sound-banner{
+    position: fixed;
+    bottom: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(2,6,23,.92);
+    color:#fff;
+    font-weight:700;
+    z-index: 99998;
+    display:none;
+    direction: rtl;
+    box-shadow: 0 10px 24px rgba(2,6,23,.22);
+  }
+  .sound-banner button{
+    margin-inline-start:10px;
+    border:1px solid rgba(255,255,255,.18);
+    padding: 6px 10px;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor:pointer;
+    background: rgba(255,255,255,.12);
+    color:#fff;
+  }
+
+  /* Notifications toggle */
+  .notify-toggle{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(30,64,175,.25);
+    background: rgba(30,64,175,.06);
+    font-weight:700;
+    color: var(--txt);
+  }
+  .notify-toggle input{
+    width:18px; height:18px;
+    accent-color: var(--primary);
+    cursor:pointer;
+  }
+</style>
+
+<div class="wrap">
+  <div class="page-title">
+    <div>
+      <h1><i class="fa-solid fa-tower-broadcast" style="color:var(--my-blue)"></i> بلاغات CAD</h1>
+      <div class="sub">لوحة متابعة البلاغات المرتبطة بنظام CAD + تتبع المستجيبين على الخريطة</div>
+    </div>
+
+    <div class="notify-toggle" title="تفعيل/تعطيل صوت التنبيه">
+      <label for="soundToggle" style="cursor:pointer;">صوت التنبيه</label>
+      <input id="soundToggle" type="checkbox" checked>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div>
+        <div class="k">إجمالي البلاغات</div>
+        <div class="v" id="stTotal">0</div>
+      </div>
+      <i class="fa-solid fa-layer-group"></i>
+    </div>
+
+    <div class="stat">
+      <div>
+        <div class="k">مفتوحة</div>
+        <div class="v" id="stOpen">0</div>
+      </div>
+      <i class="fa-solid fa-circle-exclamation"></i>
+    </div>
+
+    <div class="stat">
+      <div>
+        <div class="k">مغلقة</div>
+        <div class="v" id="stClosed">0</div>
+      </div>
+      <i class="fa-solid fa-circle-check"></i>
+    </div>
+
+    <div class="stat">
+      <div>
+        <div class="k">آخر تحديث</div>
+        <div class="v" id="stUpdated" style="font-size:14px">—</div>
+      </div>
+      <i class="fa-regular fa-clock"></i>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="panel" id="panelMap">
+      <div class="panel-h">
+        <div class="h"><i class="fa-solid fa-map-location-dot" style="color:var(--my-blue)"></i> الخريطة</div>
+        <div class="row">
+          <span class="pill" id="mapHint">
+            <i class="fa-solid fa-location-dot"></i>
+            انقر على ماركر البلاغ لفتح التفاصيل
+          </span>
+        </div>
+      </div>
+      <div class="panel-b" style="padding:0;">
+        <div id="map"></div>
+      </div>
+    </div>
+
+    <div class="panel" id="panelTable">
+      <div class="panel-h">
+        <div class="h"><i class="fa-solid fa-table" style="color:var(--my-dark)"></i>  بلاغات مرتبطة CAD </div>
+        <div class="row">
+          <span class="pill open" id="tblCount">0</span>
+        </div>
+      </div>
+      <div class="panel-b">
+        <div style="padding:8px 12px; border-bottom:1px solid var(--line); direction:rtl; background:#fff;">
+          <span class="pill" style="font-weight:900;">
+            <i class="fa-solid fa-user-shield"></i>
+            المستجيبين المتصلين:
+            <span id="respCount" style="margin-inline-start:6px;">0</span>
+          </span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>رقم CAD</th>
+              <th>نوع الحالة</th>
+              <th>حالة البلاغ</th>
+              <th>المنطقة</th>
+              <th>المستجيب</th>
+              <th>وقت البلاغ</th>
+              <th>مدة الحالة</th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr><td colspan="7" style="color:var(--muted); font-weight:800;">تحميل البيانات.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal" id="modal">
+  <div class="mcard">
+    <div class="mhead">
+      <div class="ttl">
+        <i class="fa-solid fa-file-lines" style="color:var(--my-blue)"></i>
+        <span id="mTitle">تفاصيل بلاغ CAD</span>
+      </div>
+      <div class="row">
+        <button class="mclose" id="mClose"><i class="fa-solid fa-xmark"></i> إغلاق</button>
+      </div>
+    </div>
+
+    <div class="mbody">
+      <div class="modalLayout">
+        <!-- ✅ الحقول -->
+        <div class="fieldsPane">
+          <div class="sectionCard">
+            <div class="sectionHead">
+              <div class="h"><i class="fa-solid fa-circle-info" style="color:var(--my-yellow)"></i> معلومات البلاغ</div>
+              <span class="pill" id="mStatusPill">—</span>
+            </div>
+            <div class="sectionBody">
+              <div class="mTable">
+                <tbody>
+                  <div class="mRow">
+                    <div class="k">رقم البلاغ CAD</div>
+                    <div class="v" id="fCad">—</div>
+                  </div>
+                  <div class="mRow">
+                    <div class="k">نوع الحالة</div>
+                    <div class="v" id="fType">—</div>
+                  </div>
+                  <div class="mRow">
+                    <div class="k">درجة الخطورة</div>
+                    <div class="v" id="fSeverity">—</div>
+                  </div>
+                  <div class="mRow">
+                    <div class="k">عدد المصابين</div>
+                    <div class="v" id="fInj">—</div>
+                  </div>
+                  <div class="mRow">
+                    <div class="k">العمر</div>
+                    <div class="v" id="fAge">—</div>
+                  </div>
+                  <div class="mRow">
+                    <div class="k">الوعي</div>
+                    <div class="v" id="fCon">—</div>
+                  </div>
+                  <div class="mRow" style="grid-column:1 / -1;">
+                    <div class="k">تفاصيل البلاغ</div>
+                    <div class="v" id="fDetails">—</div>
+                  </div>
+                  <div class="mRow" style="grid-column:1 / -1;">
+                    <div class="k">الموقع (Lat/Lng)</div>
+                    <div class="v" id="fCoords">—</div>
+                  </div>
+                  <div class="mRow">
+                    <div class="k">المنطقة</div>
+                    <div class="v" id="fRegion">—</div>
+                  </div>
+                  <div class="mRow">
+                    <div class="k">المستجيب</div>
+                    <div class="v" id="fResp">—</div>
+                  </div>
+                </tbody>
+              </div>
+            </div>
+          </div>
+
+          <div class="sectionCard">
+            <div class="sectionHead">
+              <div class="h"><i class="fa-regular fa-clock" style="color:var(--my-blue)"></i> الأزمنة</div>
+              <span class="pill"><i class="fa-solid fa-stopwatch"></i> <span id="fDur">—</span></span>
+            </div>
+            <div class="sectionBody">
+              <div class="timeGrid">
+                <div class="mRow">
+                  <div class="k">وقت الإنشاء</div>
+                  <div class="v" id="fCreated">—</div>
+                </div>
+                <div class="mRow">
+                  <div class="k">وقت الترحيل</div>
+                  <div class="v" id="fDisp">—</div>
+                </div>
+                <div class="mRow">
+                  <div class="k">وقت القبول</div>
+                  <div class="v" id="fAcc">—</div>
+                </div>
+                <div class="mRow">
+                  <div class="k">وقت الوصول</div>
+                  <div class="v" id="fArr">—</div>
+                </div>
+                <div class="mRow" style="grid-column:1 / -1;">
+                  <div class="k">وقت الإغلاق</div>
+                  <div class="v" id="fClosedAt">—</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ✅ سجل الإجراءات والملاحظات (دردشة مرتبطة بالبلاغ) -->
+          <div class="sectionCard" style="margin-top:12px;">
+            <div class="sectionHead">
+              <div class="h"><i class="fa-solid fa-comments" style="color:var(--my-blue)"></i> سجل الإجراءات والملاحظات</div>
+              <span class="pill" id="activityCount"><i class="fa-solid fa-list"></i> 0</span>
+            </div>
+            <div class="sectionBody">
+              <div id="activityList" class="activityList">
+                <div style="color:var(--muted); font-weight:900; padding:6px 4px;">لا يوجد سجل بعد.</div>
+              </div>
+
+              <div class="activityComposer">
+                <textarea class="mInput" id="activityMsg" placeholder="اكتب ملاحظة... (ستُحفظ في سجل البلاغ)"></textarea>
+                <button class="btn btn-primary" id="btnSendActivity" type="button">
+                  <i class="fa-solid fa-paper-plane"></i> إرسال
+                </button>
+              </div>
+            </div>
+          </div>
+
+
+        </div>
+
+        <!-- ✅ الخريطة + الأزرار تحتها -->
+        <div class="mapPane">
+          <div id="modalMapWrap">
+            <div id="modalMapHead">
+              <div style="font-weight:950; display:flex; gap:10px; align-items:center;">
+                <i class="fa-solid fa-map" style="color:var(--my-blue)"></i>
+                خريطة البلاغ
+              </div>
+              <span class="pill" style="font-weight:900;">
+                <i class="fa-solid fa-mouse-pointer"></i>
+                (للتعديل: انقر لتحديد موقع)
+              </span>
+            </div>
+            <div id="modalMap"></div>
+          </div>
+
+          <div class="sectionCard">
+            <div class="sectionHead">
+              <div class="h"><i class="fa-solid fa-gears" style="color:var(--my-dark)"></i> الإجراءات</div>
+              <span class="pill" id="editBadge">عرض</span>
+            </div>
+            <div class="sectionBody">
+              <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:flex-start;" id="actionRow">
+                <button class="btn btn-warning" id="btnDispatch"><i class="fa-solid fa-share"></i> ترحيل</button>
+                <button class="btn t-accept" id="btnAccept"><i class="fa-solid fa-check"></i> قبول</button>
+                <button class="btn t-arrive" id="btnArrive"><i class="fa-solid fa-location-crosshairs"></i> وصول</button>
+                <button class="btn btn-danger" id="btnClose"><i class="fa-solid fa-lock"></i> إغلاق</button>
+              </div>
+
+              <div class="sep"></div>
+
+              <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:flex-start;" id="editRow">
+                <button class="btn btn-primary" id="btnEdit"><i class="fa-solid fa-pen"></i> تعديل</button>
+                <button class="btn btn-primary" id="btnSave" style="display:none;"><i class="fa-solid fa-floppy-disk"></i> حفظ</button>
+                <button class="btn" id="btnCancel" style="display:none;"><i class="fa-solid fa-ban"></i> إلغاء</button>
+              </div>
+
+              <div class="msg" id="mMsg"></div>
+            </div>
+          </div>
+
+          <div class="sectionCard" id="editFormCard" style="display:none;">
+            <div class="sectionHead">
+              <div class="h"><i class="fa-solid fa-pen-to-square" style="color:var(--my-blue)"></i> تعديل البيانات</div>
+            </div>
+            <div class="sectionBody">
+              <div style="display:grid; gap:10px;">
+                <div>
+                  <div class="k" style="font-weight:950; color:var(--muted); margin-bottom:6px;">تفاصيل البلاغ</div>
+                  <textarea class="mInput" id="editDetails" placeholder="اكتب تفاصيل البلاغ"></textarea>
+                </div>
+                <div>
+                  <div class="k" style="font-weight:950; color:var(--muted); margin-bottom:6px;">وصف الموقع (اختياري)</div>
+                  <input class="mInput" id="editLocText" placeholder="عنوان/وصف نصي للموقع">
+                </div>
+                <div>
+                  <div class="k" style="font-weight:950; color:var(--muted); margin-bottom:6px;">عدد المصابين</div>
+                  <input class="mInput" id="editInj" type="number" min="0">
+                </div>
+                <div>
+                  <div class="k" style="font-weight:950; color:var(--muted); margin-bottom:6px;">درجة الخطورة</div>
+                  <select class="mInput" id="editSev">
+                    <option value="simple">بسيطة</option>
+                    <option value="medium">متوسطة</option>
+                    <option value="critical">حرجة</option>
+                  </select>
+                </div>
+              </div>
+              <div style="color:var(--muted); font-weight:900; margin-top:10px;">
+                ملاحظة: لتعديل الموقع، فعّل وضع التعديل ثم انقر على الخريطة لتحديد نقطة جديدة.
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="sound-banner" id="soundBanner">
+  قد يكون الصوت في المتصفح مقفلاً. اضغط للتفعيل
+  <button id="btnEnableSound">تفعيل</button>
+</div>
+
+
+<script>
+  // ====== Config ======
+  const API_LIST_URL = "{% url 'cad_reports:assigned_reports_json' %}";
+
+  // Prefixes (بدون report_id)
+  const API_DISPATCH_PREFIX = "{% url 'cad_reports:list' %}";   // "/cad/" غالبًا
+  const API_ACCEPT_PREFIX   = "{% url 'cad_reports:list' %}";
+  const API_ARRIVE_PREFIX   = "{% url 'cad_reports:list' %}";
+  const API_CLOSE_PREFIX    = "{% url 'cad_reports:list' %}";
+
+  // helper يبني الروابط
+  function urlDispatch(id){ return `${API_DISPATCH_PREFIX}${id}/dispatch/`; }
+  function urlAccept(id){   return `${API_ACCEPT_PREFIX}${id}/accept/`; }
+  function urlArrive(id){   return `${API_ARRIVE_PREFIX}${id}/arrive/`; }
+  function urlClose(id){    return `${API_CLOSE_PREFIX}${id}/close/`; }
+
+  function urlAssignedUpdate(cadNumber){
+    return `${API_DISPATCH_PREFIX}api/assigned/${encodeURIComponent(String(cadNumber))}/update/`;
+  }
+
+  // ✅ NEW: History API (جذري)
+  // يجب أن يكون عندك Django URL: /cad/api/activity/<int:report_id>/
+  function urlActivityHistory(reportId){
+    return `${API_DISPATCH_PREFIX}api/activity/${encodeURIComponent(String(reportId))}/?limit=120`;
+  }
+
+  const ICON_CAD = "{% static 'icons/ecrb.png' %}";
+  const ICON_RESPONDER = "{% static 'icons/responlive.png' %}";
+
+  const MAP_CENTER = { lat: 24.7136, lng: 46.6753, zoom: 6 }; // Saudi default
+  let map = null;
+  let reportMarkers = [];
+  let responderMarkers = [];
+  let reportsRaw = [];
+  let respondersRaw = [];
+
+  // ===== Notifications state =====
+  let prevStates = new Map();
+  let prevStatesInitialized = false;
+  let recentNotify = new Map(); // key -> epoch ms
+
+  // modal
+  let modalMap = null;
+  let modalMarker = null;
+  let modalLatLng = null;
+  let isEditing = false;
+  let currentReport = null;
+
+  // === CAD Activity (WebSocket) ===
+  let cadWs = null;
+  let cadWsReportId = null;
+
+  // إرسال آمن عبر WS: يمنع الإرسال قبل OPEN
+  let wsSendQueue = [];
+
+  function wsUrlForReport(reportId){
+    const proto = (window.location.protocol === "https:") ? "wss" : "ws";
+    return `${proto}://${window.location.host}/ws/cad/${encodeURIComponent(String(reportId))}/`;
+  }
+
+  function resetActivityUI(){
+    const list = document.getElementById("activityList");
+    const cnt = document.getElementById("activityCount");
+    if(list){
+      list.innerHTML = `<div style="color:var(--muted); font-weight:900; padding:6px 4px;">لا يوجد سجل بعد.</div>`;
+    }
+    if(cnt) cnt.innerHTML = `<i class="fa-solid fa-list"></i> 0`;
+  }
+
+  function setActivityCount(n){
+    const cnt = document.getElementById("activityCount");
+    if(!cnt) return;
+    cnt.innerHTML = `<i class="fa-solid fa-list"></i> ${Number(n || 0)}`;
+  }
+
+  function kindLabel(kind){
+    const k = String(kind || "").toLowerCase();
+    const map = {
+      "system": "نظام",
+      "action": "إجراء",
+      "note": "ملاحظة",
+      "chat": "رسالة",
+      "message": "رسالة",
+    };
+    return map[k] || (kind || "—");
+  }
+
+  function fmtWhen(v){
+    if(!v) return "—";
+    try{
+      const d = new Date(String(v).replace(" ", "T"));
+      if(!isNaN(d.getTime())){
+        return d.toLocaleString("ar-SA");
+      }
+    }catch(_e){}
+    return String(v);
+  }
+
+  function appendActivityItem(item){
+    const list = document.getElementById("activityList");
+    if(!list) return;
+
+    // remove placeholder if present
+    if(list.children.length === 1 && (list.textContent || "").includes("لا يوجد سجل")){
+      list.innerHTML = "";
+    }
+
+    const who = item.actor_name || item.user_name || item.username || item.user || item.by || "—";
+    const when = fmtWhen(item.created_at || item.timestamp || item.at);
+    const kind = kindLabel(item.kind || item.type);
+    const action = item.action ? ` • ${item.action}` : "";
+    const msg = (item.message ?? item.text ?? "");
+
+    const el = document.createElement("div");
+    el.className = "activityItem";
+    el.innerHTML = `
+      <div class="activityAvatar"><i class="fa-solid fa-user"></i></div>
+      <div class="activityBubble">
+        <div class="activityMeta">
+          <span style="font-weight:950; color:var(--txt)">${escapeHtml(who)}</span>
+          <span class="kind"><i class="fa-solid fa-tag"></i> ${escapeHtml(kind)}${escapeHtml(action)}</span>
+          <span><i class="fa-regular fa-clock"></i> ${escapeHtml(when)}</span>
+        </div>
+        <div class="activityText">${escapeHtml(msg)}</div>
+      </div>
+    `;
+    list.appendChild(el);
+
+    try{ list.scrollTop = list.scrollHeight; }catch(_e){}
+
+    setActivityCount(list.querySelectorAll(".activityItem").length);
+  }
+
+  // ✅ NEW: Load history from DB via HTTP (الحل الجذري)
+  async function loadActivityHistory(reportId){
+    resetActivityUI();
+    try{
+      const res = await fetch(urlActivityHistory(reportId), { credentials: "same-origin" });
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json().catch(()=> ({}));
+      const items = Array.isArray(data.items) ? data.items : [];
+
+      if(items.length === 0){
+        return; // يبقى placeholder
+      }
+
+      const list = document.getElementById("activityList");
+      if(list) list.innerHTML = "";
+      items.forEach(appendActivityItem);
+    }catch(e){
+      // لا توقف النظام، فقط اعرض تنبيه
+      setMsg("تعذر تحميل سجل الملاحظات من الخادم.", true);
+    }
+  }
+
+  function closeCadWs(){
+    try{
+      if(cadWs){
+        cadWs.onopen = null;
+        cadWs.onmessage = null;
+        cadWs.onerror = null;
+        cadWs.onclose = null;
+        cadWs.close();
+      }
+    }catch(_e){}
+    cadWs = null;
+    cadWsReportId = null;
+    wsSendQueue = [];
+  }
+
+  function flushWsQueue(){
+    if(!cadWs || cadWs.readyState !== WebSocket.OPEN) return;
+    const q = wsSendQueue.slice();
+    wsSendQueue = [];
+    for(const payload of q){
+      try{ cadWs.send(payload); }catch(_e){ wsSendQueue.unshift(payload); break; }
+    }
+  }
+
+  function connectCadWs(reportId){
+    if(!reportId) return;
+    const rid = String(reportId);
+
+    if(cadWs && cadWsReportId === rid && cadWs.readyState === WebSocket.OPEN) return;
+    if(cadWs && cadWsReportId === rid && cadWs.readyState === WebSocket.CONNECTING) return;
+
+    closeCadWs();
+    cadWsReportId = rid;
+
+    try{
+      cadWs = new WebSocket(wsUrlForReport(reportId));
+
+      cadWs.onopen = () => {
+        // ✅ لا نعتمد على history عبر WS نهائيًا
+        flushWsQueue();
+      };
+
+      cadWs.onmessage = (ev) => {
+        let data = null;
+        try { data = JSON.parse(ev.data); }
+        catch (_e) { return; }
+
+        // error from server
+        if (String(data.type || "").toLowerCase() === "error") {
+          setMsg(data.detail || "WS error", true);
+          return;
+        }
+
+        // message/event
+        const item = data.activity || data.data || data;
+        if (item && (item.message != null || item.text != null)) {
+          appendActivityItem(item);
+        }
+      };
+
+      cadWs.onerror = () => {};
+      cadWs.onclose = () => {};
+    }catch(_e){
+      cadWs = null;
+      cadWsReportId = null;
+      wsSendQueue = [];
+    }
+  }
+
+  async function ensureWsAndSend(reportId, obj){
+    const rid = String(reportId);
+    const payload = JSON.stringify(obj || {});
+    connectCadWs(rid);
+
+    if(!cadWs){
+      throw new Error("تعذر إنشاء اتصال WebSocket.");
+    }
+
+    if(cadWs.readyState === WebSocket.OPEN){
+      cadWs.send(payload);
+      return;
+    }
+
+    if(cadWs.readyState === WebSocket.CONNECTING){
+      wsSendQueue.push(payload);
+
+      await new Promise((resolve, reject) => {
+        const t = setTimeout(() => reject(new Error("تعذر إرسال الرسالة: لم يفتح اتصال WebSocket.")), 2500);
+
+        const oldOnOpen = cadWs.onopen;
+        cadWs.onopen = () => {
+          try{ if(oldOnOpen) oldOnOpen(); }catch(_e){}
+          clearTimeout(t);
+          resolve();
+        };
+
+        const oldOnClose = cadWs.onclose;
+        cadWs.onclose = () => {
+          try{ if(oldOnClose) oldOnClose(); }catch(_e){}
+          clearTimeout(t);
+          reject(new Error("تعذر إرسال الرسالة: تم إغلاق WebSocket."));
+        };
+      });
+
+      flushWsQueue();
+      return;
+    }
+
+    throw new Error("تعذر إرسال الرسالة. تأكد من اتصال WebSocket.");
+  }
+
+  // ====== Helpers ======
+  function escapeHtml(s){
+    s = (s === null || s === undefined) ? "" : String(s);
+    return s.replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+  }
+  function setToast(text, ok=true){
+    const t = document.getElementById("toast");
+    t.textContent = text;
+    t.style.background = ok ? "rgba(34,197,94,.92)" : "rgba(239,68,68,.92)";
+    t.classList.add("show");
+    setTimeout(()=> t.classList.remove("show"), 2200);
+  }
+  function setMsg(text, isErr=false){
+    const el = document.getElementById("mMsg");
+    if(!el) return;
+    el.textContent = text || "";
+    el.classList.toggle("err", !!isErr);
+  }
+
+  // ===== Notifications: detect new/accepted/arrived from polling =====
+  function stateKey(r){
+    return String(r.id ?? r.pk ?? r.report_id ?? r.cad_number ?? "");
+  }
+
+  function detectCadEvents(list){
+    const items = Array.isArray(list) ? list : [];
+    const events = [];
+
+    if(!prevStatesInitialized){
+      // أول تحميل: لا نطلق تنبيهات، فقط نخزن الحالة
+      for(const r of items){
+        const k = stateKey(r);
+        if(!k) continue;
+        prevStates.set(k, {
+          cad_number: r.cad_number,
+          responder_name: (r.responder_name || r.responder || null),
+          accepted_at: (r.accepted_at || null),
+          arrival_time: (r.arrival_time || null),
+        });
+      }
+      prevStatesInitialized = true;
+      return events;
+    }
+
+    const next = new Map();
+
+    for(const r of items){
+      const k = stateKey(r);
+      if(!k) continue;
+
+      const curr = {
+        cad_number: r.cad_number,
+        responder_name: (r.responder_name || r.responder || null),
+        accepted_at: (r.accepted_at || null),
+        arrival_time: (r.arrival_time || null),
+      };
+
+      const prev = prevStates.get(k);
+
+      if(!prev){
+        events.push({ kind: "new_report", cad_number: curr.cad_number, responder_name: curr.responder_name });
+      }else{
+        if(!prev.accepted_at && curr.accepted_at){
+          events.push({ kind: "accepted", cad_number: curr.cad_number, responder_name: curr.responder_name });
+        }
+        if(!prev.arrival_time && curr.arrival_time){
+          events.push({ kind: "arrived", cad_number: curr.cad_number, responder_name: curr.responder_name });
+        }
+      }
+
+      next.set(k, curr);
+    }
+
+    prevStates = next;
+    return events;
+  }
+
+  function canEditCurrent(){
+    if(!currentReport) return false;
+    const isClosed = !!(currentReport.is_closed || currentReport.closed);
+    return !isClosed;
+  }
+
+  // ====== Map init ======
+  window.initMap = function(){
+    map = new google.maps.Map(document.getElementById("map"), {
+      center: {lat: MAP_CENTER.lat, lng: MAP_CENTER.lng},
+      zoom: MAP_CENTER.zoom,
+      mapTypeId: "roadmap",
+      gestureHandling: "greedy",
+    });
+    loadCad();
+  };
+
+  function clearMarkers(list){
+    for(const m of list){
+      try{ m.setMap(null); }catch(_e){}
+    }
+    list.length = 0;
+  }
+
+  function renderCadMarkers(reports){
+    clearMarkers(reportMarkers);
+    const bounds = new google.maps.LatLngBounds();
+
+    let hasAny = false;
+    for(const r of reports){
+      const lat = r.latitude ?? r.lat;
+      const lng = r.longitude ?? r.lng;
+      if(lat == null || lng == null) continue;
+
+      const pos = { lat: Number(lat), lng: Number(lng) };
+      if(Number.isNaN(pos.lat) || Number.isNaN(pos.lng)) continue;
+
+      hasAny = true;
+      bounds.extend(pos);
+
+      const mk = new google.maps.Marker({
+        map,
+        position: pos,
+        icon: { url: ICON_CAD, scaledSize: new google.maps.Size(36, 36) },
+        title: `CAD #${r.cad_number}`
+      });
+
+      mk.addListener("click", ()=> populateModal(r));
+      reportMarkers.push(mk);
+    }
+
+    if(hasAny){
+      map.fitBounds(bounds);
+      setTimeout(()=> { if(map.getZoom() > 15) map.setZoom(15); }, 400);
+    }else{
+      map.setCenter({lat: MAP_CENTER.lat, lng: MAP_CENTER.lng});
+      map.setZoom(MAP_CENTER.zoom);
+    }
+  }
+
+  function renderResponderMarkers(responders){
+    clearMarkers(responderMarkers);
+
+    const rc = document.getElementById("respCount");
+    if(rc) rc.textContent = (Array.isArray(responders) ? responders.length : 0);
+
+    for(const r of responders){
+      const lat = r.latitude ?? r.lat;
+      const lng = r.longitude ?? r.lng;
+      if(lat == null || lng == null) continue;
+
+      const pos = { lat: Number(lat), lng: Number(lng) };
+      if(Number.isNaN(pos.lat) || Number.isNaN(pos.lng)) continue;
+
+      const name = r.name || r.full_name || r.display_name || r.responder || r.username || "مستجيب";
+      const mk = new google.maps.Marker({
+        map,
+        position: pos,
+        icon: { url: ICON_RESPONDER, scaledSize: new google.maps.Size(30, 30) },
+        title: String(name)
+      });
+      responderMarkers.push(mk);
+    }
+  }
+
+  // modal map responders markers
+  let modalResponderMarkers = [];
+  let modalSelectedResponderId = null;
+  let modalSelectedResponderName = null;
+
+  function setField(id, val){
+    const el = document.getElementById(id);
+    if(el) el.textContent = val ?? "—";
+  }
+
+  function openModal(){
+    document.getElementById("modal").classList.add("show");
+  }
+  function closeModal(){
+    document.getElementById("modal").classList.remove("show");
+    setEditing(false);
+    setMsg("");
+    closeCadWs();
+  }
+
+  function setEditing(on){
+    isEditing = !!on;
+    document.getElementById("editBadge").textContent = on ? "تعديل" : "عرض";
+    document.getElementById("editFormCard").style.display = on ? "" : "none";
+    document.getElementById("btnEdit").style.display = on ? "none" : "";
+    document.getElementById("btnSave").style.display = on ? "" : "none";
+    document.getElementById("btnCancel").style.display = on ? "" : "none";
+  }
+
+  function syncEditFieldsFromReport(r){
+    document.getElementById("editDetails").value = r.details || "";
+    document.getElementById("editLocText").value = r.location_text || "";
+    document.getElementById("editInj").value = (r.injured_count ?? 0);
+    document.getElementById("editSev").value = r.severity || "medium";
+  }
+
+  function populateModal(r){
+    currentReport = r;
+
+    document.getElementById("mTitle").textContent = `تفاصيل بلاغ CAD #${r.cad_number}`;
+    const statusText = (r.is_closed || r.closed) ? "مغلق" : "مفتوح";
+    const statusClass = (r.is_closed || r.closed) ? "closed" : "ready";
+
+    const sp = document.getElementById("mStatusPill");
+    sp.className = `pill ${statusClass}`;
+    sp.innerHTML = `<i class="fa-solid fa-circle"></i> ${statusText}`;
+
+    setField("fCad", r.cad_number || "-");
+    setField("fType", r.case_type || r.type || "-");
+    setField("fSeverity", r.severity_display || r.severity || "-");
+    setField("fInj", (r.injured_count ?? "-"));
+    setField("fAge", (r.age ?? "-"));
+    setField("fCon", (r.is_conscious === true ? "واعي" : (r.is_conscious === false ? "غير واعي" : "-")));
+    setField("fResp", r.responder_name || r.responder || "-");
+    modalSelectedResponderId = (r.responder_id != null) ? String(r.responder_id) : null;
+    modalSelectedResponderName = (r.responder_name || r.responder || null);
+    setField("fCreated", r.created_at || "-");
+    setField("fDisp", r.dispatched_at || "-");
+    setField("fAcc", r.accepted_at || "-");
+    setField("fArr", r.arrival_time || "-");
+    setField("fDur", r.response_duration || "-");
+    setField("fClosedAt", r.closed_at || "-");
+
+    const coords = (r.latitude != null && r.longitude != null) ? `${r.latitude}, ${r.longitude}` : "—";
+    setField("fCoords", coords);
+
+    const isClosed = !!(r.is_closed || r.closed);
+    document.getElementById("actionRow").style.display = isClosed ? "none" : "";
+    document.getElementById("editRow").style.display = isClosed ? "none" : "";
+
+    setEditing(false);
+    syncEditFieldsFromReport(r);
+
+    openModal();
+    ensureModalMap(r);
+
+    // ✅ الأهم: حمّل السجل من DB عبر HTTP (مضمون)
+    const rid = r.id ?? r.pk ?? r.report_id ?? null;
+    resetActivityUI();
+    if(rid != null){
+      loadActivityHistory(rid);   // ✅ هذا اللي يخليك تشوف الرسائل بعد ما تقفل وتفتح
+      connectCadWs(rid);          // بث لحظي فقط
+    }
+  }
+
+  function ensureModalMap(r){
+    if(!(window.google && google.maps)) return;
+
+    const has = (r.latitude != null && r.longitude != null);
+    const center = has ? { lat: Number(r.latitude), lng: Number(r.longitude) } : { lat: MAP_CENTER.lat, lng: MAP_CENTER.lng };
+    modalLatLng = has ? center : null;
+
+    if(!modalMap){
+      modalMap = new google.maps.Map(document.getElementById("modalMap"), {
+        center,
+        zoom: has ? 14 : Math.max(MAP_CENTER.zoom, 6),
+        mapTypeId: "roadmap",
+        gestureHandling: "greedy",
+      });
+
+      modalMap.addListener("click", (e) => {
+        if(!isEditing) return;
+        if(!canEditCurrent()) return;
+        modalLatLng = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+        placeOrMoveModalMarker(modalLatLng);
+        setField("fCoords", `${modalLatLng.lat.toFixed(6)}, ${modalLatLng.lng.toFixed(6)}`);
+      });
+    } else {
+      google.maps.event.trigger(modalMap, "resize");
+      modalMap.setCenter(center);
+      modalMap.setZoom(has ? 14 : Math.max(MAP_CENTER.zoom, 6));
+    }
+
+    if(has){
+      placeOrMoveModalMarker(center);
+    } else {
+      if(modalMarker) { modalMarker.setMap(null); modalMarker = null; }
+    }
+
+    renderModalResponders();
+  }
+
+  function placeOrMoveModalMarker(latlng){
+    if(!(window.google && google.maps && modalMap)) return;
+    if(!modalMarker){
+      modalMarker = new google.maps.Marker({
+        map: modalMap,
+        position: latlng,
+        draggable: false,
+        icon: { url: ICON_CAD, scaledSize: new google.maps.Size(34, 34) }
+      });
+    }else{
+      modalMarker.setPosition(latlng);
+      modalMarker.setMap(modalMap);
+    }
+  }
+
+  function clearModalResponderMarkers(){
+    for(const m of modalResponderMarkers){ try{ m.setMap(null);}catch(_e){} }
+    modalResponderMarkers = [];
+  }
+
+  function renderModalResponders(){
+    if(!(window.google && google.maps && modalMap)) return;
+    clearModalResponderMarkers();
+
+    const list = Array.isArray(respondersRaw) ? respondersRaw : [];
+    for(const r of list){
+      const lat = (r.latitude ?? r.lat);
+      const lng = (r.longitude ?? r.lng);
+      if(lat == null || lng == null) continue;
+
+      const pos = { lat: Number(lat), lng: Number(lng) };
+      if(Number.isNaN(pos.lat) || Number.isNaN(pos.lng)) continue;
+
+      const name = r.name || r.full_name || r.display_name || r.responder || r.username || "مستجيب";
+      const rid = r.id ?? r.responder_id ?? r.pk ?? r.user_id ?? null;
+
+      const mk = new google.maps.Marker({
+        map: modalMap,
+        position: pos,
+        clickable: true,
+        icon: { url: ICON_RESPONDER, scaledSize: new google.maps.Size(28, 28) },
+        title: String(name),
+      });
+
+      mk.addListener("click", async () => {
+        if(!isEditing) return;
+        if(!canEditCurrent()) return;
+        if(rid == null){
+          setMsg("لا يمكن تحديد المستجيب (معرف غير متوفر).", true);
+          return;
+        }
+        modalSelectedResponderId = String(rid);
+        modalSelectedResponderName = String(name);
+        setField("fResp", modalSelectedResponderName);
+        setMsg("تم اختيار المستجيب: " + modalSelectedResponderName);
+      });
+
+      modalResponderMarkers.push(mk);
+    }
+  }
+
+  function findReportByCad(cad){
+    return reportsRaw.find(x => String(x.cad_number) === String(cad)) || null;
+  }
+
+  function renderTable(items){
+    const tb = document.getElementById("tbody");
+    tb.innerHTML = "";
+    document.getElementById("tblCount").textContent = items.length;
+
+    if(items.length === 0){
+      tb.innerHTML = `<tr><td colspan="7" style="color:var(--muted); font-weight:800;">لا يوجد نتائج حسب الفلاتر الحالية</td></tr>`;
+      return;
+    }
+
+    for(const r of items){
+      const tr = document.createElement("tr");
+      tr.style.cursor = "pointer";
+      tr.dataset.cad = String(r.cad_number || "");
+      tr.innerHTML = `
+        <td><button class="cad-link" type="button" data-cad="${escapeHtml(r.cad_number)}">${escapeHtml(r.cad_number)}</button></td>
+        <td>${escapeHtml(r.case_type || r.type || "-")}</td>
+        <td>
+          <span class="pill ${(r.is_closed || r.closed) ? "closed" : "ready"}">
+            ${(r.is_closed || r.closed) ? '<i class="fa-solid fa-lock"></i> مغلق' : '<i class="fa-solid fa-bolt"></i> مفتوح'}
+          </span>
+        </td>
+        <td>${escapeHtml(r.region_name || r.region || "-")}</td>
+        <td>${escapeHtml(r.responder_name || r.responder || "-")}</td>
+        <td>${escapeHtml(r.created_at || "-")}</td>
+        <td>${escapeHtml(r.response_duration || "-")}</td>
+      `;
+
+      tr.addEventListener("click", ()=> populateModal(r));
+      tb.appendChild(tr);
+    }
+
+    document.querySelectorAll(".cad-link").forEach(btn=>{
+      btn.addEventListener("click", (e)=>{
+        e.stopPropagation();
+        const cad = btn.getAttribute("data-cad");
+        const r = findReportByCad(cad);
+        if(r) populateModal(r);
+      });
+    });
+  }
+
+  // ====== Load data ======
+  async function loadCad(){
+    try{
+      const res = await fetch(API_LIST_URL, { credentials: "same-origin" });
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+
+      reportsRaw = Array.isArray(data.reports) ? data.reports : (Array.isArray(data) ? data : []);
+      respondersRaw = Array.isArray(data.responders) ? data.responders : [];
+
+
+      // ===== Detect events for notifications =====
+      const events = detectCadEvents(reportsRaw);
+      for(const ev of events){
+        const key = `${ev.kind}:${ev.cad_number}`;
+        if(notifyOnce(key, 3500)){
+          showEvent(ev.kind, ev.cad_number, ev.responder_name);
+        }
+      }
+
+      const total = reportsRaw.length;
+      const closed = reportsRaw.filter(r => (r.is_closed || r.closed)).length;
+      const open = total - closed;
+
+      document.getElementById("stTotal").textContent = total;
+      document.getElementById("stClosed").textContent = closed;
+      document.getElementById("stOpen").textContent = open;
+      document.getElementById("stUpdated").textContent = new Date().toLocaleString("ar-SA");
+
+      renderTable(reportsRaw);
+      renderCadMarkers(reportsRaw);
+      renderResponderMarkers(respondersRaw);
+
+      if(document.getElementById("modal").classList.contains("show")){
+        renderModalResponders();
+      }
+    }catch(e){
+      console.error(e);
+      setToast("تعذر تحميل البيانات من الخادم.", false);
+    }
+  }
+
+  // ====== Actions ======
+  async function postAction(url, payload, method="POST"){
+    const res = await fetch(url, {
+      method: method,
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCsrfToken(),
+      },
+      body: JSON.stringify(payload || {}),
+    });
+    const data = await res.json().catch(()=> ({}));
+    if(!res.ok){
+      const msg = data.detail || data.error || ("خطأ: " + res.status);
+      throw new Error(msg);
+    }
+    return data;
+  }
+
+  function getCsrfToken(){
+    const m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? m[1] : "";
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+
+    // ===== Activity Send =====
+    const btnSendActivity = document.getElementById("btnSendActivity");
+    const activityMsg = document.getElementById("activityMsg");
+
+    function getActivityText(){
+      if(!activityMsg || typeof activityMsg.value !== "string") return "";
+      return activityMsg.value.trim();
+    }
+
+    async function sendActivity(){
+      if(!currentReport) return;
+
+      const rid = currentReport.id ?? currentReport.pk ?? currentReport.report_id ?? null;
+      if(rid == null){
+        setMsg("لا يمكن إرسال ملاحظة: معرف البلاغ غير متوفر.", true);
+        return;
+      }
+
+      const msg = getActivityText();
+      if(!msg){
+        setMsg("الرسالة مطلوبة.", true);
+        try{ activityMsg?.focus(); }catch(_e){}
+        return;
+      }
+
+      btnSendActivity?.setAttribute("disabled", "disabled");
+
+      try{
+        await ensureWsAndSend(rid, { message: msg });
+        activityMsg.value = "";
+        setMsg("");
+
+        // ✅ ضمان: بعد الإرسال حمّل السجل من DB
+        await loadActivityHistory(rid);
+      }catch(e){
+        setMsg(e.message || "تعذر إرسال الرسالة. تأكد من اتصال WebSocket.", true);
+      }finally{
+        btnSendActivity?.removeAttribute("disabled");
+      }
+    }
+
+    btnSendActivity?.addEventListener("click", sendActivity);
+
+    activityMsg?.addEventListener("keydown", (e) => {
+      if(e.key === "Enter" && !e.shiftKey){
+        e.preventDefault();
+        sendActivity();
+      }
+    });
+
+    // ===== Modal =====
+    document.getElementById("mClose").addEventListener("click", closeModal);
+    document.getElementById("modal").addEventListener("click", (e)=>{
+      if(e.target === document.getElementById("modal")) closeModal();
+    });
+
+    document.getElementById("btnEdit").addEventListener("click", ()=>{
+      if(!canEditCurrent()){
+        setMsg("لا يمكن التعديل على بلاغ مغلق.", true);
+        return;
+      }
+      setEditing(true);
+      setMsg("تم تفعيل وضع التعديل. يمكنك تعديل الحقول والنقر على الخريطة لتغيير الموقع.");
+      if(modalMap) google.maps.event.trigger(modalMap, "resize");
+    });
+
+    document.getElementById("btnCancel").addEventListener("click", ()=>{
+      setEditing(false);
+      setMsg("تم إلغاء التعديل.");
+      if(currentReport) syncEditFieldsFromReport(currentReport);
+      if(currentReport) ensureModalMap(currentReport);
+    });
+
+    document.getElementById("btnSave").addEventListener("click", async ()=>{
+      if(!currentReport) return;
+      if(!canEditCurrent()){
+        setMsg("لا يمكن حفظ تعديل على بلاغ مغلق.", true);
+        return;
+      }
+
+      const id = currentReport.id ?? currentReport.pk ?? currentReport.report_id;
+      const url = urlAssignedUpdate(currentReport.cad_number);
+
+      const payload = {
+        details: document.getElementById("editDetails").value || "",
+        location_text: document.getElementById("editLocText").value || "",
+        injured_count: Number(document.getElementById("editInj").value || 0),
+        severity: document.getElementById("editSev").value || "medium",
+      };
+
+      if(modalLatLng){
+        payload.latitude = modalLatLng.lat;
+        payload.longitude = modalLatLng.lng;
+      }
+
+      try{
+        await postAction(url, payload, "PATCH");
+        setToast("تم حفظ التعديلات بنجاح ✅", true);
+        setMsg("تم حفظ التعديلات.");
+        setEditing(false);
+        await loadCad();
+        const updated = reportsRaw.find(x => String(x.id ?? x.pk ?? x.report_id) === String(id));
+        if(updated) populateModal(updated);
+      }catch(e){
+        setMsg(e.message || "تعذر حفظ التعديل.", true);
+        setToast("تعذر حفظ التعديل", false);
+      }
+    });
+
+    document.getElementById("btnDispatch").addEventListener("click", async ()=>{
+      if(!currentReport) return;
+      const id = currentReport.id ?? currentReport.pk ?? currentReport.report_id;
+
+      if(!modalSelectedResponderId){
+        setMsg("اختر مستجيب من خريطة المودل قبل الترحيل.", true);
+        return;
+      }
+
+      try{
+        await postAction(urlDispatch(id), { responder_id: modalSelectedResponderId });
+        setToast("تم ترحيل البلاغ ✅", true);
+        setMsg("تم ترحيل البلاغ للمستجيب: " + (modalSelectedResponderName || modalSelectedResponderId));
+        await loadCad();
+        const updated = reportsRaw.find(x => String(x.id ?? x.pk ?? x.report_id) === String(id));
+        if(updated) populateModal(updated);
+      }catch(e){
+        setMsg(e.message || "تعذر الترحيل.", true);
+        setToast("تعذر الترحيل", false);
+      }
+    });
+
+    document.getElementById("btnAccept").addEventListener("click", async ()=>{
+      if(!currentReport) return;
+      const id = currentReport.id ?? currentReport.pk ?? currentReport.report_id;
+      try{
+        await postAction(urlAccept(id), {});
+        setToast("تم تسجيل القبول ✅", true);
+        setMsg("تم تسجيل قبول البلاغ.");
+        // ✅ إشعار فوري (مرئي + صوت) مع رقم البلاغ واسم المستجيب
+        showEvent("accepted", currentReport.cad_number, (currentReport.responder_name || currentReport.responder || modalSelectedResponderName));
+        await loadCad();
+        const updated = reportsRaw.find(x => String(x.id ?? x.pk ?? x.report_id) === String(id));
+        if(updated) populateModal(updated);
+      }catch(e){
+        setMsg(e.message || "تعذر تسجيل القبول.", true);
+        setToast("تعذر القبول", false);
+      }
+    });
+
+    document.getElementById("btnArrive").addEventListener("click", async ()=>{
+      if(!currentReport) return;
+      const id = currentReport.id ?? currentReport.pk ?? currentReport.report_id;
+      try{
+        await postAction(urlArrive(id), {});
+        setToast("تم تسجيل الوصول ✅", true);
+        setMsg("تم تسجيل وصول المستجيب.");
+        // ✅ إشعار فوري (مرئي + صوت) مع رقم البلاغ واسم المستجيب
+        showEvent("arrived", currentReport.cad_number, (currentReport.responder_name || currentReport.responder || modalSelectedResponderName));
+        await loadCad();
+        const updated = reportsRaw.find(x => String(x.id ?? x.pk ?? x.report_id) === String(id));
+        if(updated) populateModal(updated);
+      }catch(e){
+        setMsg(e.message || "تعذر تسجيل الوصول.", true);
+        setToast("تعذر الوصول", false);
+      }
+    });
+
+    document.getElementById("btnClose").addEventListener("click", async ()=>{
+      if(!currentReport) return;
+      const id = currentReport.id ?? currentReport.pk ?? currentReport.report_id;
+      try{
+        await postAction(urlClose(id), {});
+        setToast("تم إغلاق البلاغ ✅", true);
+        setMsg("تم إغلاق البلاغ.");
+        await loadCad();
+        const updated = reportsRaw.find(x => String(x.id ?? x.pk ?? x.report_id) === String(id));
+        if(updated) populateModal(updated);
+      }catch(e){
+        setMsg(e.message || "تعذر إغلاق البلاغ.", true);
+        setToast("تعذر الإغلاق", false);
+      }
+    });
+
+    // Audio + Notifications
+    const banner = document.getElementById("soundBanner");
+    const btnEnableSound = document.getElementById("btnEnableSound");
+    const soundToggle = document.getElementById("soundToggle");
+    let audioUnlocked = false;
+
+    // ✅ ملفات الصوت داخل: static/sounds/
+    // نستخدم ملف واحد افتراضي لكل التنبيهات لتجنب كسر النظام إذا لم تتوفر ملفات أخرى.
+    const soundFiles = {
+      new_report: "{% static 'sounds/cad.mp3' %}",
+      accepted:   "{% static 'sounds/accept.mp3' %}",
+      arrived:    "{% static 'sounds/accept.mp3' %}",
+    };
+
+    let beep = new Audio(soundFiles.new_report);
+
+    function nowMs(){ return Date.now ? Date.now() : (new Date()).getTime(); }
+
+    function canPlaySound(){
+      return !!(soundToggle?.checked) && audioUnlocked;
+    }
+
+    function playNotifySound(kind){
+      if(!canPlaySound()) return;
+
+      const k = String(kind || "new_report");
+      const src = soundFiles[k] || soundFiles.new_report;
+
+      try{
+        if(beep.src !== src){
+          beep = new Audio(src);
+        }
+        beep.volume = 0.7;
+        beep.currentTime = 0;
+        beep.play();
+      }catch(_e){
+        // إذا فشل التشغيل، نظهر بانر التفعيل
+        try{ banner.style.display = ""; }catch(_e2){}
+      }
+    }
+
+    function notifyOnce(key, ttlMs=3000){
+      const t = nowMs();
+      const prev = Number(recentNotify.get(key) || 0);
+      if(prev && (t - prev) < ttlMs) return false;
+      recentNotify.set(key, t);
+      return true;
+    }
+
+    function responderLabel(name){
+      const n = (name == null) ? "" : String(name).trim();
+      return n ? n : "غير محدد";
+    }
+
+    function showEvent(kind, cadNumber, responderName){
+      const cad = (cadNumber == null) ? "—" : String(cadNumber);
+      const resp = responderLabel(responderName);
+
+      const k = String(kind || "").toLowerCase();
+      const labels = {
+        new_report: "بلاغ جديد",
+        accepted: "تم قبول البلاغ",
+        arrived: "تم تسجيل الوصول",
+      };
+      const title = labels[k] || "تنبيه";
+
+      const toastText = `${title} • CAD #${cad} • المستجيب: ${resp}`;
+
+      // ✅ إشعار مرئي دائمًا
+      setToast(toastText, true);
+
+      // ✅ صوت (إذا كان مفعّلًا)
+      playNotifySound(k);
+    }
+
+    async function tryUnlockAudio(){
+      try{
+        // تجربة تشغيل قصيرة لتفعيل السماح في المتصفح
+        beep.volume = 0.0;
+        await beep.play();
+        beep.pause();
+        beep.currentTime = 0;
+
+        // ارجع للصوت الطبيعي
+        beep.volume = 0.7;
+        audioUnlocked = true;
+        banner.style.display = "none";
+      }catch(e){
+        audioUnlocked = false;
+        banner.style.display = "";
+      }
+    }
+
+    btnEnableSound.addEventListener("click", ()=> tryUnlockAudio());
+    soundToggle.addEventListener("change", ()=> {
+      if(soundToggle.checked && !audioUnlocked){
+        banner.style.display = "";
+      }else{
+        banner.style.display = "none";
+      }
+    });
+
+    tryUnlockAudio();
+
+    // auto refresh
+
+    loadCad();
+    setInterval(() => loadCad(), 5000);
+  });
+</script>
+
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap&language=ar&region=SA" async defer></script>
+{% endblock %}

@@ -122,4 +122,7 @@ urlpatterns = [
 
     path("cad/api/device-token/", register_device_token, name="cad_device_token"),
     path("cad/api/assigned/<str:cad_number>/reject/", cad_reject, name="cad_reject"),
+    
+    path("api/activity/<int:report_id>/", views.cad_activity_history, name="cad_activity_history"),
+
 ]

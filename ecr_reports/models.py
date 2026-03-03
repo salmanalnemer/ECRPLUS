@@ -1,24 +1,47 @@
 from __future__ import annotations
 
 from django.conf import settings
-from django.core.validators import MinValueValidator, RegexValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
-from django.core.exceptions import ValidationError
 
 
 
 class MedicalConditionCatalog(models.Model):
-    """كتالوج تفاصيل الحالة المرضية."""
-
-    name = models.CharField("اسم الحالة", max_length=150, unique=True)
+    name = models.CharField("نوع الحالة", max_length=150, unique=True)
     is_active = models.BooleanField("مفعّل", default=True)
+
+    # ✅ رجّعها لتفادي مشاكل قديمة (اختياري لكن مفيد)
     created_at = models.DateTimeField("تاريخ الإنشاء", auto_now_add=True)
     updated_at = models.DateTimeField("آخر تحديث", auto_now=True)
 
     class Meta:
-        verbose_name = "كتالوج الحالة المرضية"
-        verbose_name_plural = "كتالوج الحالات المرضية"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class ServiceCatalog(models.Model):
+    name = models.CharField("اسم الخدمة", max_length=150, unique=True)
+    is_active = models.BooleanField("مفعّل", default=True)
+
+    # ✅ هذا هو المهم لحل خطأ NOT NULL
+    created_at = models.DateTimeField("تاريخ الإنشاء", auto_now_add=True)
+    updated_at = models.DateTimeField("آخر تحديث", auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+    name = models.CharField("نوع الحالة", max_length=150, unique=True)
+    is_active = models.BooleanField("مفعّل", default=True)
+
+    class Meta:
+        verbose_name = "نوع حالة"
+        verbose_name_plural = "أنواع الحالات"
         ordering = ["name"]
 
     def __str__(self) -> str:
@@ -26,16 +49,14 @@ class MedicalConditionCatalog(models.Model):
 
 
 class ServiceCatalog(models.Model):
-    """كتالوج الخدمات المقدمة للمريض."""
+    """كتالوج الخدمات المقدمة."""
 
     name = models.CharField("اسم الخدمة", max_length=150, unique=True)
     is_active = models.BooleanField("مفعّل", default=True)
-    created_at = models.DateTimeField("تاريخ الإنشاء", auto_now_add=True)
-    updated_at = models.DateTimeField("آخر تحديث", auto_now=True)
 
     class Meta:
-        verbose_name = "كتالوج الخدمات المقدمة"
-        verbose_name_plural = "كتالوج الخدمات المقدمة"
+        verbose_name = "خدمة"
+        verbose_name_plural = "الخدمات"
         ordering = ["name"]
 
     def __str__(self) -> str:
@@ -43,36 +64,52 @@ class ServiceCatalog(models.Model):
 
 
 class MobileReport(models.Model):
-    """بلاغات تطبيق ECR (قادمة من الجوال فقط)."""
-
-    class Nationality(models.TextChoices):
-        SAUDI = "saudi", "سعودي"
-        RESIDENT = "resident", "مقيم"
+    """بلاغ مبسط: (المستجيب + نوع الحالة + الخدمات + الموقع + الجنس + ملاحظات)."""
 
     class Gender(models.TextChoices):
         MALE = "male", "ذكر"
         FEMALE = "female", "أنثى"
 
-    class AmbulanceCaller(models.TextChoices):
-        SELF = "self", "أنا"
-        OTHER = "other", "شخص آخر"
-
-    # الحقول الأساسية حسب متطلبات التطبيق
-    patient_name = models.CharField("اسم المريض", max_length=200)
-    national_id = models.CharField("رقم الهوية", max_length=20, blank=True, default="")
-
-    phone_validator = RegexValidator(
-        regex=r"^\+?\d{7,15}$",
-        message="رقم الجوال غير صالح. أدخل أرقام فقط ويمكن إضافة + في البداية.",
+    # ✅ المستجيب (منشئ البلاغ)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="mobile_reports",
+        verbose_name="المستجيب",
     )
-    patient_phone = models.CharField("رقم الجوال", max_length=20, validators=[phone_validator])
-    age = models.PositiveSmallIntegerField("العمر", null=True, blank=True, validators=[MinValueValidator(0)])
-    nationality = models.CharField(
-        "الجنسية",
-        max_length=20,
-        choices=Nationality.choices,
-        default=Nationality.SAUDI,
+    created_at = models.DateTimeField("تاريخ الإنشاء", default=timezone.now)
+
+    # نوع الحالة
+    medical_condition = models.ForeignKey(
+        MedicalConditionCatalog,
+        on_delete=models.PROTECT,
+        related_name="reports",
+        verbose_name="نوع الحالة",
     )
+
+    # الخدمات المقدمة
+    services = models.ManyToManyField(
+        ServiceCatalog,
+        related_name="reports",
+        verbose_name="الخدمات المقدمة",
+        blank=True,
+    )
+
+    # الموقع (الخريطة)
+    latitude = models.DecimalField(
+        "خط العرض",
+        max_digits=9,
+        decimal_places=6,
+        validators=[MinValueValidator(-90), MaxValueValidator(90)],
+    )
+    longitude = models.DecimalField(
+        "خط الطول",
+        max_digits=9,
+        decimal_places=6,
+        validators=[MinValueValidator(-180), MaxValueValidator(180)],
+    )
+
+    # الجنس
     gender = models.CharField(
         "الجنس",
         max_length=10,
@@ -80,85 +117,18 @@ class MobileReport(models.Model):
         default=Gender.MALE,
     )
 
-    medical_condition = models.ForeignKey(
-        "ecr_reports.MedicalConditionCatalog",
-        on_delete=models.PROTECT,
-        related_name="reports",
-        verbose_name="تفاصيل الحالة المرضية",
-        null=True,
-        blank=True,
-    )
-    services = models.ManyToManyField(
-        "ecr_reports.ServiceCatalog",
-        related_name="reports",
-        verbose_name="الخدمات المقدمة للمريض",
-        blank=True,
-    )
-
-    called_ambulance = models.BooleanField("هل تم طلب إسعاف؟", default=False)
-    ambulance_called_by = models.CharField(
-        "من طلب الإسعاف",
-        max_length=10,
-        choices=AmbulanceCaller.choices,
-        blank=True,
-        default="",
-        help_text="يظهر فقط إذا كان (هل تم طلب إسعاف؟) = نعم",
-    )
-
-    # الموقع
-    latitude = models.DecimalField("خط العرض", max_digits=9, decimal_places=6)
-    longitude = models.DecimalField("خط الطول", max_digits=9, decimal_places=6)
-
-    # المنطقة الإدارية (لا يسمح بالحفظ خارج حدود منطقة المستخدم)
-    region = models.ForeignKey(
-        "regions.Region",
-        on_delete=models.PROTECT,
-        related_name="mobile_reports",
-        verbose_name="المنطقة",
-    )
-
-    # تتبع الطلب
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.PROTECT,
-        related_name="mobile_reports",
-        verbose_name="المُبلّغ",
-    )
-    created_at = models.DateTimeField("تاريخ البلاغ", default=timezone.now)
-
-    send_to_997 = models.BooleanField(
-        "إرسال توثيق الحالة إلى 997",
-        default=False,
-        help_text="يوثق رغبة المستخدم (يتم إرجاع نص جاهز للمشاركة/الإبلاغ عبر التطبيق).",
-    )
-
-
-    # =========================
-    # Vital Signs (NEW)
-    # =========================
-    temperature = models.DecimalField("درجة الحرارة", max_digits=4, decimal_places=1, null=True, blank=True)
-    pulse_rate = models.PositiveSmallIntegerField("معدل النبض", null=True, blank=True, validators=[MinValueValidator(0)])
-    blood_pressure = models.CharField("ضغط الدم", max_length=20, blank=True, default="")
-    respiratory_rate = models.PositiveSmallIntegerField("معدل التنفس", null=True, blank=True, validators=[MinValueValidator(0)])
-    blood_sugar = models.DecimalField("نسبة السكر في الدم", max_digits=5, decimal_places=2, null=True, blank=True)
+    # ✅ ملاحظات
     notes = models.TextField("ملاحظات", blank=True, default="")
 
     class Meta:
-        verbose_name = "بلاغ تطبيق"
-        verbose_name_plural = "بلاغات التطبيق"
-        ordering = ["-created_at"]
+        verbose_name = "بلاغ"
+        verbose_name_plural = "البلاغات"
+        ordering = ["-created_at", "-id"]
         indexes = [
-            models.Index(fields=["region", "created_at"]),
             models.Index(fields=["created_by", "created_at"]),
+            models.Index(fields=["medical_condition"]),
+            models.Index(fields=["gender"]),
         ]
 
     def __str__(self) -> str:
-        return f"بلاغ #{self.pk} - {self.patient_name}"
-
-
-def clean(self) -> None:
-    # منطق الاعتماد بين الحقول
-    if self.called_ambulance and not self.ambulance_called_by:
-        raise ValidationError({"ambulance_called_by": "حدد (أنا/شخص آخر) عند اختيار طلب إسعاف."})
-    if not self.called_ambulance and self.ambulance_called_by:
-        raise ValidationError({"ambulance_called_by": "لا يمكن تحديد هذا الحقل بدون اختيار طلب إسعاف."})
+        return f"بلاغ #{self.pk}"

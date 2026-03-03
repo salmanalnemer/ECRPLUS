@@ -7,7 +7,7 @@ from ecr_reports.views import (
     MedicalConditionCatalogViewSet,
     MobileReportViewSet,
     ServiceCatalogViewSet,
-    reports_ecr_dashboard,  # ✅ Web dashboard view
+    reports_ecr_dashboard,
 )
 
 app_name = "ecr_reports"
@@ -18,15 +18,12 @@ router.register(r"catalog/services", ServiceCatalogViewSet, basename="services")
 router.register(r"mobile-reports", MobileReportViewSet, basename="mobile-reports")
 
 urlpatterns = [
-    # ==========================
-    # Web Dashboard
-    # ==========================
-    path("dashboard/ecr/", reports_ecr_dashboard, name="reports_ecr_dashboard"),
+    # Dashboard / Portal (Web)
+    path("dashboard/ecr-reports/", reports_ecr_dashboard, name="reports_ecr_dashboard"),
+    path("dashboard/ecr/", reports_ecr_dashboard, name="reports_ecr_dashboard_alias"),
+    # old path kept (if you used it before)
+    path("portal/reports/", reports_ecr_dashboard, name="portal_reports"),
 
-    # ==========================
-    # API
-    # ==========================
+    # API (Mobile)
     path("", include(router.urls)),
-
-    
 ]
