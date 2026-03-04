@@ -35,6 +35,11 @@ urlpatterns = [
     path("new/", views.reports_cad_page, name="page"),
     path("reports-cad-ecr/", views.reports_cad_ecr, name="reports_cad_ecr"),
     path("reports/", views.cad_reports_reports_page, name="cad_reports_reports"),
+    # ==========================
+    # Print view
+    # ==========================
+    # ✅ صفحة الطباعة (تفتح في نافذة جديدة بدون إطار، وتستخدم نسخة مبسطة من CSS)
+    path("print/<int:report_id>/", views.cad_report_print, name="print_report"),
 
     # ==========================
     # Dashboards

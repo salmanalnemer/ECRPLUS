@@ -183,3 +183,20 @@ def reports_ecr_dashboard(request):
 
 # Backward-compatible alias (if some urls imported old name)
 reports_ecr_portal_page = reports_ecr_dashboard
+
+
+from django.shortcuts import get_object_or_404
+
+from .models import MobileReport  # أو اسم موديل بلاغات ECR عندك
+
+@login_required
+def ecr_report_print(request, pk: int):
+    r = get_object_or_404(MobileReport, pk=pk)
+
+    # (اختياري/مهم) تحقق صلاحيات/فلترة منطقة لو عندك RBAC
+    # مثال: if not request.user.is_superuser and r.region_id not in allowed_regions: raise Http404()
+
+    return render(request, "dashboard/ecr_print.html", {
+        "r": r,
+        "printed_at": timezone.now(),
+    })

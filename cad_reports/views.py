@@ -12,7 +12,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Count, Q
 from django.db.models.functions import TruncDate
-from django.http import HttpRequest, JsonResponse
+from django.http import Http404, HttpRequest, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
@@ -23,6 +23,9 @@ from regions.models import Region  # ✅ NEW
 
 from .models import CADReport, CADReportActivity, CaseType, UserDeviceToken
 from .services.fcm import send_fcm_to_tokens
+
+from django.views.decorators.cache import cache_control
+from django.utils.timezone import now
 
 logger = logging.getLogger(__name__)
 
@@ -1385,3 +1388,25 @@ def cad_activity_history(request, report_id: int):
         })
 
     return JsonResponse({"items": items})
+# ==========================
+# CAD Report Print View
+# ==========================
+# ==========================
+# CAD Report Print View
+# ==========================
+@login_required
+@cache_control(no_store=True)
+def cad_report_print(request, report_id: int):
+    from .models import CADReport  # الاسم الصحيح
+
+    # ✅ العلاقات الصحيحة حسب موديلك
+    report = get_object_or_404(
+        CADReport.objects.select_related("region", "assigned_responder", "created_by"),
+        pk=report_id,
+    )
+
+    return render(
+        request,
+        "dashboard/print_report.html",
+        {"r": report, "printed_at": now()},
+    )

@@ -420,10 +420,11 @@
             <th style="min-width: 160px;">المستجيب</th>
             <th style="min-width: 130px;">نوع الحالة</th>
             <th style="min-width: 260px;">الخدمات</th>
-            <th style="min-width: 100px;">الجنس</th>
+            <th style="min-width: 70px;">الجنس</th>
             <th style="min-width: 300px;">ملاحظات</th>
-            <th style="min-width: 150px;">التاريخ</th>
-            <th style="min-width: 130px;">الموقع</th>
+            <th style="min-width: 100px;">التاريخ</th>
+            <th style="min-width: 60px;">الموقع</th>
+            <th style="min-width: 60px;">إجراءات</th>
           </tr>
         </thead>
         <tbody>
@@ -485,6 +486,14 @@
                 <span style="color: var(--text-muted);">—</span>
               {% endif %}
             </td>
+            <td>
+            <a href="{% url 'ecr_reports:report_print' r.id %}"
+              target="_blank"
+              class="map-link"
+              title="طباعة البلاغ">
+              <i class="fa fa-print"></i> طباعة
+            </a>
+          </td>
           </tr>
           {% endfor %}
         </tbody>
