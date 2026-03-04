@@ -84,6 +84,7 @@ urlpatterns = [
     # Web Apps
     path("accounts/", include("accounts.urls")),
     path("cad/", include(("cad_reports.urls", "cad_reports"), namespace="cad_reports")),
+    path("api/cad/", include("cad_reports.urls")),
     path("responders/", include("responders.urls")),
     path("support/", include(("support_tickets.urls", "support_tickets"), namespace="support_tickets")),
 

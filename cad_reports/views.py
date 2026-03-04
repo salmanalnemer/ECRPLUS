@@ -540,7 +540,11 @@ def api_dashboard_summary(request):
     days_30_start = today_start - timedelta(days=29)
 
     cad_qs = _apply_viewer_region_filter(CADReport.objects.all(), request.user, "region_id")
-    ecr_qs = _apply_viewer_region_filter(MobileReport.objects.all(), request.user, "region_id")
+    ecr_qs = _apply_viewer_region_filter(
+    MobileReport.objects.select_related("created_by", "created_by__region"),
+    request.user,
+    "created_by__region_id",
+    )
 
     cad_today = cad_qs.filter(created_at__gte=today_start).count()
     ecr_today = ecr_qs.filter(created_at__gte=today_start).count()
