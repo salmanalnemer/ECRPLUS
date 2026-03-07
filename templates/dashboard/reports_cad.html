@@ -1035,7 +1035,7 @@
   <div class="stats">
     <div class="stat">
       <div>
-        <div class="k">إجمالي البلاغات</div>
+        <div class="k">إجمالي بلاغات النظام </div>
         <div class="v" id="stTotal">0</div>
       </div>
       <i class="fa-solid fa-layer-group"></i>
@@ -1491,6 +1491,7 @@
   const API_REJECT_PREFIX   = "{% url 'cad_reports:list' %}";
   const API_ARRIVE_PREFIX   = "{% url 'cad_reports:list' %}";
   const API_CLOSE_PREFIX    = "{% url 'cad_reports:list' %}";
+  const API_RESPONDERS_URL  = "{% url 'cad_reports:responders_online_json' %}";
 
   function urlDispatch(id){ return `${API_DISPATCH_PREFIX}${id}/dispatch/`; }
   function urlAccept(id){   return `${API_ACCEPT_PREFIX}${id}/accept/`; }
@@ -2525,12 +2526,21 @@ document.getElementById("editLocText").value = r.location_text || "";
   // ===== Load data =====
   async function loadCad(isInitial=false){
     try{
-      const res = await fetch(API_LIST_URL, { credentials: "same-origin" });
-      if(!res.ok) throw new Error("HTTP " + res.status);
-      const data = await res.json();
+      const [reportsRes, respondersRes] = await Promise.all([
+        fetch(API_LIST_URL, { credentials: "same-origin" }),
+        fetch(API_RESPONDERS_URL, { credentials: "same-origin" }),
+      ]);
+      if(!reportsRes.ok) throw new Error("Reports HTTP " + reportsRes.status);
+      if(!respondersRes.ok) throw new Error("Responders HTTP " + respondersRes.status);
+      const data = await reportsRes.json();
+      const respondersData = await respondersRes.json();
 
       reportsRaw = Array.isArray(data.reports) ? data.reports : (Array.isArray(data) ? data : []);
-      respondersRaw = Array.isArray(data.responders) ? data.responders : [];
+      respondersRaw = Array.isArray(respondersData.results)
+        ? respondersData.results
+        : (Array.isArray(respondersData.responders)
+            ? respondersData.responders
+            : (Array.isArray(respondersData.data) ? respondersData.data : []));
 
       const events = detectCadEvents(reportsRaw);
       for(const ev of events){
@@ -2851,22 +2861,41 @@ document.getElementById("btnApplyFilters")?.addEventListener("click", applyFilte
         setToast("اختر مستجيب أولاً", false);
         return;
       }
+      if(id == null || id === ""){
+        setToast("معرف البلاغ غير متوفر للترحيل", false);
+        return;
+      }
 
       const selectedOpt = transferSelect.options[transferSelect.selectedIndex];
       modalSelectedResponderId = String(targetId);
       modalSelectedResponderName = selectedOpt ? selectedOpt.textContent : modalSelectedResponderId;
 
       try{
+        document.getElementById("transferConfirm").disabled = true;
         await postAction(urlDispatch(id), { responder_id: modalSelectedResponderId });
+
+        if(currentReport){
+          currentReport.responder_id = modalSelectedResponderId;
+          currentReport.responder_name = modalSelectedResponderName;
+          currentReport.responder = modalSelectedResponderName;
+        }
+
         closeTransferDialog();
         setToast("تم ترحيل البلاغ ✅", true);
         setMsg("تم ترحيل البلاغ للمستجيب: " + (modalSelectedResponderName || modalSelectedResponderId));
         await loadCad(false);
-        const updated = reportsRaw.find(x => String(x.id ?? x.pk ?? x.report_id) === String(id));
+
+        let updated = reportsRaw.find(x => String(x.id ?? x.pk ?? x.report_id) === String(id));
+        if(!updated && currentReport?.cad_number != null){
+          updated = reportsRaw.find(x => String(x.cad_number) === String(currentReport.cad_number));
+        }
         if(updated) populateModal(updated);
       }catch(e){
+        console.error("dispatch failed", e);
         setMsg(e.message || "تعذر الترحيل.", true);
         setToast("تعذر الترحيل", false);
+      }finally{
+        document.getElementById("transferConfirm").disabled = false;
       }
     });
 

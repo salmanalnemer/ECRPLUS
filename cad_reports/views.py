@@ -26,8 +26,29 @@ from .services.fcm import send_fcm_to_tokens
 
 from django.views.decorators.cache import cache_control
 from django.utils.timezone import now
-
+from django.utils.dateparse import parse_datetime
 logger = logging.getLogger(__name__)
+
+
+def _parse_dt(value):
+    if not value:
+        return None
+
+    if hasattr(value, "isoformat"):
+        return value
+
+    text = str(value).strip()
+    if not text:
+        return None
+
+    dt = parse_datetime(text)
+    if dt is None:
+        return None
+
+    if timezone.is_naive(dt):
+        dt = timezone.make_aware(dt, timezone.get_current_timezone())
+
+    return dt
 
 def _actor_name(user) -> str:
     """Return a safe display name for custom User models that may not have `username`."""
@@ -54,6 +75,20 @@ def _actor_name(user) -> str:
         if isinstance(v, str) and v.strip():
             return v.strip()
     return str(user)
+
+
+def _log_activity(report, *, user=None, kind=None, action=None, message=""):
+    """Safe helper to append an activity timeline row without breaking workflow actions."""
+    kind_value = kind or CADReportActivity.Kind.SYSTEM
+    action_value = action or CADReportActivity.Action.NOTE
+    message_value = "" if message is None else str(message)
+    return CADReportActivity.objects.create(
+        report=report,
+        user=user if getattr(user, 'pk', None) else None,
+        kind=kind_value,
+        action=action_value,
+        message=message_value,
+    )
 
 
 User = get_user_model()  # ✅ NEW
@@ -1023,7 +1058,12 @@ def list_reports(request: HttpRequest) -> JsonResponse:
 @login_required
 @require_POST
 def dispatch_report(request: HttpRequest, report_id: int) -> JsonResponse:
-    """Dispatch/assign report to a responder (Web dashboard). Return JSON always."""
+    """Dispatch/assign report to a responder (Web dashboard). Return JSON always.
+
+    يدعم نوعين من الطلبات:
+    1) FormData / application/x-www-form-urlencoded
+    2) application/json من واجهة لوحة CAD الحالية
+    """
     if not request.user.has_perm("cad_reports.can_dispatch_cad_report"):
         return JsonResponse(
             {"ok": False, "error": "permission_denied", "detail": "ليس لديك صلاحية ترحيل البلاغ."},
@@ -1032,11 +1072,79 @@ def dispatch_report(request: HttpRequest, report_id: int) -> JsonResponse:
 
     r = get_object_or_404(CADReport, pk=report_id)
     try:
+        payload = {}
+        ctype = (request.content_type or "").lower()
+        if "application/json" in ctype:
+            try:
+                payload = json.loads(request.body.decode("utf-8") or "{}")
+            except Exception:
+                payload = {}
+
+        def _pick(*keys, default=""):
+            for key in keys:
+                val = None
+                if payload:
+                    val = payload.get(key)
+                if val in (None, ""):
+                    val = request.POST.get(key)
+                if val in (None, ""):
+                    val = request.GET.get(key)
+                if val not in (None, ""):
+                    return val
+            return default
+
         when = _parse_when_param(request)
+        if not when and payload:
+            when = _parse_dt(_pick("when", "dispatched_at", default=""))
         when = _safe_when_not_before_created(r, when)
-        force = _bool_param(request, "force")
-        source = (request.POST.get("source") or "web_manual").strip() or "web_manual"
-        r.mark_dispatched(when=when, by=request.user, source=source, force=force)
+
+        force_raw = _pick("force", default="")
+        force = str(force_raw).strip().lower() in {"1", "true", "yes", "y", "on"}
+        source = str(_pick("source", default="web_manual")).strip() or "web_manual"
+
+        responder_id = str(
+            _pick("responder_id", "assigned_responder_id", "user_id", default="")
+        ).strip()
+
+        if not responder_id:
+            return JsonResponse(
+                {"ok": False, "error": "responder_required", "detail": "يجب اختيار مستجيب قبل الترحيل."},
+                status=400,
+            )
+
+        try:
+            target_user = User.objects.get(pk=int(responder_id))
+        except (ValueError, TypeError, User.DoesNotExist):
+            return JsonResponse(
+                {"ok": False, "error": "invalid_responder", "detail": "المستجيب المختار غير موجود."},
+                status=400,
+            )
+
+        with transaction.atomic():
+            r.assigned_responder = target_user
+            if hasattr(r, "assigned_to"):
+                try:
+                    r.assigned_to = target_user
+                except Exception:
+                    pass
+            r.save(update_fields=["assigned_responder", "updated_at"])
+            r.mark_dispatched(when=when, by=request.user, source=source, force=force)
+
+        try:
+            _log_activity(
+                r,
+                user=request.user,
+                kind=CADReportActivity.Kind.SYSTEM,
+                action=CADReportActivity.Action.DISPATCHED,
+                message=f"تم ترحيل البلاغ للمستجيب: {getattr(target_user, 'full_name', None) or getattr(target_user, 'username', None) or target_user}",
+            )
+        except Exception:
+            logger.exception("dispatch_report activity log failed")
+
+        try:
+            r.refresh_from_db()
+        except Exception:
+            pass
     except ValidationError as e:
         logger.exception("dispatch_report validation error")
         return JsonResponse({"ok": False, "error": "validation_error", "detail": e.message_dict}, status=400)
