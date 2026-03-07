@@ -975,8 +975,11 @@ def create_report(request: HttpRequest) -> JsonResponse:
             if not assigned_user_id:
                 return
             tokens = list(
-                UserDeviceToken.objects.filter(user_id=assigned_user_id, is_active=True)
+                UserDeviceToken.objects.filter(user_id=assigned_user_id)
+                .exclude(token__isnull=True)
+                .exclude(token__exact="")
                 .values_list("token", flat=True)
+                .distinct()
             )
             if not tokens:
                 return

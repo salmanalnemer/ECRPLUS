@@ -432,6 +432,7 @@ class CADReportActivity(models.Model):
         DISPATCHED = "dispatched", "تم ترحيل البلاغ"
         ACCEPTED = "accepted", "تم قبول البلاغ"
         ARRIVED = "arrived", "تم الوصول"
+        REJECTED = "rejected", "تم رفض البلاغ"
         CLOSED = "closed", "تم إغلاق البلاغ"
         NOTE = "note", "ملاحظة"
 

@@ -3,21 +3,40 @@ from __future__ import annotations
 import logging
 
 from django.utils.dateparse import parse_date
-
-from rest_framework.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 from django.db import models
 
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from .models import CADReport, CADReportActivity, UserDeviceToken
 
 logger = logging.getLogger(__name__)
+
+
+def _user_display_name(user) -> str:
+    try:
+        full_name = (user.get_full_name() or "").strip()
+        if full_name:
+            return full_name
+    except Exception:
+        pass
+
+    for attr in ("full_name", "name", "username"):
+        try:
+            value = getattr(user, attr, "")
+            value = str(value).strip()
+            if value:
+                return value
+        except Exception:
+            pass
+
+    return "مستخدم غير معروف"
+
 
 def _log_activity(report: CADReport, *, user, kind: str, action: str, message: str = "") -> None:
     """سجل إجراء/ملاحظة في Timeline/Chat للبلاغ."""
@@ -33,14 +52,11 @@ def _log_activity(report: CADReport, *, user, kind: str, action: str, message: s
         logger.exception("CADReportActivity create failed")
 
 
-# نفس القيم المستخدمة في views.py
 PRIVILEGED_GROUP_CODES = {"SYSADMIN", "NEMSCC"}
 
 
 def _get_user_group_code(user) -> str:
-    # نسخة خفيفة لتجنب circular imports
     try:
-        # لو عندك user.group_code مباشرة
         code = getattr(user, "group_code", None)
         if code:
             return str(code)
@@ -48,7 +64,6 @@ def _get_user_group_code(user) -> str:
         pass
 
     try:
-        # لو عندك user.groups (Django groups) واستخدمت أسم المجموعة كـ code
         g = user.groups.first()
         if g:
             return str(g.name).upper()
@@ -59,13 +74,7 @@ def _get_user_group_code(user) -> str:
 
 
 def _ensure_can_act(report: CADReport, user, *, allow_unassigned: bool = False) -> None:
-    """تحقق صلاحية المستجيب على البلاغ.
-
-    - المجموعات المميّزة (SYSADMIN/NEMSCC) مسموح لها دائماً.
-    - الوضع الطبيعي: المستجيب يتصرف فقط في البلاغ المعيّن له.
-    - عند allow_unassigned=True: يسمح بتنفيذ الإجراء إذا لم يكن البلاغ معيّناً لأحد بعد.
-      (مطلوب لزر "قبول" في تطبيق الجوال عندما يظهر البلاغ للمستجيب قبل تعيينه)
-    """
+    """تحقق صلاحية المستجيب على البلاغ."""
     group = _get_user_group_code(user)
     if group in PRIVILEGED_GROUP_CODES:
         return
@@ -78,42 +87,32 @@ def _ensure_can_act(report: CADReport, user, *, allow_unassigned: bool = False) 
 
 
 def _get_report_by_cad_for_user(cad_number: str, user, *, allow_unassigned: bool = False) -> CADReport:
-    r = get_object_or_404(CADReport, cad_number=str(cad_number).strip())
-    _ensure_can_act(r, user, allow_unassigned=allow_unassigned)
-    return r
+    report = get_object_or_404(CADReport, cad_number=str(cad_number).strip())
+    _ensure_can_act(report, user, allow_unassigned=allow_unassigned)
+    return report
 
 
-def _status_of(r: CADReport) -> str:
-    """حالة نصية مبسطة (للتطبيق)."""
-    if r.is_closed:
+def _status_of(report: CADReport) -> str:
+    if report.is_closed:
         return "CLOSED"
-    if r.arrived_at:
+    if report.arrived_at:
         return "ARRIVED"
-    if r.accepted_at:
+    if report.accepted_at:
         return "ACCEPTED"
-    if r.dispatched_at:
+    if report.dispatched_at:
         return "DISPATCHED"
     return "OPEN"
 
 
 def _user_region_id(user):
-    rid = getattr(user, "region_id", None)
-    return rid
+    return getattr(user, "region_id", None)
 
 
 @api_view(["GET"])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def cad_assigned_reports(request):
-    """قائمة بلاغات CAD للتطبيق (JWT).
-
-    سياسة الإظهار:
-    - SYSADMIN/NEMSCC: كل البلاغات غير المغلقة.
-    - غير ذلك:
-        - البلاغات المعيّنة للمستخدم.
-        - + البلاغات غير المعيّنة (assigned_responder=None) داخل منطقة المستخدم (إن وُجدت).
-          إذا المستخدم بدون منطقة: نعرض غير المعيّن فقط (بدون تقييد منطقة) لتجنب فراغ الشاشة.
-    """
+    """قائمة بلاغات CAD للتطبيق (JWT)."""
     group = _get_user_group_code(request.user)
 
     qs = CADReport.objects.select_related("case_type", "region", "assigned_responder")
@@ -123,48 +122,52 @@ def cad_assigned_reports(request):
         rid = _user_region_id(request.user)
         if rid:
             qs = qs.filter(
-                (
-                    # assigned to me
-                    models.Q(assigned_responder=request.user)
-                    |
-                    # unassigned in my region
-                    models.Q(assigned_responder__isnull=True, region_id=rid)
-                )
+                models.Q(assigned_responder=request.user)
+                | models.Q(assigned_responder__isnull=True, region_id=rid)
             )
         else:
             qs = qs.filter(
                 models.Q(assigned_responder=request.user) | models.Q(assigned_responder__isnull=True)
             )
 
-    def _safe_str(v):
-        return "-" if v is None else str(v)
+    def _safe_str(value):
+        return "-" if value is None else str(value)
 
     results = []
-    for r in qs[:250]:
+    for report in qs[:250]:
         results.append(
             {
-                "id": r.id,
-                "cad_number": r.cad_number,
-                "case_type": getattr(r.case_type, "name", None) or getattr(r.case_type, "name_ar", None) or str(r.case_type),
-                "severity": r.severity,
-                "created_at": r.created_at.isoformat() if r.created_at else None,
-                "injured_count": r.injured_count,
-                "age": r.age,
-                "is_conscious": r.is_conscious,
-                "location_text": r.location_text,
-                "details": r.details,
-                "latitude": r.latitude,
-                "longitude": r.longitude,
-                "region": _safe_str(getattr(r.region, "name_ar", None) or getattr(r.region, "name_en", None) or r.region),
-                "responder": _safe_str(getattr(r.assigned_responder, "get_full_name", lambda: None)() or getattr(r.assigned_responder, "username", None) or r.assigned_responder),
-                "status": _status_of(r),
-                "dispatched_at": r.dispatched_at.isoformat() if r.dispatched_at else None,
-                "accepted_at": r.accepted_at.isoformat() if r.accepted_at else None,
-                "arrival_time": r.arrived_at.isoformat() if r.arrived_at else None,
-                "is_closed": r.is_closed,
-                "closed_at": r.closed_at.isoformat() if r.closed_at else None,
-                # response_duration (اختياري)
-                "response_duration": r.response_duration if hasattr(r, "response_duration") else None,
+                "id": report.id,
+                "cad_number": report.cad_number,
+                "case_type": getattr(report.case_type, "name", None)
+                or getattr(report.case_type, "name_ar", None)
+                or str(report.case_type),
+                "severity": report.severity,
+                "created_at": report.created_at.isoformat() if report.created_at else None,
+                "injured_count": report.injured_count,
+                "age": report.age,
+                "is_conscious": report.is_conscious,
+                "location_text": report.location_text,
+                "details": report.details,
+                "latitude": report.latitude,
+                "longitude": report.longitude,
+                "region": _safe_str(
+                    getattr(report.region, "name_ar", None)
+                    or getattr(report.region, "name_en", None)
+                    or report.region
+                ),
+                "responder": _safe_str(
+                    getattr(report.assigned_responder, "get_full_name", lambda: None)()
+                    or getattr(report.assigned_responder, "username", None)
+                    or report.assigned_responder
+                ),
+                "status": _status_of(report),
+                "dispatched_at": report.dispatched_at.isoformat() if report.dispatched_at else None,
+                "accepted_at": report.accepted_at.isoformat() if report.accepted_at else None,
+                "arrival_time": report.arrived_at.isoformat() if report.arrived_at else None,
+                "is_closed": report.is_closed,
+                "closed_at": report.closed_at.isoformat() if report.closed_at else None,
+                "response_duration": report.response_duration if hasattr(report, "response_duration") else None,
             }
         )
 
@@ -177,52 +180,72 @@ def cad_assigned_reports(request):
 def cad_accept(request, cad_number: str):
     """قبول البلاغ (موبايل) باستخدام JWT.
 
-    ✅ يسمح بالقبول إذا كان البلاغ غير معيّن لأحد بعد، وفي هذه الحالة يتم تعيينه للمستخدم الحالي.
+    يسمح بالقبول إذا كان البلاغ غير معيّن لأحد بعد، وفي هذه الحالة يتم تعيينه
+    للمستخدم الحالي أولاً ثم تسجيل القبول.
     """
-    r = _get_report_by_cad_for_user(cad_number, request.user, allow_unassigned=True)
+    report = _get_report_by_cad_for_user(cad_number, request.user, allow_unassigned=True)
     try:
-        # إذا البلاغ غير معيّن، نعيّنه لهذا المستجيب أولاً (Atomic قدر الإمكان)
-        if r.assigned_responder_id is None:
-            r.assigned_responder = request.user
-            r.full_clean()
-            r.save(update_fields=["assigned_responder", "updated_at"])
+        if report.assigned_responder_id is None:
+            report.assigned_responder = request.user
+            report.full_clean()
+            report.save(update_fields=["assigned_responder", "updated_at"])
 
-        r.mark_accepted(by=request.user, source="mobile", force=True)
-    except Exception as e:
+        report.mark_accepted(by=request.user, source="mobile", force=True)
+    except Exception as exc:
         logger.exception("cad_accept failed")
-        return Response({"ok": False, "error": "accept_failed", "detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-    _log_activity(r, user=request.user, kind=CADReportActivity.Kind.SYSTEM, action=CADReportActivity.Action.ACCEPTED, message='')
+        return Response(
+            {"ok": False, "error": "accept_failed", "detail": str(exc)},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
-    return Response({"ok": True}, status=status.HTTP_200_OK)
+    _log_activity(
+        report,
+        user=request.user,
+        kind=CADReportActivity.Kind.SYSTEM,
+        action=CADReportActivity.Action.ACCEPTED,
+        message="",
+    )
+    return Response({"ok": True, "cad_number": report.cad_number}, status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def cad_reject(request, cad_number: str):
-    """رفض البلاغ (موبايل) باستخدام JWT.
-
-    المنطق الحالي بدون تغيير قاعدة البيانات:
-    - إزالة assigned_responder حتى يرجع البلاغ للطابور/يُعاد ترحيله من الويب.
-    - لا نغيّر cad_number ولا بيانات البلاغ الأخرى.
-    """
-    r = _get_report_by_cad_for_user(cad_number, request.user)
+    """رفض البلاغ (موبايل) باستخدام JWT."""
+    report = _get_report_by_cad_for_user(cad_number, request.user)
+    rejector_name = _user_display_name(request.user)
     try:
-        # إذا كان مقبول/مباشر/مغلق نمنع الرفض (حماية عمل)
-        if r.accepted_at or r.arrived_at or r.closed_at:
+        if report.accepted_at or report.arrived_at or report.closed_at:
             return Response(
-                {"ok": False, "error": "cannot_reject_after_progress", "detail": "لا يمكن رفض بلاغ بعد بدء المعالجة."},
+                {
+                    "ok": False,
+                    "error": "cannot_reject_after_progress",
+                    "detail": "لا يمكن رفض بلاغ بعد بدء المعالجة.",
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        r.assigned_responder = None
-        r.full_clean()
-        r.save(update_fields=["assigned_responder", "updated_at"])
-    except Exception as e:
+        report.assigned_responder = None
+        report.full_clean()
+        report.save(update_fields=["assigned_responder", "updated_at"])
+    except Exception as exc:
         logger.exception("cad_reject failed")
-        return Response({"ok": False, "error": "reject_failed", "detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"ok": False, "error": "reject_failed", "detail": str(exc)},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
-    return Response({"ok": True}, status=status.HTTP_200_OK)
+    reject_message = f"تم رفض البلاغ رقم {report.cad_number} من قبل {rejector_name}"
+    _log_activity(
+        report,
+        user=request.user,
+        kind=CADReportActivity.Kind.SYSTEM,
+        action=CADReportActivity.Action.REJECTED,
+        message=reject_message,
+    )
+
+    return Response({"ok": True, "message": reject_message}, status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])
@@ -230,14 +253,23 @@ def cad_reject(request, cad_number: str):
 @permission_classes([IsAuthenticated])
 def cad_arrive(request, cad_number: str):
     """وصول/مباشرة البلاغ (موبايل) باستخدام JWT."""
-    r = _get_report_by_cad_for_user(cad_number, request.user)
+    report = _get_report_by_cad_for_user(cad_number, request.user)
     try:
-        r.mark_arrived(by=request.user, source="mobile", force=True)
-    except Exception as e:
+        report.mark_arrived(by=request.user, source="mobile", force=True)
+    except Exception as exc:
         logger.exception("cad_arrive failed")
-        return Response({"ok": False, "error": "arrive_failed", "detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-    _log_activity(r, user=request.user, kind=CADReportActivity.Kind.SYSTEM, action=CADReportActivity.Action.ARRIVED, message='')
+        return Response(
+            {"ok": False, "error": "arrive_failed", "detail": str(exc)},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
+    _log_activity(
+        report,
+        user=request.user,
+        kind=CADReportActivity.Kind.SYSTEM,
+        action=CADReportActivity.Action.ARRIVED,
+        message="",
+    )
     return Response({"ok": True}, status=status.HTTP_200_OK)
 
 
@@ -246,14 +278,23 @@ def cad_arrive(request, cad_number: str):
 @permission_classes([IsAuthenticated])
 def cad_close(request, cad_number: str):
     """إغلاق البلاغ (موبايل) باستخدام JWT."""
-    r = _get_report_by_cad_for_user(cad_number, request.user)
+    report = _get_report_by_cad_for_user(cad_number, request.user)
     try:
-        r.mark_closed(by=request.user, source="mobile_manual", force=True)
-    except Exception as e:
+        report.mark_closed(by=request.user, source="mobile_manual", force=True)
+    except Exception as exc:
         logger.exception("cad_close failed")
-        return Response({"ok": False, "error": "close_failed", "detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-    _log_activity(r, user=request.user, kind=CADReportActivity.Kind.SYSTEM, action=CADReportActivity.Action.CLOSED, message='')
+        return Response(
+            {"ok": False, "error": "close_failed", "detail": str(exc)},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
+    _log_activity(
+        report,
+        user=request.user,
+        kind=CADReportActivity.Kind.SYSTEM,
+        action=CADReportActivity.Action.CLOSED,
+        message="",
+    )
     return Response({"ok": True}, status=status.HTTP_200_OK)
 
 
@@ -262,39 +303,33 @@ def cad_close(request, cad_number: str):
 @permission_classes([IsAuthenticated])
 def register_device_token(request):
     """Register/refresh FCM device token for this user."""
-    token = str(request.data.get('token') or '').strip()
-    platform = str(request.data.get('platform') or '').strip()
+    token = str(request.data.get("token") or "").strip()
+    platform = str(request.data.get("platform") or "").strip()
     if not token:
-        return Response({'ok': False, 'error': 'token_required'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"ok": False, "error": "token_required"}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        obj, _created = UserDeviceToken.objects.update_or_create(
+        UserDeviceToken.objects.update_or_create(
             token=token,
-            defaults={'user': request.user, 'platform': platform, 'is_active': True},
+            defaults={"user": request.user, "platform": platform},
         )
-    except Exception as e:
-        logger.exception('register_device_token failed')
-        return Response({'ok': False, 'error': 'save_failed', 'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-    _log_activity(r, user=request.user, kind=CADReportActivity.Kind.SYSTEM, action=CADReportActivity.Action.NOTE, message="تم رفض البلاغ")
+    except Exception as exc:
+        logger.exception("register_device_token failed")
+        return Response(
+            {"ok": False, "error": "save_failed", "detail": str(exc)},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
-
-    return Response({'ok': True}, status=status.HTTP_200_OK)
+    return Response({"ok": True}, status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def cad_my_reports(request):
-    """قائمة بلاغات CAD الخاصة بالمستجيب (المعيّنة له) مع فلترة بالتاريخ.
-
-    Query params:
-      - from=YYYY-MM-DD
-      - to=YYYY-MM-DD
-      - year=YYYY
-    """
+    """قائمة بلاغات CAD الخاصة بالمستجيب (المعيّنة له) مع فلترة بالتاريخ."""
     qs = (
-        CADReport.objects
-        .select_related("case_type", "region", "assigned_responder")
+        CADReport.objects.select_related("case_type", "region", "assigned_responder")
         .filter(assigned_responder=request.user)
         .order_by("-created_at")
     )
@@ -305,8 +340,7 @@ def cad_my_reports(request):
 
     if year:
         try:
-            y = int(year)
-            qs = qs.filter(created_at__year=y)
+            qs = qs.filter(created_at__year=int(year))
         except Exception:
             pass
 
@@ -320,39 +354,35 @@ def cad_my_reports(request):
         if d:
             qs = qs.filter(created_at__date__lte=d)
 
-    def safe_str(v):
-        return "" if v is None else str(v)
+    def safe_str(value):
+        return "" if value is None else str(value)
 
     data = []
-    for r in qs[:500]:  # سقف حماية
-        data.append({
-            "id": r.id,
-            "cad_number": safe_str(r.cad_number),
-            "case_type": safe_str(getattr(r.case_type, "name", "")),
-            "severity": safe_str(getattr(r, "severity", "")),
-            "status": _status_of(r),
-            "created_at": r.created_at.isoformat() if getattr(r, "created_at", None) else None,
-            "dispatched_at": r.dispatched_at.isoformat() if getattr(r, "dispatched_at", None) else None,
-            "accepted_at": r.accepted_at.isoformat() if getattr(r, "accepted_at", None) else None,
-            "arrived_at": r.arrived_at.isoformat() if getattr(r, "arrived_at", None) else None,
-            "is_closed": bool(getattr(r, "is_closed", False)),
-        })
+    for report in qs[:500]:
+        data.append(
+            {
+                "id": report.id,
+                "cad_number": safe_str(report.cad_number),
+                "case_type": safe_str(getattr(report.case_type, "name", "")),
+                "severity": safe_str(getattr(report, "severity", "")),
+                "status": _status_of(report),
+                "created_at": report.created_at.isoformat() if getattr(report, "created_at", None) else None,
+                "dispatched_at": report.dispatched_at.isoformat() if getattr(report, "dispatched_at", None) else None,
+                "accepted_at": report.accepted_at.isoformat() if getattr(report, "accepted_at", None) else None,
+                "arrived_at": report.arrived_at.isoformat() if getattr(report, "arrived_at", None) else None,
+                "is_closed": bool(getattr(report, "is_closed", False)),
+            }
+        )
 
     return Response({"results": data, "count": qs.count()}, status=status.HTTP_200_OK)
-
 
 
 @api_view(["GET", "POST"])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def cad_chat(request, cad_number: str):
-    """Chat/Notes for mobile app (JWT) using CADReportActivity.
-
-    - GET: returns last messages/actions (timeline) for this report.
-      Query: limit=120 (max 300)
-    - POST: body {message: "..."} adds NOTE message (kind=MESSAGE, action=NOTE)
-    """
-    r = _get_report_by_cad_for_user(cad_number, request.user, allow_unassigned=True)
+    """Chat/Notes for mobile app (JWT) using CADReportActivity."""
+    report = _get_report_by_cad_for_user(cad_number, request.user, allow_unassigned=True)
 
     if request.method == "GET":
         limit = request.GET.get("limit", "120")
@@ -363,31 +393,52 @@ def cad_chat(request, cad_number: str):
         limit_i = max(1, min(limit_i, 300))
 
         qs = (
-            CADReportActivity.objects
-            .filter(report=r)
+            CADReportActivity.objects.filter(report=report)
             .select_related("user")
             .order_by("-created_at")[:limit_i]
         )
 
+        def _actor_name(user):
+            if not user:
+                return "النظام"
+
+            try:
+                full_name = user.get_full_name()
+                if full_name and full_name.strip():
+                    return full_name.strip()
+            except Exception:
+                pass
+
+            for field in ("full_name", "name", "first_name", "username"):
+                try:
+                    value = getattr(user, field, None)
+                    if value and str(value).strip():
+                        return str(value).strip()
+                except Exception:
+                    continue
+
+            return "مستخدم"
+
         items = []
-        for a in reversed(list(qs)):
-            items.append({
-                "id": a.id,
-                "kind": a.kind,
-                "action": a.action,
-                "text": a.message or "",
-                "created_at": a.created_at.isoformat(),
-                "sender": _actor_name(a.user) if a.user_id else "النظام",
-            })
+        for activity in reversed(list(qs)):
+            items.append(
+                {
+                    "id": activity.id,
+                    "kind": activity.kind,
+                    "action": activity.action,
+                    "text": activity.message or "",
+                    "created_at": activity.created_at.isoformat(),
+                    "sender": _actor_name(activity.user) if activity.user_id else "النظام",
+                }
+            )
         return Response({"ok": True, "items": items}, status=status.HTTP_200_OK)
 
-    # POST
     msg = str(request.data.get("message") or "").strip()
     if not msg:
         return Response({"ok": False, "error": "message_required"}, status=status.HTTP_400_BAD_REQUEST)
 
     _log_activity(
-        r,
+        report,
         user=request.user,
         kind=CADReportActivity.Kind.MESSAGE,
         action=CADReportActivity.Action.NOTE,

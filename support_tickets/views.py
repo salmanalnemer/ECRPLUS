@@ -72,30 +72,60 @@ def _open_status() -> TicketStatusCatalog:
     return st
 
 
-def api_auth_required(view_func):
-    """Authenticate API endpoints via Session OR JWT Bearer token.
 
-    - If the user is logged in (session-auth), allow.
-    - Else, try SimpleJWT Bearer token (Authorization: Bearer <access>).
-    - If not authenticated, return 401 JSON (no redirects).
-    """
+
+
+def _user_display_name(user) -> Optional[str]:
+    """يرجع اسم عرض آمن ومتوافق مع أي User model."""
+    if not user:
+        return None
+
+    first_name = (getattr(user, "first_name", None) or "").strip()
+    last_name = (getattr(user, "last_name", None) or "").strip()
+    full_name = f"{first_name} {last_name}".strip()
+    if full_name:
+        return full_name
+
+    for attr in ("name", "full_name", "username", "email"):
+        value = getattr(user, attr, None)
+        if value:
+            return str(value)
+
+    pk = getattr(user, "pk", None)
+    return str(pk) if pk is not None else None
+
+
+def api_auth_required(view_func):
     @wraps(view_func)
-    def _wrapped(request: HttpRequest, *args, **kwargs):
+    def _wrapped(request, *args, **kwargs):
+        # Session auth
         if getattr(request, "user", None) is not None and request.user.is_authenticated:
+            logger.warning("support auth via session user=%s", request.user)
             return view_func(request, *args, **kwargs)
 
-        # Try JWT (SimpleJWT)
+        auth_header = request.META.get("HTTP_AUTHORIZATION", "")
+        logger.warning("support auth header raw=%r", auth_header)
+
         try:
             from rest_framework_simplejwt.authentication import JWTAuthentication
+
             jwt_auth = JWTAuthentication()
             auth_result = jwt_auth.authenticate(request)
-            if auth_result:
-                user, _token = auth_result
-                request.user = user
-                return view_func(request, *args, **kwargs)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.exception("support jwt auth failed: %s", e)
+            return JsonResponse({"detail": "غير مصرح. أعد تسجيل الدخول."}, status=401)
 
+        if auth_result:
+            user, token = auth_result
+            request.user = user
+            logger.warning(
+                "support jwt auth success user=%s token_type=%s",
+                getattr(user, "username", user.pk),
+                getattr(token, "token_type", "unknown"),
+            )
+            return view_func(request, *args, **kwargs)
+
+        logger.warning("support jwt auth returned None")
         return JsonResponse({"detail": "غير مصرح. أعد تسجيل الدخول."}, status=401)
 
     return _wrapped
@@ -432,7 +462,7 @@ def api_assignees(request: HttpRequest) -> JsonResponse:
             except Exception:
                 pass
 
-    data = [{"id": u.id, "name": (u.get_full_name() or u.username)} for u in qs.order_by("username")]
+    data = [{"id": u.id, "name": (_user_display_name(u) or str(u.pk))} for u in qs.order_by("username")]
     return JsonResponse(data, safe=False)
 
 
@@ -468,7 +498,7 @@ def api_tickets_list(request: HttpRequest) -> JsonResponse:
                 "requester_phone": t.requester_phone,
                 "requester_email": t.requester_email,
                 "region": getattr(t.region, "name", None),
-                "assignee": (t.assignee.get_full_name() if t.assignee_id else None),
+                "assignee": (_user_display_name(t.assignee) if t.assignee_id else None),
                 "status": {"id": t.status_id, "code": t.status.code if t.status_id else None, "name": t.status.name if t.status_id else None},
                 "pause_reason": str(t.pause_reason) if t.pause_reason_id else None,
                 "main_category": t.main_category.name,
@@ -526,7 +556,7 @@ def api_ticket_detail(request: HttpRequest, pk: int) -> JsonResponse:
         comments = [
             {
                 "id": c.id,
-                "author": c.author.get_full_name() or c.author.username,
+                "author": _user_display_name(c.author) or str(c.author.pk),
                 "body": c.body,
                 "is_support_reply": c.is_support_reply,
                 "is_internal": c.is_internal,
@@ -546,7 +576,7 @@ def api_ticket_detail(request: HttpRequest, pk: int) -> JsonResponse:
             "requester_phone": t.requester_phone,
             "requester_email": t.requester_email,
             "region": getattr(t.region, "name", None),
-            "assignee": (t.assignee.get_full_name() if t.assignee_id else None),
+            "assignee": (_user_display_name(t.assignee) if t.assignee_id else None),
             "status": {"id": t.status_id, "code": t.status.code if t.status_id else None, "name": t.status.name if t.status_id else None},
             "pause_reason": str(t.pause_reason) if t.pause_reason_id else None,
             "main_category": {"id": t.main_category_id, "name": t.main_category.name},
