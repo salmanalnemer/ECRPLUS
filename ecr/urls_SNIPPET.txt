@@ -1,0 +1,5 @@
+# أضف هذه المسارات داخل urlpatterns في ecr/urls.py (قسم APIs)
+# from regions.api_views import regions_list
+# from organizations.api_views import organizations_list
+# path("api/catalog/regions/", regions_list, name="api_catalog_regions"),
+# path("api/catalog/organizations/", organizations_list, name="api_catalog_organizations"),

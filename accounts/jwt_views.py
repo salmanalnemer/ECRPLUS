@@ -13,6 +13,8 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+from .models_auth import EmailVerification
+
 logger = logging.getLogger(__name__)
 UserModel = get_user_model()
 
@@ -74,6 +76,17 @@ class NationalIdTokenObtainPairSerializer(TokenObtainPairSerializer):
         if not getattr(user, "is_active", True):
             raise serializers.ValidationError({
                 "non_field_errors": ["الحساب غير نشط. تواصل مع الدعم الفني."]
+            })
+
+        # ✅ منع تسجيل الدخول إذا الحساب غير مُفعّل (تفعيل بريد)
+        try:
+            ev = getattr(user, "email_verification", None)
+        except Exception:
+            ev = None
+
+        if not ev or not getattr(ev, "is_verified", False):
+            raise serializers.ValidationError({
+                "non_field_errors": ["الحساب غير مفعل. يرجى تفعيل الحساب عبر رمز التحقق المرسل إلى البريد الإلكتروني."]
             })
 
         if not user.check_password(password):

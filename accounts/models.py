@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-from django.db import models
+import secrets
+from datetime import timedelta
+
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
-from django.utils.translation import gettext_lazy as _
+from django.db import models
+from django.utils import timezone
 
 from .user_manager import UserManager
-# في نهاية accounts/models.py
-from .models_auth import EmailOTP, EmailVerification  # noqa: F401
 
 
 class User(AbstractBaseUser, PermissionsMixin):
@@ -59,6 +61,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     location_sharing_enabled = models.BooleanField("مشاركة الموقع", default=True, db_index=True)
 
     # حقول نظامية
+    # ملاحظة: لسيناريو التفعيل عبر OTP، اجعل المستخدم الجديد is_active=False عند التسجيل.
     is_active = models.BooleanField("مفعّل", default=True)
     is_staff = models.BooleanField("موظف لوحة التحكم", default=False)
 
@@ -95,10 +98,105 @@ class User(AbstractBaseUser, PermissionsMixin):
                 raise ValidationError({"phone": "طول رقم الجوال غير صحيح."})
 
         # المنطقة إلزامية إلا إذا كانت مجموعة SYSADMIN
-        if self.user_group and self.user_group.code == "SYSADMIN":
+        if self.user_group and getattr(self.user_group, "code", None) == "SYSADMIN":
             # مسموح region = null
             return
 
         # غير SYSADMIN: لازم منطقة
         if not self.region:
             raise ValidationError({"region": "حقل المنطقة إلزامي (يسمح بتجاوزه فقط لمجموعة مدير النظام)."})
+
+
+class EmailVerification(models.Model):
+    """
+    سجل اختياري لحالة التحقق من البريد (مفيد للتدقيق/التقارير).
+    تفعيل الحساب النهائي يتم عبر User.is_active.
+    """
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="email_verification")
+    verified_at = models.DateTimeField(null=True, blank=True)
+    last_sent_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "تحقق البريد"
+        verbose_name_plural = "تحقق البريد"
+
+    @property
+    def is_verified(self) -> bool:
+        return self.verified_at is not None
+
+
+class EmailOTP(models.Model):
+    """
+    OTP للبريد:
+    - إصدار كود (6 أرقام) للتفعيل أو لإعادة تعيين كلمة المرور
+    - تحقق آمن: غير مستخدم + غير منتهي الصلاحية
+    """
+
+    PURPOSE_VERIFY_EMAIL = "verify_email"
+    PURPOSE_RESET_PASSWORD = "reset_password"
+
+    PURPOSE_CHOICES = (
+        (PURPOSE_VERIFY_EMAIL, "Verify Email"),
+        (PURPOSE_RESET_PASSWORD, "Reset Password"),
+    )
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="email_otps")
+    purpose = models.CharField(max_length=32, choices=PURPOSE_CHOICES)
+    code = models.CharField(max_length=10, db_index=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(db_index=True)
+    used_at = models.DateTimeField(null=True, blank=True, db_index=True)
+
+    class Meta:
+        verbose_name = "رمز تحقق البريد"
+        verbose_name_plural = "رموز تحقق البريد"
+        indexes = [
+            models.Index(fields=["user", "purpose", "code"]),
+        ]
+
+    def is_expired(self) -> bool:
+        return timezone.now() >= self.expires_at
+
+    def is_used(self) -> bool:
+        return self.used_at is not None
+
+    @staticmethod
+    def generate_code(length: int = 6) -> str:
+        digits = "0123456789"
+        return "".join(secrets.choice(digits) for _ in range(length))
+
+    @classmethod
+    def issue_otp(cls, *, user, purpose: str, ttl_minutes: int = 10, length: int = 6) -> "EmailOTP":
+        now = timezone.now()
+        return cls.objects.create(
+            user=user,
+            purpose=purpose,
+            code=cls.generate_code(length=length),
+            expires_at=now + timedelta(minutes=ttl_minutes),
+        )
+
+    @classmethod
+    def verify_otp(cls, *, user, code: str, purpose: str) -> bool:
+        """
+        يرجع True عند نجاح التحقق ويقوم بتمييز الرمز كمستخدم.
+        """
+        code = (code or "").strip()
+        if not code:
+            return False
+
+        otp = (
+            cls.objects
+            .filter(user=user, purpose=purpose, code=code, used_at__isnull=True)
+            .order_by("-created_at")
+            .first()
+        )
+        if not otp:
+            return False
+        if otp.is_expired():
+            return False
+
+        otp.used_at = timezone.now()
+        otp.save(update_fields=["used_at"])
+        return True

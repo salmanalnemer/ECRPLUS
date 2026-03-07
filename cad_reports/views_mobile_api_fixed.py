@@ -101,6 +101,25 @@ def _user_region_id(user):
     return rid
 
 
+def _actor_name(user) -> str:
+    """اسم آمن لعرضه في الدردشة/النشاط."""
+    if not user:
+        return "النظام"
+    try:
+        full = user.get_full_name()
+        if full:
+            return str(full)
+    except Exception:
+        pass
+    try:
+        username = getattr(user, "username", None)
+        if username:
+            return str(username)
+    except Exception:
+        pass
+    return "مستخدم"
+
+
 @api_view(["GET"])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
@@ -222,6 +241,8 @@ def cad_reject(request, cad_number: str):
         logger.exception("cad_reject failed")
         return Response({"ok": False, "error": "reject_failed", "detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+    _log_activity(r, user=request.user, kind=CADReportActivity.Kind.SYSTEM, action=CADReportActivity.Action.NOTE, message="تم رفض البلاغ")
+
     return Response({"ok": True}, status=status.HTTP_200_OK)
 
 
@@ -275,9 +296,6 @@ def register_device_token(request):
     except Exception as e:
         logger.exception('register_device_token failed')
         return Response({'ok': False, 'error': 'save_failed', 'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-    _log_activity(r, user=request.user, kind=CADReportActivity.Kind.SYSTEM, action=CADReportActivity.Action.NOTE, message="تم رفض البلاغ")
-
-
     return Response({'ok': True}, status=status.HTTP_200_OK)
 
 

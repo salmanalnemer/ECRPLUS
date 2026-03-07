@@ -7,7 +7,7 @@ GROUPS = [
     ("مرحلين غرف العمليات بالفروع", "ORRB", False),
     ("إدارة التطوع بالفروع", "BVM", False),
     ("الدعم الفني", "ITS", False),
-    ("مدير النظام", "SYSADMIN", False),
+    ("مدير النظام", "SYSADMIN", False), 
     ("المستجيبين", "ECRMOBIL", True),
     ("العمليات المركزية", "CENTRAL_OPERATIONS", True),
 ]

@@ -87,3 +87,22 @@ def send_password_reset_otp(user, ip=None) -> bool:
     if not sent and getattr(settings, "DEBUG", False):
         print(f"[ECR][DEBUG] RESET OTP for {user.email} = {otp}")
     return sent
+
+
+def send_email_verification_otp(user, ip=None, user_agent: str = "") -> bool:
+    """Send OTP for email verification (account activation)."""
+    otp = _generate_otp()
+    store_otp("verify", user.id, otp)
+
+    subject = "رمز تفعيل الحساب - ECR"
+    message = (
+        f"مرحبًا {getattr(user, 'full_name', '')}\n\n"
+        f"رمز تفعيل حسابك هو:\n\n{otp}\n\n"
+        "صالح لمدة 5 دقائق.\n"
+        "إذا لم تطلب إنشاء حساب تجاهل الرسالة."
+    )
+
+    sent = _send_email(subject, message, user.email, ip=ip)
+    if not sent and getattr(settings, "DEBUG", False):
+        print(f"[ECR][DEBUG] VERIFY OTP for {user.email} = {otp}")
+    return sent

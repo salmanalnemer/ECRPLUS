@@ -12,6 +12,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 
 from responders.models import ResponderLocation
+from regions.models import Region
 
 User = get_user_model()
 
@@ -46,12 +47,25 @@ class MeView(APIView):
         u = request.user
         email = (request.data.get("email") or "").strip()
         phone = (request.data.get("phone") or "").strip()
+        region_id = request.data.get("region_id", None)
 
         errors = {}
         if not email:
             errors["email"] = ["هذا الحقل مطلوب."]
         if not phone:
             errors["phone"] = ["هذا الحقل مطلوب."]
+
+        # region_id اختياري لكن إن أُرسل يجب أن يكون صالحًا
+        region_obj = None
+        if region_id is not None:
+            try:
+                region_id_int = int(region_id)
+            except (TypeError, ValueError):
+                errors["region_id"] = ["قيمة غير صالحة."]
+            else:
+                region_obj = Region.objects.filter(pk=region_id_int, is_active=True).first()
+                if not region_obj:
+                    errors["region_id"] = ["المنطقة غير موجودة أو غير مفعلة."]
         if errors:
             return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -64,11 +78,25 @@ class MeView(APIView):
         u.email = email
         if hasattr(u, "phone"):
             u.phone = phone
-            u.save(update_fields=["email", "phone"])
+            update_fields = ["email", "phone"]
         else:
-            u.save(update_fields=["email"])
+            update_fields = ["email"]
 
-        return Response({"email": u.email, "phone": getattr(u, "phone", "")}, status=status.HTTP_200_OK)
+        if region_obj is not None and hasattr(u, "region_id"):
+            u.region_id = region_obj.id
+            update_fields.append("region")
+
+        u.save(update_fields=update_fields)
+
+        return Response(
+            {
+                "email": u.email,
+                "phone": getattr(u, "phone", ""),
+                "region": getattr(u, "region_id", None),
+                "region_name": getattr(getattr(u, "region", None), "name", None),
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class ChangePasswordView(APIView):
