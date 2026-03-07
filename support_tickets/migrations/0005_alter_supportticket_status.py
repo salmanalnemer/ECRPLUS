@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('support_tickets', '0004_close_confirmation_workflow'),
+        ("support_tickets", "0004_close_confirm_workflow"),
     ]
 
     operations = [
