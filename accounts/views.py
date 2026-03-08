@@ -101,7 +101,7 @@ def login_view(request):
         else:
             messages.warning(
                 request,
-                "تعذر إرسال البريد الآن. تحقق من إعدادات SMTP/DNS أو جرّب بريد Gmail."
+                "تعذر إرسال البريد الآن. تحقق من إعدادات SMTP/DNS."
             )
 
         return redirect("accounts_verify_otp")
@@ -217,8 +217,6 @@ def reset_password_view(request):
 from organizations.models import Organization
 from usergroups.models import UserGroup
 from regions.models import Region
-from responders.models import Responder
-
 
 def register_view(request):
 
@@ -246,21 +244,11 @@ def register_view(request):
             password=password
         )
 
-        # إضافة المستخدم تلقائياً إلى مجموعة التطبيق
+        # إضافة المستخدم إلى مجموعة ECRMOBIL
         try:
             group = UserGroup.objects.get(code="ECRMOBIL")
             user.user_group = group
             user.save(update_fields=["user_group"])
-        except Exception:
-            pass
-
-        # إنشاء Responder تلقائياً
-        try:
-            Responder.objects.create(
-                user=user,
-                region_id=region_id,
-                is_active=True
-            )
         except Exception:
             pass
 
