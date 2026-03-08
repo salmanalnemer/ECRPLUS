@@ -1,0 +1,669 @@
+[
+{
+  "model": "auth.group",
+  "pk": 1,
+  "fields": {
+    "name": "«·„—ﬂ“ «·Êÿ‰Ì «·≈”⁄«›Ì ··ﬁÌ«œ… Ê«·”Ìÿ—…",
+    "permissions": []
+  }
+},
+{
+  "model": "auth.group",
+  "pk": 2,
+  "fields": {
+    "name": "„œ—«¡ ≈œ«—… «· Õﬂ„ «·⁄„·Ì« Ì »«·›—Ê⁄",
+    "permissions": []
+  }
+},
+{
+  "model": "auth.group",
+  "pk": 3,
+  "fields": {
+    "name": "„—Õ·Ì‰ €—› «·⁄„·Ì«  »«·›—Ê⁄",
+    "permissions": []
+  }
+},
+{
+  "model": "auth.group",
+  "pk": 4,
+  "fields": {
+    "name": "≈œ«—… «· ÿÊ⁄ »«·›—Ê⁄",
+    "permissions": []
+  }
+},
+{
+  "model": "auth.group",
+  "pk": 5,
+  "fields": {
+    "name": "«·œ⁄„ «·›‰Ì",
+    "permissions": []
+  }
+},
+{
+  "model": "auth.group",
+  "pk": 6,
+  "fields": {
+    "name": "„œÌ— «·‰Ÿ«„",
+    "permissions": []
+  }
+},
+{
+  "model": "auth.group",
+  "pk": 7,
+  "fields": {
+    "name": "«·„” ÃÌ»Ì‰",
+    "permissions": []
+  }
+},
+{
+  "model": "auth.group",
+  "pk": 8,
+  "fields": {
+    "name": "«·⁄„·Ì«  «·„—ﬂ“Ì…",
+    "permissions": []
+  }
+},
+{
+  "model": "usergroups.usergroup",
+  "pk": 1,
+  "fields": {
+    "name_ar": "«·„—ﬂ“ «·Êÿ‰Ì «·≈”⁄«›Ì ··ﬁÌ«œ… Ê«·”Ìÿ—…",
+    "code": "NEMSCC",
+    "is_mobile_group": false,
+    "data_scope": "ALL",
+    "django_group": 1,
+    "is_active": true,
+    "created_at": "2026-03-08T01:28:11.395Z",
+    "updated_at": "2026-03-08T01:28:11.395Z"
+  }
+},
+{
+  "model": "usergroups.usergroup",
+  "pk": 2,
+  "fields": {
+    "name_ar": "„œ—«¡ ≈œ«—… «· Õﬂ„ «·⁄„·Ì« Ì »«·›—Ê⁄",
+    "code": "BOCM",
+    "is_mobile_group": false,
+    "data_scope": "REGION",
+    "django_group": 2,
+    "is_active": true,
+    "created_at": "2026-03-08T01:28:12.582Z",
+    "updated_at": "2026-03-08T01:28:12.582Z"
+  }
+},
+{
+  "model": "usergroups.usergroup",
+  "pk": 3,
+  "fields": {
+    "name_ar": "„—Õ·Ì‰ €—› «·⁄„·Ì«  »«·›—Ê⁄",
+    "code": "ORRB",
+    "is_mobile_group": false,
+    "data_scope": "REGION",
+    "django_group": 3,
+    "is_active": true,
+    "created_at": "2026-03-08T01:28:13.812Z",
+    "updated_at": "2026-03-08T01:28:13.812Z"
+  }
+},
+{
+  "model": "usergroups.usergroup",
+  "pk": 4,
+  "fields": {
+    "name_ar": "≈œ«—… «· ÿÊ⁄ »«·›—Ê⁄",
+    "code": "BVM",
+    "is_mobile_group": false,
+    "data_scope": "REGION",
+    "django_group": 4,
+    "is_active": true,
+    "created_at": "2026-03-08T01:28:14.992Z",
+    "updated_at": "2026-03-08T01:28:14.992Z"
+  }
+},
+{
+  "model": "usergroups.usergroup",
+  "pk": 5,
+  "fields": {
+    "name_ar": "«·œ⁄„ «·›‰Ì",
+    "code": "ITS",
+    "is_mobile_group": false,
+    "data_scope": "REGION",
+    "django_group": 5,
+    "is_active": true,
+    "created_at": "2026-03-08T01:28:16.122Z",
+    "updated_at": "2026-03-08T01:28:16.122Z"
+  }
+},
+{
+  "model": "usergroups.usergroup",
+  "pk": 6,
+  "fields": {
+    "name_ar": "„œÌ— «·‰Ÿ«„",
+    "code": "SYSADMIN",
+    "is_mobile_group": false,
+    "data_scope": "ALL",
+    "django_group": 6,
+    "is_active": true,
+    "created_at": "2026-03-08T01:28:17.231Z",
+    "updated_at": "2026-03-08T01:28:17.231Z"
+  }
+},
+{
+  "model": "usergroups.usergroup",
+  "pk": 7,
+  "fields": {
+    "name_ar": "«·„” ÃÌ»Ì‰",
+    "code": "ECRMOBIL",
+    "is_mobile_group": true,
+    "data_scope": "REGION",
+    "django_group": 7,
+    "is_active": true,
+    "created_at": "2026-03-08T01:28:18.332Z",
+    "updated_at": "2026-03-08T01:28:18.332Z"
+  }
+},
+{
+  "model": "usergroups.usergroup",
+  "pk": 8,
+  "fields": {
+    "name_ar": "«·⁄„·Ì«  «·„—ﬂ“Ì…",
+    "code": "CENTRAL_OPERATIONS",
+    "is_mobile_group": true,
+    "data_scope": "REGION",
+    "django_group": 8,
+    "is_active": true,
+    "created_at": "2026-03-08T01:28:19.467Z",
+    "updated_at": "2026-03-08T01:28:19.467Z"
+  }
+},
+{
+  "model": "regions.region",
+  "pk": 1,
+  "fields": {
+    "code": "RIY",
+    "name_ar": "„‰ÿﬁ… «·—Ì«÷",
+    "name_en": "Riyadh",
+    "is_active": true,
+    "center_lat": "24.713600",
+    "center_lng": "46.675300",
+    "default_zoom": 11,
+    "boundary_geojson": null,
+    "bbox_min_lat": null,
+    "bbox_min_lng": null,
+    "bbox_max_lat": null,
+    "bbox_max_lng": null,
+    "created_at": "2026-03-08T01:28:21.135Z",
+    "updated_at": "2026-03-08T01:28:21.135Z"
+  }
+},
+{
+  "model": "regions.region",
+  "pk": 2,
+  "fields": {
+    "code": "MAK",
+    "name_ar": "„‰ÿﬁ… „ﬂ… «·„ﬂ—„…",
+    "name_en": "Makkah",
+    "is_active": true,
+    "center_lat": "21.389100",
+    "center_lng": "39.857900",
+    "default_zoom": 11,
+    "boundary_geojson": null,
+    "bbox_min_lat": null,
+    "bbox_min_lng": null,
+    "bbox_max_lat": null,
+    "bbox_max_lng": null,
+    "created_at": "2026-03-08T01:28:21.792Z",
+    "updated_at": "2026-03-08T01:28:21.792Z"
+  }
+},
+{
+  "model": "regions.region",
+  "pk": 3,
+  "fields": {
+    "code": "MAD",
+    "name_ar": "„‰ÿﬁ… «·„œÌ‰… «·„‰Ê—…",
+    "name_en": "Madinah",
+    "is_active": true,
+    "center_lat": "24.524700",
+    "center_lng": "39.569200",
+    "default_zoom": 11,
+    "boundary_geojson": null,
+    "bbox_min_lat": null,
+    "bbox_min_lng": null,
+    "bbox_max_lat": null,
+    "bbox_max_lng": null,
+    "created_at": "2026-03-08T01:28:22.442Z",
+    "updated_at": "2026-03-08T01:28:22.442Z"
+  }
+},
+{
+  "model": "regions.region",
+  "pk": 4,
+  "fields": {
+    "code": "QAS",
+    "name_ar": "„‰ÿﬁ… «·ﬁ’Ì„",
+    "name_en": "Qassim",
+    "is_active": true,
+    "center_lat": "26.359200",
+    "center_lng": "43.981800",
+    "default_zoom": 11,
+    "boundary_geojson": null,
+    "bbox_min_lat": null,
+    "bbox_min_lng": null,
+    "bbox_max_lat": null,
+    "bbox_max_lng": null,
+    "created_at": "2026-03-08T01:28:23.136Z",
+    "updated_at": "2026-03-08T01:28:23.136Z"
+  }
+},
+{
+  "model": "regions.region",
+  "pk": 5,
+  "fields": {
+    "code": "EAS",
+    "name_ar": "«·„‰ÿﬁ… «·‘—ﬁÌ…",
+    "name_en": "Eastern Province",
+    "is_active": true,
+    "center_lat": "26.420700",
+    "center_lng": "50.088800",
+    "default_zoom": 11,
+    "boundary_geojson": null,
+    "bbox_min_lat": null,
+    "bbox_min_lng": null,
+    "bbox_max_lat": null,
+    "bbox_max_lng": null,
+    "created_at": "2026-03-08T01:28:23.892Z",
+    "updated_at": "2026-03-08T01:28:23.892Z"
+  }
+},
+{
+  "model": "regions.region",
+  "pk": 6,
+  "fields": {
+    "code": "ASI",
+    "name_ar": "„‰ÿﬁ… ⁄”Ì—",
+    "name_en": "Asir",
+    "is_active": true,
+    "center_lat": "18.216400",
+    "center_lng": "42.505300",
+    "default_zoom": 11,
+    "boundary_geojson": null,
+    "bbox_min_lat": null,
+    "bbox_min_lng": null,
+    "bbox_max_lat": null,
+    "bbox_max_lng": null,
+    "created_at": "2026-03-08T01:28:24.550Z",
+    "updated_at": "2026-03-08T01:28:24.550Z"
+  }
+},
+{
+  "model": "regions.region",
+  "pk": 7,
+  "fields": {
+    "code": "TAB",
+    "name_ar": "„‰ÿﬁ…  »Êﬂ",
+    "name_en": "Tabuk",
+    "is_active": true,
+    "center_lat": "28.383800",
+    "center_lng": "36.566200",
+    "default_zoom": 11,
+    "boundary_geojson": null,
+    "bbox_min_lat": null,
+    "bbox_min_lng": null,
+    "bbox_max_lat": null,
+    "bbox_max_lng": null,
+    "created_at": "2026-03-08T01:28:25.223Z",
+    "updated_at": "2026-03-08T01:28:25.223Z"
+  }
+},
+{
+  "model": "regions.region",
+  "pk": 8,
+  "fields": {
+    "code": "HAI",
+    "name_ar": "„‰ÿﬁ… Õ«∆·",
+    "name_en": "Hail",
+    "is_active": true,
+    "center_lat": "27.530389",
+    "center_lng": "41.717500",
+    "default_zoom": 11,
+    "boundary_geojson": null,
+    "bbox_min_lat": null,
+    "bbox_min_lng": null,
+    "bbox_max_lat": null,
+    "bbox_max_lng": null,
+    "created_at": "2026-03-08T01:28:25.878Z",
+    "updated_at": "2026-03-08T01:28:25.878Z"
+  }
+},
+{
+  "model": "regions.region",
+  "pk": 9,
+  "fields": {
+    "code": "NBR",
+    "name_ar": "„‰ÿﬁ… «·ÕœÊœ «·‘„«·Ì…",
+    "name_en": "Northern Borders",
+    "is_active": true,
+    "center_lat": "30.975300",
+    "center_lng": "41.038100",
+    "default_zoom": 11,
+    "boundary_geojson": null,
+    "bbox_min_lat": null,
+    "bbox_min_lng": null,
+    "bbox_max_lat": null,
+    "bbox_max_lng": null,
+    "created_at": "2026-03-08T01:28:26.535Z",
+    "updated_at": "2026-03-08T01:28:26.535Z"
+  }
+},
+{
+  "model": "regions.region",
+  "pk": 10,
+  "fields": {
+    "code": "JAZ",
+    "name_ar": "„‰ÿﬁ… Ã«“«‰",
+    "name_en": "Jazan",
+    "is_active": true,
+    "center_lat": "16.889200",
+    "center_lng": "42.551100",
+    "default_zoom": 11,
+    "boundary_geojson": null,
+    "bbox_min_lat": null,
+    "bbox_min_lng": null,
+    "bbox_max_lat": null,
+    "bbox_max_lng": null,
+    "created_at": "2026-03-08T01:28:27.285Z",
+    "updated_at": "2026-03-08T01:28:27.285Z"
+  }
+},
+{
+  "model": "regions.region",
+  "pk": 11,
+  "fields": {
+    "code": "NAJ",
+    "name_ar": "„‰ÿﬁ… ‰Ã—«‰",
+    "name_en": "Najran",
+    "is_active": true,
+    "center_lat": "17.492400",
+    "center_lng": "44.127700",
+    "default_zoom": 11,
+    "boundary_geojson": null,
+    "bbox_min_lat": null,
+    "bbox_min_lng": null,
+    "bbox_max_lat": null,
+    "bbox_max_lng": null,
+    "created_at": "2026-03-08T01:28:27.985Z",
+    "updated_at": "2026-03-08T01:28:27.985Z"
+  }
+},
+{
+  "model": "regions.region",
+  "pk": 12,
+  "fields": {
+    "code": "BAH",
+    "name_ar": "„‰ÿﬁ… «·»«Õ…",
+    "name_en": "Al Bahah",
+    "is_active": true,
+    "center_lat": "20.012900",
+    "center_lng": "41.467700",
+    "default_zoom": 11,
+    "boundary_geojson": null,
+    "bbox_min_lat": null,
+    "bbox_min_lng": null,
+    "bbox_max_lat": null,
+    "bbox_max_lng": null,
+    "created_at": "2026-03-08T01:28:28.652Z",
+    "updated_at": "2026-03-08T01:28:28.652Z"
+  }
+},
+{
+  "model": "regions.region",
+  "pk": 13,
+  "fields": {
+    "code": "JWF",
+    "name_ar": "„‰ÿﬁ… «·ÃÊ›",
+    "name_en": "Al Jawf",
+    "is_active": true,
+    "center_lat": "29.969700",
+    "center_lng": "40.206400",
+    "default_zoom": 11,
+    "boundary_geojson": null,
+    "bbox_min_lat": null,
+    "bbox_min_lng": null,
+    "bbox_max_lat": null,
+    "bbox_max_lng": null,
+    "created_at": "2026-03-08T01:28:29.347Z",
+    "updated_at": "2026-03-08T01:28:29.347Z"
+  }
+},
+{
+  "model": "support_tickets.ticketstatuscatalog",
+  "pk": "AWAITING_REQUESTER_CONFIRM",
+  "fields": {
+    "name": "»«‰ Ÿ«—  √ﬂÌœ «·⁄„Ì·",
+    "is_active": true,
+    "requires_pause_reason": false,
+    "is_closed": false,
+    "sort_order": 10,
+    "created_at": "2026-03-08T01:29:36.544Z",
+    "updated_at": "2026-03-08T01:29:36.544Z"
+  }
+},
+{
+  "model": "support_tickets.ticketstatuscatalog",
+  "pk": "CLOSED",
+  "fields": {
+    "name": "„€·ﬁ…",
+    "is_active": true,
+    "requires_pause_reason": false,
+    "is_closed": true,
+    "sort_order": 10,
+    "created_at": "2026-03-08T01:29:37.192Z",
+    "updated_at": "2026-03-08T01:29:37.192Z"
+  }
+},
+{
+  "model": "support_tickets.ticketstatuscatalog",
+  "pk": "CLOSE_REQUESTED",
+  "fields": {
+    "name": "ÿ·» ≈€·«ﬁ „‰ «·⁄„Ì·",
+    "is_active": true,
+    "requires_pause_reason": false,
+    "is_closed": false,
+    "sort_order": 10,
+    "created_at": "2026-03-08T01:29:36.026Z",
+    "updated_at": "2026-03-08T01:29:36.026Z"
+  }
+},
+{
+  "model": "support_tickets.ticketstatuscatalog",
+  "pk": "IN_PROGRESS",
+  "fields": {
+    "name": "ﬁÌœ «·⁄„·",
+    "is_active": true,
+    "requires_pause_reason": false,
+    "is_closed": false,
+    "sort_order": 10,
+    "created_at": "2026-03-08T01:29:35.082Z",
+    "updated_at": "2026-03-08T01:29:35.082Z"
+  }
+},
+{
+  "model": "support_tickets.ticketstatuscatalog",
+  "pk": "OPEN",
+  "fields": {
+    "name": "„› ÊÕ…",
+    "is_active": true,
+    "requires_pause_reason": false,
+    "is_closed": false,
+    "sort_order": 10,
+    "created_at": "2026-03-08T01:29:34.627Z",
+    "updated_at": "2026-03-08T01:29:34.627Z"
+  }
+},
+{
+  "model": "support_tickets.ticketstatuscatalog",
+  "pk": "PAUSED",
+  "fields": {
+    "name": "„⁄·¯ﬁ…",
+    "is_active": true,
+    "requires_pause_reason": true,
+    "is_closed": false,
+    "sort_order": 10,
+    "created_at": "2026-03-08T01:29:35.550Z",
+    "updated_at": "2026-03-08T01:29:35.550Z"
+  }
+},
+{
+  "model": "support_tickets.ticketpausereasoncatalog",
+  "pk": "ASK_REQUESTER",
+  "fields": {
+    "name": "«” ›”«— „‰ ’«Õ» «·ÿ·»",
+    "is_active": true,
+    "sort_order": 10,
+    "created_at": "2026-03-08T01:29:32.835Z",
+    "updated_at": "2026-03-08T01:29:32.835Z"
+  }
+},
+{
+  "model": "support_tickets.ticketpausereasoncatalog",
+  "pk": "GENERAL_OUTAGE",
+  "fields": {
+    "name": "⁄ÿ· ⁄«„ ÊÃ«—Ì «·Õ·",
+    "is_active": true,
+    "sort_order": 10,
+    "created_at": "2026-03-08T01:29:33.313Z",
+    "updated_at": "2026-03-08T01:29:33.313Z"
+  }
+},
+{
+  "model": "support_tickets.ticketpausereasoncatalog",
+  "pk": "HIGHER_PRIV",
+  "fields": {
+    "name": "’·«ÕÌ… ⁄·Ì«",
+    "is_active": true,
+    "sort_order": 10,
+    "created_at": "2026-03-08T01:29:33.800Z",
+    "updated_at": "2026-03-08T01:29:33.800Z"
+  }
+},
+{
+  "model": "support_tickets.ticketmaincategory",
+  "pk": 1,
+  "fields": {
+    "kind": "INC",
+    "name": "«·√⁄ÿ«·",
+    "is_active": true,
+    "sla_minutes": 60,
+    "created_at": "2026-03-08T01:29:22.145Z",
+    "updated_at": "2026-03-08T01:29:22.145Z"
+  }
+},
+{
+  "model": "support_tickets.ticketmaincategory",
+  "pk": 2,
+  "fields": {
+    "kind": "REQ",
+    "name": "«·ÿ·»« ",
+    "is_active": true,
+    "sla_minutes": 60,
+    "created_at": "2026-03-08T01:29:22.631Z",
+    "updated_at": "2026-03-08T01:29:22.631Z"
+  }
+},
+{
+  "model": "support_tickets.ticketsubcategory",
+  "pk": 1,
+  "fields": {
+    "main_category": 1,
+    "name": "⁄ÿ· ›Ì «· ÿ»Ìﬁ",
+    "is_active": true,
+    "sla_minutes_override": null,
+    "created_at": "2026-03-08T01:29:23.081Z",
+    "updated_at": "2026-03-08T01:29:23.081Z"
+  }
+},
+{
+  "model": "support_tickets.ticketsubcategory",
+  "pk": 2,
+  "fields": {
+    "main_category": 1,
+    "name": "„‘ﬂ·… ›Ì  ⁄œÌ· »Ì«‰«  „” ÃÌ»",
+    "is_active": true,
+    "sla_minutes_override": null,
+    "created_at": "2026-03-08T01:29:23.566Z",
+    "updated_at": "2026-03-08T01:29:23.566Z"
+  }
+},
+{
+  "model": "support_tickets.ticketsubcategory",
+  "pk": 3,
+  "fields": {
+    "main_category": 1,
+    "name": "„‘ﬂ·… ⁄œ„ ŸÂÊ— »Ì«‰«  „” ÃÌ»",
+    "is_active": true,
+    "sla_minutes_override": null,
+    "created_at": "2026-03-08T01:29:24.050Z",
+    "updated_at": "2026-03-08T01:29:24.050Z"
+  }
+},
+{
+  "model": "support_tickets.ticketsubcategory",
+  "pk": 4,
+  "fields": {
+    "main_category": 1,
+    "name": "⁄ÿ· ›Ì ŸÂÊ— »·«€ „Õœœ",
+    "is_active": true,
+    "sla_minutes_override": null,
+    "created_at": "2026-03-08T01:29:24.517Z",
+    "updated_at": "2026-03-08T01:29:24.517Z"
+  }
+},
+{
+  "model": "support_tickets.ticketsubcategory",
+  "pk": 5,
+  "fields": {
+    "main_category": 1,
+    "name": "·« ÌÊÃœ  ﬂ«„· ›Ì »·«€«  ECR Ê CAD",
+    "is_active": true,
+    "sla_minutes_override": null,
+    "created_at": "2026-03-08T01:29:24.941Z",
+    "updated_at": "2026-03-08T01:29:24.941Z"
+  }
+},
+{
+  "model": "support_tickets.ticketsubcategory",
+  "pk": 6,
+  "fields": {
+    "main_category": 2,
+    "name": "ÿ·» ’·«ÕÌ… ›Ì „‘«Âœ… Ã„Ì⁄ «·„‰«ÿﬁ",
+    "is_active": true,
+    "sla_minutes_override": null,
+    "created_at": "2026-03-08T01:29:25.420Z",
+    "updated_at": "2026-03-08T01:29:25.420Z"
+  }
+},
+{
+  "model": "support_tickets.ticketsubcategory",
+  "pk": 7,
+  "fields": {
+    "main_category": 2,
+    "name": "ÿ·» ’·«ÕÌ… ÌÊ“— ÊÌ» ·„‰ÿﬁ… Ê«Õœ…",
+    "is_active": true,
+    "sla_minutes_override": null,
+    "created_at": "2026-03-08T01:29:25.891Z",
+    "updated_at": "2026-03-08T01:29:25.891Z"
+  }
+},
+{
+  "model": "support_tickets.ticketsubcategory",
+  "pk": 8,
+  "fields": {
+    "main_category": 2,
+    "name": "ÿ·»  ⁄œÌ· »Ì«‰«  „” Œœ„",
+    "is_active": true,
+    "sla_minutes_override": null,
+    "created_at": "2026-03-08T01:29:26.342Z",
+    "updated_at": "2026-03-08T01:29:26.342Z"
+  }
+}
+]
