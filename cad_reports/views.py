@@ -1525,3 +1525,14 @@ def cad_report_print(request, report_id: int):
         "dashboard/print_report.html",
         {"r": report, "printed_at": now()},
     )
+from django.http import JsonResponse
+from .models import CADReport
+
+def assigned_reports_api(request):
+    reports = CADReport.objects.all().values(
+        "id",
+        "case_number",
+        "status",
+        "region",
+    )
+    return JsonResponse(list(reports), safe=False)
