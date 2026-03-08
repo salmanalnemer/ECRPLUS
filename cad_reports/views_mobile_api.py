@@ -112,28 +112,23 @@ def _user_region_id(user):
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def cad_assigned_reports(request):
-    """قائمة بلاغات CAD للتطبيق (JWT)."""
-    group = _get_user_group_code(request.user)
+    """قائمة بلاغات CAD للتطبيق (JWT) - فقط البلاغات المعينة لنفس المستخدم."""
 
-    qs = CADReport.objects.select_related("case_type", "region", "assigned_responder")
-    qs = qs.filter(is_closed=False).order_by("-created_at")
-
-    if group not in PRIVILEGED_GROUP_CODES:
-        rid = _user_region_id(request.user)
-        if rid:
-            qs = qs.filter(
-                models.Q(assigned_responder=request.user)
-                | models.Q(assigned_responder__isnull=True, region_id=rid)
-            )
-        else:
-            qs = qs.filter(
-                models.Q(assigned_responder=request.user) | models.Q(assigned_responder__isnull=True)
-            )
+    qs = (
+        CADReport.objects
+        .select_related("case_type", "region", "assigned_responder")
+        .filter(
+            is_closed=False,
+            assigned_responder=request.user   # ← البلاغات الخاصة بالمستخدم فقط
+        )
+        .order_by("-created_at")
+    )
 
     def _safe_str(value):
         return "-" if value is None else str(value)
 
     results = []
+
     for report in qs[:250]:
         results.append(
             {
@@ -142,37 +137,59 @@ def cad_assigned_reports(request):
                 "case_type": getattr(report.case_type, "name", None)
                 or getattr(report.case_type, "name_ar", None)
                 or str(report.case_type),
+
                 "severity": report.severity,
-                "created_at": report.created_at.isoformat() if report.created_at else None,
+
+                "created_at": report.created_at.isoformat()
+                if report.created_at else None,
+
                 "injured_count": report.injured_count,
                 "age": report.age,
                 "is_conscious": report.is_conscious,
+
                 "location_text": report.location_text,
                 "details": report.details,
+
                 "latitude": report.latitude,
                 "longitude": report.longitude,
+
                 "region": _safe_str(
                     getattr(report.region, "name_ar", None)
                     or getattr(report.region, "name_en", None)
                     or report.region
                 ),
+
                 "responder": _safe_str(
                     getattr(report.assigned_responder, "get_full_name", lambda: None)()
                     or getattr(report.assigned_responder, "username", None)
                     or report.assigned_responder
                 ),
+
                 "status": _status_of(report),
-                "dispatched_at": report.dispatched_at.isoformat() if report.dispatched_at else None,
-                "accepted_at": report.accepted_at.isoformat() if report.accepted_at else None,
-                "arrival_time": report.arrived_at.isoformat() if report.arrived_at else None,
+
+                "dispatched_at": report.dispatched_at.isoformat()
+                if report.dispatched_at else None,
+
+                "accepted_at": report.accepted_at.isoformat()
+                if report.accepted_at else None,
+
+                "arrival_time": report.arrived_at.isoformat()
+                if report.arrived_at else None,
+
                 "is_closed": report.is_closed,
-                "closed_at": report.closed_at.isoformat() if report.closed_at else None,
-                "response_duration": report.response_duration if hasattr(report, "response_duration") else None,
+
+                "closed_at": report.closed_at.isoformat()
+                if report.closed_at else None,
+
+                "response_duration": report.response_duration
+                if hasattr(report, "response_duration") else None,
             }
         )
 
-    return Response({"ok": True, "count": len(results), "results": results}, status=status.HTTP_200_OK)
-
+    return Response(
+        {"ok": True, "count": len(results), "results": results},
+        status=status.HTTP_200_OK,
+    )
 
 @api_view(["POST"])
 @authentication_classes([JWTAuthentication])
