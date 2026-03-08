@@ -116,7 +116,7 @@ urlpatterns = [
     path("api/responders/", include(("responders.urls", "responders"), namespace="responders")),
 
     # CAD API فقط
-    path("api/cad/", include("cad_reports.api_urls")),
+    path("api/cad/", include("cad_reports.urls")),
 
     # Auth (JWT)
     path("api/auth/login/", NationalIdTokenObtainPairView.as_view(), name="jwt_login"),
