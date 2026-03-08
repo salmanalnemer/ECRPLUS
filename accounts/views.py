@@ -285,7 +285,7 @@ def register_view(request):
         messages.success(request, "تم إنشاء الحساب")
         return redirect("accounts_login")
 
-    organizations = Organization.objects.filter(is_active=True)
+    organizations = Organization.objects.all()
     groups = UserGroup.objects.filter(is_active=True)
     regions = Region.objects.filter(is_active=True)
 

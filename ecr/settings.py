@@ -44,7 +44,12 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-change-this-in-prod
 # ✅ DEBUG يقرأ من .env (DJANGO_DEBUG=True/False)
 DEBUG = env_bool("DJANGO_DEBUG", False)
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = [
+    "ecrzone.com",
+    "www.ecrzone.com",
+    "http://127.0.0.1:8000/",
+    "http://192.168.8.41:8000/",
+]
 
 # -----------------------------------------------------------------------------
 # التطبيقات المثبتة
