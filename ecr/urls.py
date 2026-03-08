@@ -22,6 +22,7 @@ from accounts.password_reset_views import (
     PasswordResetConfirmView,
     PasswordResetRequestView,
     PasswordResetVerifyView,
+
 )
 from accounts.registration_api_views import (
     register,
