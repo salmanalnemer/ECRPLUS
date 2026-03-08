@@ -1529,10 +1529,21 @@ from django.http import JsonResponse
 from .models import CADReport
 
 def assigned_reports_api(request):
-    reports = CADReport.objects.all().values(
+
+    reports = CADReport.objects.filter(
+        assigned_responder=request.user,
+        is_closed=False
+    ).values(
         "id",
-        "case_number",
-        "status",
-        "region",
+        "cad_number",
+        "region_id",
+        "latitude",
+        "longitude",
+        "details",
+        "created_at",
+        "dispatched_at",
+        "accepted_at",
+        "arrived_at",
     )
+
     return JsonResponse(list(reports), safe=False)
