@@ -37,4 +37,4 @@ tzdata==2025.3
 ujson==5.11.0
 whitenoise==6.11.0
 zope.interface==8.2
-psycopg[binary]==3.2.1
+psycopg[binary]==3.2.13
