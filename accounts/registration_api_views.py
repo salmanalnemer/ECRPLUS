@@ -173,7 +173,7 @@ def verify_email(request):
 
     national_id = (data.get("national_id") or "").strip()
     email = (data.get("email") or "").strip().lower()
-    otp = (data.get("otp") or "").strip()
+    otp = (data.get("otp") or data.get("code") or "").strip()
 
     if not otp or (not national_id and not email):
         return JsonResponse({"detail": "national_id/email and otp are required"}, status=400)
