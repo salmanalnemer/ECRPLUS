@@ -127,26 +127,24 @@ ASGI_APPLICATION = "ecr.asgi.application"
 # ✅ ملاحظة: يحتاج تثبيت dj-database-url و psycopg
 import dj_database_url  # noqa: E402
 
-DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 if DATABASE_URL:
-    # ✅ إنتاج (Render غالبًا يمرر DATABASE_URL)
     DATABASES = {
         "default": dj_database_url.parse(
             DATABASE_URL,
-            conn_max_age=env_int("DB_CONN_MAX_AGE", 600),
-            ssl_require=env_bool("DB_SSL_REQUIRE", True),
+            conn_max_age=600,
+            ssl_require=True
         )
     }
 else:
-    # ✅ تطوير محلي (SQLite)
     DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
         }
     }
-
 
 # -----------------------------------------------------------------------------
 # سياسة كلمات المرور (أمن سيبراني)
