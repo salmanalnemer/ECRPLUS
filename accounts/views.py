@@ -253,14 +253,51 @@ def reset_password_view(request):
 # -------------------------------------------------------------------
 # Compatibility alias (إذا عندك رابط قديم)
 # -------------------------------------------------------------------
-# إذا كان مشروعك يستخدم register_view بدل register
+from organizations.models import Organization
+from usergroups.models import UserGroup
+from regions.models import Region
 def register_view(request):
-    # لو عندك register فعلي سابقًا، اربطه هنا أو احذف هذا وارجع لدالتك
-    return HttpResponseForbidden("صفحة التسجيل لم تُفعّل بعد.")
 
+    if request.method == "POST":
 
-register = register_view
+        full_name = request.POST.get("full_name")
+        national_id = request.POST.get("national_id")
+        email = request.POST.get("email")
+        phone = request.POST.get("phone")
 
+        organization_id = request.POST.get("organization")
+        group_id = request.POST.get("group")
+        region_id = request.POST.get("region")
+
+        password = request.POST.get("password")
+
+        user = User.objects.create_user(
+            email=email,
+            full_name=full_name,
+            national_id=national_id,
+            phone=phone,
+            organization_id=organization_id,
+            user_group_id=group_id,
+            region_id=region_id,
+            password=password
+        )
+
+        messages.success(request, "تم إنشاء الحساب")
+        return redirect("accounts_login")
+
+    organizations = Organization.objects.filter(is_active=True)
+    groups = UserGroup.objects.filter(is_active=True)
+    regions = Region.objects.filter(is_active=True)
+
+    return render(
+        request,
+        "accounts/register.html",
+        {
+            "organizations": organizations,
+            "groups": groups,
+            "regions": regions,
+        }
+    )
 
 @login_required
 def ecr_dashcad(request):
