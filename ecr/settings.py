@@ -366,3 +366,6 @@ CHANNEL_LAYERS = {
         "BACKEND": "channels.layers.InMemoryChannelLayer",
     }
 }
+
+FCM_ENABLED = True
+FCM_SERVICE_ACCOUNT_FILE = BASE_DIR / "firebase-service-account.json"
