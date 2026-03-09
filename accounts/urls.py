@@ -44,6 +44,8 @@ urlpatterns = [
     path("forgot-password/", views.forgot_password_view, name="accounts_forgot_password"),
     path("reset-password/", views.reset_password_view, name="accounts_reset_password"),
 
+    # Mobile/API logout
+    path("api/logout/", LogoutAPI.as_view(), name="api_logout"),
     # Web logout
     path("logout/", LogoutView.as_view(next_page="/accounts/login/"), name="logout"),
 
@@ -55,6 +57,4 @@ urlpatterns = [
     path("api/change-password/", ChangePasswordView.as_view(), name="api_change_password"),
     path("api/location-sharing/", LocationSharingView.as_view(), name="api_location_sharing"),
 
-    # Mobile/API logout
-    path("api/logout/", LogoutAPI.as_view(), name="api_logout"),
 ]

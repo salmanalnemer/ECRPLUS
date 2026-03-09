@@ -56,17 +56,32 @@ PRIVILEGED_GROUP_CODES = {"SYSADMIN", "NEMSCC"}
 
 
 def _get_user_group_code(user) -> str:
+    """
+    جلب كود مجموعة المستخدم مع دعم:
+    - user.group_code
+    - user.user_group.code
+    - Django auth groups
+    """
     try:
         code = getattr(user, "group_code", None)
         if code:
-            return str(code)
+            return str(code).strip().upper()
+    except Exception:
+        pass
+
+    try:
+        user_group = getattr(user, "user_group", None)
+        if user_group:
+            code = getattr(user_group, "code", None)
+            if code:
+                return str(code).strip().upper()
     except Exception:
         pass
 
     try:
         g = user.groups.first()
-        if g:
-            return str(g.name).upper()
+        if g and getattr(g, "name", None):
+            return str(g.name).strip().upper()
     except Exception:
         pass
 
@@ -79,8 +94,12 @@ def _ensure_can_act(report: CADReport, user, *, allow_unassigned: bool = False) 
     if group in PRIVILEGED_GROUP_CODES:
         return
 
+    user_region_id = _user_region_id(user)
+
+    # السماح للبلاغات غير المعينة إذا كانت ضمن نفس المنطقة
     if allow_unassigned and report.assigned_responder_id is None:
-        return
+        if user_region_id is None or report.region_id == user_region_id:
+            return
 
     if report.assigned_responder_id != user.id:
         raise PermissionDenied("not_assigned_to_you")
@@ -108,98 +127,109 @@ def _user_region_id(user):
     return getattr(user, "region_id", None)
 
 
+def _safe_str(value):
+    return "-" if value is None else str(value)
+
+
+def _serialize_report(report: CADReport) -> dict:
+    return {
+        "id": report.id,
+        "cad_number": report.cad_number,
+        "case_type": getattr(report.case_type, "name", None)
+        or getattr(report.case_type, "name_ar", None)
+        or str(report.case_type),
+
+        "severity": report.severity,
+
+        "created_at": report.created_at.isoformat()
+        if report.created_at else None,
+
+        "injured_count": report.injured_count,
+        "age": report.age,
+        "is_conscious": report.is_conscious,
+
+        "location_text": report.location_text,
+        "details": report.details,
+
+        "latitude": report.latitude,
+        "longitude": report.longitude,
+
+        "region": _safe_str(
+            getattr(report.region, "name_ar", None)
+            or getattr(report.region, "name_en", None)
+            or report.region
+        ),
+
+        "responder": _safe_str(
+            getattr(report.assigned_responder, "get_full_name", lambda: None)()
+            or getattr(report.assigned_responder, "username", None)
+            or report.assigned_responder
+        ),
+
+        "status": _status_of(report),
+
+        "dispatched_at": report.dispatched_at.isoformat()
+        if report.dispatched_at else None,
+
+        "accepted_at": report.accepted_at.isoformat()
+        if report.accepted_at else None,
+
+        "arrival_time": report.arrived_at.isoformat()
+        if report.arrived_at else None,
+
+        "is_closed": report.is_closed,
+
+        "closed_at": report.closed_at.isoformat()
+        if report.closed_at else None,
+
+        "response_duration": report.response_duration
+        if hasattr(report, "response_duration") else None,
+    }
+
+
 @api_view(["GET"])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def cad_assigned_reports(request):
-    """قائمة بلاغات CAD للتطبيق (JWT) - فقط البلاغات المعينة لنفس المستخدم."""
+    """
+    قائمة بلاغات CAD للتطبيق (JWT):
+    - البلاغات المعينة للمستخدم
+    - البلاغات غير المعينة ضمن منطقة المستخدم
+    """
+    user_region_id = _user_region_id(request.user)
 
     qs = (
         CADReport.objects
         .select_related("case_type", "region", "assigned_responder")
-        .filter(
-            is_closed=False,
-            assigned_responder=request.user   # ← البلاغات الخاصة بالمستخدم فقط
-        )
-        .order_by("-created_at")
+        .filter(is_closed=False)
     )
 
-    def _safe_str(value):
-        return "-" if value is None else str(value)
-
-    results = []
-
-    for report in qs[:250]:
-        results.append(
-            {
-                "id": report.id,
-                "cad_number": report.cad_number,
-                "case_type": getattr(report.case_type, "name", None)
-                or getattr(report.case_type, "name_ar", None)
-                or str(report.case_type),
-
-                "severity": report.severity,
-
-                "created_at": report.created_at.isoformat()
-                if report.created_at else None,
-
-                "injured_count": report.injured_count,
-                "age": report.age,
-                "is_conscious": report.is_conscious,
-
-                "location_text": report.location_text,
-                "details": report.details,
-
-                "latitude": report.latitude,
-                "longitude": report.longitude,
-
-                "region": _safe_str(
-                    getattr(report.region, "name_ar", None)
-                    or getattr(report.region, "name_en", None)
-                    or report.region
-                ),
-
-                "responder": _safe_str(
-                    getattr(report.assigned_responder, "get_full_name", lambda: None)()
-                    or getattr(report.assigned_responder, "username", None)
-                    or report.assigned_responder
-                ),
-
-                "status": _status_of(report),
-
-                "dispatched_at": report.dispatched_at.isoformat()
-                if report.dispatched_at else None,
-
-                "accepted_at": report.accepted_at.isoformat()
-                if report.accepted_at else None,
-
-                "arrival_time": report.arrived_at.isoformat()
-                if report.arrived_at else None,
-
-                "is_closed": report.is_closed,
-
-                "closed_at": report.closed_at.isoformat()
-                if report.closed_at else None,
-
-                "response_duration": report.response_duration
-                if hasattr(report, "response_duration") else None,
-            }
+    if user_region_id:
+        qs = qs.filter(
+            models.Q(assigned_responder=request.user) |
+            models.Q(assigned_responder__isnull=True, region_id=user_region_id)
         )
+    else:
+        qs = qs.filter(
+            models.Q(assigned_responder=request.user) |
+            models.Q(assigned_responder__isnull=True)
+        )
+
+    qs = qs.order_by("-created_at").distinct()
+
+    results = [_serialize_report(report) for report in qs[:250]]
 
     return Response(
         {"ok": True, "count": len(results), "results": results},
         status=status.HTTP_200_OK,
     )
 
+
 @api_view(["POST"])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def cad_accept(request, cad_number: str):
-    """قبول البلاغ (موبايل) باستخدام JWT.
-
-    يسمح بالقبول إذا كان البلاغ غير معيّن لأحد بعد، وفي هذه الحالة يتم تعيينه
-    للمستخدم الحالي أولاً ثم تسجيل القبول.
-    """
+    """قبول البلاغ (موبايل) باستخدام JWT."""
     report = _get_report_by_cad_for_user(cad_number, request.user, allow_unassigned=True)
     try:
         if report.assigned_responder_id is None:
@@ -344,7 +374,7 @@ def register_device_token(request):
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def cad_my_reports(request):
-    """قائمة بلاغات CAD الخاصة بالمستجيب (المعيّنة له) مع فلترة بالتاريخ."""
+    """قائمة بلاغات CAD الخاصة بالمستجيب مع فلترة بالتاريخ."""
     qs = (
         CADReport.objects.select_related("case_type", "region", "assigned_responder")
         .filter(assigned_responder=request.user)
@@ -371,17 +401,14 @@ def cad_my_reports(request):
         if d:
             qs = qs.filter(created_at__date__lte=d)
 
-    def safe_str(value):
-        return "" if value is None else str(value)
-
     data = []
     for report in qs[:500]:
         data.append(
             {
                 "id": report.id,
-                "cad_number": safe_str(report.cad_number),
-                "case_type": safe_str(getattr(report.case_type, "name", "")),
-                "severity": safe_str(getattr(report, "severity", "")),
+                "cad_number": "" if report.cad_number is None else str(report.cad_number),
+                "case_type": "" if getattr(report.case_type, "name", None) is None else str(getattr(report.case_type, "name", "")),
+                "severity": "" if getattr(report, "severity", None) is None else str(getattr(report, "severity", "")),
                 "status": _status_of(report),
                 "created_at": report.created_at.isoformat() if getattr(report, "created_at", None) else None,
                 "dispatched_at": report.dispatched_at.isoformat() if getattr(report, "dispatched_at", None) else None,
