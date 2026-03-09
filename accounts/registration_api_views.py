@@ -80,6 +80,77 @@ def _assign_default_usergroup(user) -> None:
         logger.exception("Failed to assign default user_group (ECRMOBIL)")
 
 
+def _model_has_field(model_class, field_name: str) -> bool:
+    try:
+        model_class._meta.get_field(field_name)
+        return True
+    except Exception:
+        return False
+
+
+def _ensure_responder_records(user, region_id=None, organization_id=None) -> None:
+    """
+    إنشاء سجلات المستجيب وموقعه الأولي بدون إسقاط التسجيل بالكامل
+    إذا اختلفت بنية الموديل أو كان هناك قيد غير متوقع.
+    """
+    try:
+        from responders.models import Responder, ResponderLocation
+    except Exception:
+        logger.exception("Unable to import responders models")
+        return
+
+    # إنشاء Responder إن أمكن
+    try:
+        responder_defaults = {}
+
+        if _model_has_field(Responder, "region") and region_id:
+            responder_defaults["region_id"] = region_id
+
+        if _model_has_field(Responder, "organization") and organization_id:
+            responder_defaults["organization_id"] = organization_id
+
+        if _model_has_field(Responder, "is_active"):
+            responder_defaults["is_active"] = True
+
+        if _model_has_field(Responder, "user"):
+            Responder.objects.get_or_create(
+                user=user,
+                defaults=responder_defaults,
+            )
+        else:
+            logger.warning("Responder model has no 'user' field; skipping responder creation")
+    except Exception:
+        logger.exception("Failed to create/get Responder for user_id=%s", getattr(user, "id", None))
+
+    # إنشاء موقع أولي للمستجيب إن أمكن
+    try:
+        location_defaults = {}
+
+        if _model_has_field(ResponderLocation, "latitude"):
+            location_defaults["latitude"] = 0.0
+
+        if _model_has_field(ResponderLocation, "longitude"):
+            location_defaults["longitude"] = 0.0
+
+        if _model_has_field(ResponderLocation, "last_seen"):
+            location_defaults["last_seen"] = timezone.now()
+
+        if _model_has_field(ResponderLocation, "responder"):
+            ResponderLocation.objects.get_or_create(
+                responder=user,
+                defaults=location_defaults,
+            )
+        else:
+            logger.warning(
+                "ResponderLocation model has no 'responder' field; skipping location creation"
+            )
+    except Exception:
+        logger.exception(
+            "Failed to create/get ResponderLocation for user_id=%s",
+            getattr(user, "id", None),
+        )
+
+
 @csrf_exempt
 @require_http_methods(["POST"])
 def register(request):
@@ -144,6 +215,7 @@ def register(request):
                     "citizen",
                 }
         except Exception:
+            logger.exception("Failed to load organization during register")
             organization_obj = None
 
     if organization_id and not organization_obj:
@@ -167,38 +239,39 @@ def register(request):
 
     try:
         with transaction.atomic():
+            user_kwargs = {
+                "email": email,
+                "national_id": national_id,
+                "full_name": full_name,
+                "phone": phone,
+                "password": password,
+                "organization_id": organization_id,
+                "region_id": region_id,
+                "is_active": False,
+            }
+
+            # نضيف حقول المواطن فقط إذا كانت موجودة في الموديل
+            if hasattr(User, "citizen_health_courses"):
+                user_kwargs["citizen_health_courses"] = (
+                    citizen_health_courses if is_citizen else []
+                )
+
+            if hasattr(User, "citizen_other_health_courses"):
+                user_kwargs["citizen_other_health_courses"] = (
+                    citizen_other_health_courses if is_citizen else ""
+                )
+
             # إنشاء المستخدم
-            user = User.objects.create_user(
-                email=email,
-                national_id=national_id,
-                full_name=full_name,
-                phone=phone,
-                password=password,
-                organization_id=organization_id,
-                region_id=region_id,
-                is_active=False,
-                citizen_health_courses=citizen_health_courses if is_citizen else [],
-                citizen_other_health_courses=citizen_other_health_courses if is_citizen else "",
-            )
+            user = User.objects.create_user(**user_kwargs)
 
             # إضافته لمجموعة ECRMOBIL
             _assign_default_usergroup(user)
 
-            # إنشاء Responder
-            from responders.models import Responder, ResponderLocation
-
-            Responder.objects.create(
+            # إنشاء سجلات المستجيب بشكل آمن بدون كسر التسجيل
+            _ensure_responder_records(
                 user=user,
                 region_id=region_id,
                 organization_id=organization_id,
-                is_active=True,
-            )
-
-            # إنشاء موقع أولي للمستجيب
-            ResponderLocation.objects.create(
-                responder=user,
-                latitude=0.0,
-                longitude=0.0,
             )
 
             # سجل التحقق
@@ -226,7 +299,13 @@ def register(request):
     except IntegrityError as e:
         logger.exception("Register failed (IntegrityError)")
         if getattr(settings, "DEBUG", False):
-            return JsonResponse({"detail": str(e)}, status=500)
+            return JsonResponse(
+                {
+                    "detail": "IntegrityError",
+                    "debug_error": str(e),
+                },
+                status=500,
+            )
 
         return JsonResponse(
             {"detail": "بيانات غير صحيحة (تأكد من المنطقة والجهة وعدم تكرار البيانات)"},
@@ -236,7 +315,14 @@ def register(request):
     except Exception as e:
         logger.exception("Register failed (Exception)")
         if getattr(settings, "DEBUG", False):
-            return JsonResponse({"detail": str(e)}, status=500)
+            return JsonResponse(
+                {
+                    "detail": "Register failed",
+                    "debug_error": str(e),
+                    "error_type": e.__class__.__name__,
+                },
+                status=500,
+            )
 
         return JsonResponse({"detail": "حدث خطأ في إنشاء الحساب"}, status=500)
 
