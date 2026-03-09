@@ -125,8 +125,9 @@ def register(request):
             _assign_default_usergroup(user)
 
             # إنشاء Responder
-            from responders.models import Responder
-            responder = Responder.objects.create(
+            from responders.models import Responder, ResponderLocation
+
+            Responder.objects.create(
                 user=user,
                 region_id=region_id,
                 organization_id=organization_id,
@@ -134,13 +135,10 @@ def register(request):
             )
 
             # إنشاء موقع أولي للمستجيب
-            from responders.models import ResponderLocation
-
             ResponderLocation.objects.create(
-                responder=responder,
+                responder=user,
                 latitude=0.0,
-                longitude=0.0,
-                updated_at=timezone.now()
+                longitude=0.0
             )
 
             # سجل التحقق
