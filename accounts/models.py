@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+import re
 import secrets
 from datetime import timedelta
 
@@ -20,6 +20,16 @@ class User(AbstractBaseUser, PermissionsMixin):
     - مرتبط بكتلوج الجهات (Organization)
     - مرتبط بكتلوج المناطق (Region) (إجباري إلا لمدير النظام)
     """
+
+    HEALTH_COURSE_LIFE_AMBASSADOR = "life_ambassador"
+    HEALTH_COURSE_FIRST_AID_EIGHT = "first_aid_8"
+    HEALTH_COURSE_OTHER = "other"
+
+    HEALTH_COURSE_CHOICES = (
+        (HEALTH_COURSE_LIFE_AMBASSADOR, "سفير الحياة"),
+        (HEALTH_COURSE_FIRST_AID_EIGHT, "الثمان الأولى للإسعافات الأولية"),
+        (HEALTH_COURSE_OTHER, "أخرى"),
+    )
 
     national_id = models.CharField("رقم الهوية", max_length=20, unique=True)
     full_name = models.CharField("الاسم الكامل", max_length=255)
@@ -57,6 +67,21 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     is_health_practitioner = models.BooleanField("ممارس صحي", default=False)
 
+    # دورات المواطن الصحية
+    citizen_health_courses = models.JSONField(
+        "دوراتي الصحية",
+        default=list,
+        blank=True,
+        help_text="اختيار متعدد للدورات الصحية الخاصة بالمواطن.",
+    )
+
+    citizen_other_health_courses = models.TextField(
+        "دورات أخرى",
+        blank=True,
+        default="",
+        help_text="اكتب دورة أو أكثر عند اختيار (أخرى)، ويمكن الفصل بين الدورات بفاصلة أو سطر جديد.",
+    )
+
     # ✅ تحكم مشاركة الموقع (يتم تحديثه من التطبيق)
     location_sharing_enabled = models.BooleanField("مشاركة الموقع", default=True, db_index=True)
 
@@ -81,6 +106,21 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self) -> str:
         return f"{self.full_name} ({self.national_id})"
 
+    @classmethod
+    def allowed_health_courses(cls) -> set[str]:
+        return {
+            cls.HEALTH_COURSE_LIFE_AMBASSADOR,
+            cls.HEALTH_COURSE_FIRST_AID_EIGHT,
+            cls.HEALTH_COURSE_OTHER,
+        }
+
+    def _organization_is_citizen(self) -> bool:
+        org_name = ""
+        if self.organization_id and getattr(self, "organization", None):
+            org_name = (self.organization.name or "").strip().lower()
+
+        return org_name in {"مواطن", "citizen"}
+
     def clean(self) -> None:
         super().clean()
 
@@ -96,6 +136,44 @@ class User(AbstractBaseUser, PermissionsMixin):
                 raise ValidationError({"phone": "رقم الجوال يجب أن يحتوي على أرقام فقط (يسمح بـ + في البداية)."})
             if len(ph) < 9 or len(ph) > 16:
                 raise ValidationError({"phone": "طول رقم الجوال غير صحيح."})
+
+        # تنظيف والتحقق من الدورات الصحية
+        if self.citizen_health_courses is None:
+            self.citizen_health_courses = []
+
+        if not isinstance(self.citizen_health_courses, list):
+            raise ValidationError({"citizen_health_courses": "صيغة دوراتي الصحية غير صحيحة."})
+
+        allowed_courses = self.allowed_health_courses()
+        normalized_courses: list[str] = []
+
+        for item in self.citizen_health_courses:
+            value = str(item).strip()
+            if not value:
+                continue
+            if value not in allowed_courses:
+                raise ValidationError({"citizen_health_courses": f"قيمة غير مسموحة: {value}"})
+            if value not in normalized_courses:
+                normalized_courses.append(value)
+
+        self.citizen_health_courses = normalized_courses
+        self.citizen_other_health_courses = (self.citizen_other_health_courses or "").strip()
+
+        is_citizen = self._organization_is_citizen()
+
+        if is_citizen:
+            if not self.citizen_health_courses:
+                raise ValidationError({"citizen_health_courses": "حقل دوراتي الصحية مطلوب عند اختيار الجهة مواطن."})
+
+            if (
+                self.HEALTH_COURSE_OTHER in self.citizen_health_courses
+                and not self.citizen_other_health_courses
+            ):
+                raise ValidationError({"citizen_other_health_courses": "اكتب اسم دورة واحدة على الأقل عند اختيار أخرى."})
+        else:
+            # إذا لم تكن الجهة مواطن، نفرغ الحقول حتى لا تُخزن بالخطأ
+            self.citizen_health_courses = []
+            self.citizen_other_health_courses = ""
 
         # المنطقة إلزامية إلا إذا كانت مجموعة SYSADMIN
         if self.user_group and getattr(self.user_group, "code", None) == "SYSADMIN":

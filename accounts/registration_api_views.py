@@ -42,6 +42,30 @@ def _coerce_int(v):
         return v
 
 
+def _normalize_health_courses(value):
+    if value is None:
+        return []
+
+    if isinstance(value, list):
+        raw_items = value
+    elif isinstance(value, str):
+        raw_items = [v.strip() for v in value.split(",")]
+    else:
+        return []
+
+    allowed = {"life_ambassador", "first_aid_8", "other"}
+    result = []
+
+    for item in raw_items:
+        v = str(item).strip()
+        if not v:
+            continue
+        if v in allowed and v not in result:
+            result.append(v)
+
+    return result
+
+
 def _assign_default_usergroup(user) -> None:
     """
     تعيين المستخدم تلقائياً إلى مجموعة ECRMOBIL
@@ -59,7 +83,6 @@ def _assign_default_usergroup(user) -> None:
 @csrf_exempt
 @require_http_methods(["POST"])
 def register(request):
-
     data = _json(request)
     if data is None:
         return JsonResponse({"detail": "Invalid JSON"}, status=400)
@@ -72,6 +95,13 @@ def register(request):
 
     region_id = _coerce_int(data.get("region_id"))
     organization_id = _coerce_int(data.get("organization_id"))
+
+    citizen_health_courses = _normalize_health_courses(
+        data.get("citizen_health_courses")
+    )
+    citizen_other_health_courses = (
+        data.get("citizen_other_health_courses") or ""
+    ).strip()
 
     errors = {}
 
@@ -96,6 +126,36 @@ def register(request):
     if not organization_id:
         errors["organization_id"] = ["required"]
 
+    organization_obj = None
+    is_citizen = False
+
+    if organization_id:
+        try:
+            from organizations.models import Organization
+
+            organization_obj = Organization.objects.filter(
+                pk=organization_id,
+                is_active=True,
+            ).first()
+
+            if organization_obj:
+                is_citizen = (organization_obj.name or "").strip().lower() in {
+                    "مواطن",
+                    "citizen",
+                }
+        except Exception:
+            organization_obj = None
+
+    if organization_id and not organization_obj:
+        errors["organization_id"] = ["invalid"]
+
+    if is_citizen:
+        if not citizen_health_courses:
+            errors["citizen_health_courses"] = ["required"]
+
+        if "other" in citizen_health_courses and not citizen_other_health_courses:
+            errors["citizen_other_health_courses"] = ["required"]
+
     if errors:
         return JsonResponse({"errors": errors}, status=400)
 
@@ -106,9 +166,7 @@ def register(request):
         return JsonResponse({"detail": "رقم الهوية مستخدم مسبقًا"}, status=409)
 
     try:
-
         with transaction.atomic():
-
             # إنشاء المستخدم
             user = User.objects.create_user(
                 email=email,
@@ -119,6 +177,8 @@ def register(request):
                 organization_id=organization_id,
                 region_id=region_id,
                 is_active=False,
+                citizen_health_courses=citizen_health_courses if is_citizen else [],
+                citizen_other_health_courses=citizen_other_health_courses if is_citizen else "",
             )
 
             # إضافته لمجموعة ECRMOBIL
@@ -131,14 +191,14 @@ def register(request):
                 user=user,
                 region_id=region_id,
                 organization_id=organization_id,
-                is_active=True
+                is_active=True,
             )
 
             # إنشاء موقع أولي للمستجيب
             ResponderLocation.objects.create(
                 responder=user,
                 latitude=0.0,
-                longitude=0.0
+                longitude=0.0,
             )
 
             # سجل التحقق
@@ -149,7 +209,7 @@ def register(request):
                 user=user,
                 purpose="verify_email",
                 ttl_minutes=10,
-                length=6
+                length=6,
             )
 
             otp = otp_obj.code
@@ -170,7 +230,7 @@ def register(request):
 
         return JsonResponse(
             {"detail": "بيانات غير صحيحة (تأكد من المنطقة والجهة وعدم تكرار البيانات)"},
-            status=400
+            status=400,
         )
 
     except Exception as e:
@@ -184,7 +244,6 @@ def register(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def verify_email(request):
-
     data = _json(request)
     if data is None:
         return JsonResponse({"detail": "Invalid JSON"}, status=400)
@@ -204,7 +263,6 @@ def verify_email(request):
     ev, _ = EmailVerification.objects.get_or_create(user=user)
 
     if ev.verified_at is not None:
-
         if not user.is_active:
             user.is_active = True
             user.save(update_fields=["is_active"])
@@ -217,7 +275,6 @@ def verify_email(request):
         return JsonResponse({"detail": "رمز التفعيل غير صحيح أو منتهي"}, status=400)
 
     with transaction.atomic():
-
         if not user.is_active:
             user.is_active = True
             user.save(update_fields=["is_active"])
@@ -233,7 +290,6 @@ def verify_email(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def resend_verify_email(request):
-
     data = _json(request)
     if data is None:
         return JsonResponse({"detail": "Invalid JSON"}, status=400)
@@ -256,7 +312,7 @@ def resend_verify_email(request):
         user=user,
         purpose="verify_email",
         ttl_minutes=10,
-        length=6
+        length=6,
     )
 
     otp = otp_obj.code
