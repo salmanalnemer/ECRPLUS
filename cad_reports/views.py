@@ -1142,6 +1142,30 @@ def dispatch_report(request: HttpRequest, report_id: int) -> JsonResponse:
             logger.exception("dispatch_report activity log failed")
 
         try:
+            tokens = list(
+                UserDeviceToken.objects.filter(user_id=target_user.id)
+                .exclude(token__isnull=True)
+                .exclude(token__exact="")
+                .values_list("token", flat=True)
+                .distinct()
+            )
+            if tokens:
+                transaction.on_commit(
+                    lambda: send_fcm_to_tokens(
+                        tokens,
+                        title="بلاغ CAD جديد",
+                        body=f"رقم البلاغ: {r.cad_number}",
+                        data={
+                            "cad_number": r.cad_number,
+                            "status": "DISPATCHED",
+                            "report_id": r.id,
+                        },
+                    )
+                )
+        except Exception:
+            logger.exception("dispatch_report FCM failed")
+
+        try:
             r.refresh_from_db()
         except Exception:
             pass
