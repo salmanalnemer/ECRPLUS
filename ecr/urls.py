@@ -120,7 +120,8 @@ urlpatterns = [
 
     # Auth (JWT)
     path("api/auth/login/", NationalIdTokenObtainPairView.as_view(), name="jwt_login"),
-    path("api/auth/refresh/", TokenRefreshView.as_view(), name="jwt_refresh"),
+    path("api/auth/refresh/", TokenRefreshView.as_view(), name="jwt_refresh_old"),
+    path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="jwt_refresh"),
 
     # Register + Verify Email
     path("api/auth/register/", register, name="api_register"),
