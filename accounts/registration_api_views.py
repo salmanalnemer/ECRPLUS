@@ -44,12 +44,7 @@ def _coerce_int(v):
 
 def _assign_default_usergroup(user) -> None:
     """
-    ✅ المطلوب:
-    - أي مستخدم يسجل من Flutter يتم تعيينه تلقائياً إلى مجموعة ECRMOBIL (كتلوج usergroups)
-
-    ملاحظة:
-    - هذا يعبّي الحقل المهم عندك (User.user_group).
-    - لا نضيف المستخدم إلى auth.Group إطلاقاً لتجنب التكرار/اللخبطة.
+    تعيين المستخدم تلقائياً إلى مجموعة ECRMOBIL
     """
     try:
         from usergroups.models import UserGroup
@@ -64,21 +59,7 @@ def _assign_default_usergroup(user) -> None:
 @csrf_exempt
 @require_http_methods(["POST"])
 def register(request):
-    """
-    Body:
-      - full_name
-      - national_id
-      - phone
-      - email
-      - password
-      - region_id
-      - organization_id
 
-    سلوك التسجيل:
-      - إنشاء المستخدم بحالة غير مفعّل is_active=False
-      - تعيينه تلقائياً إلى مجموعة ECRMOBIL داخل كتلوج usergroups
-      - إصدار OTP وإرساله للبريد
-    """
     data = _json(request)
     if data is None:
         return JsonResponse({"detail": "Invalid JSON"}, status=400)
@@ -93,18 +74,25 @@ def register(request):
     organization_id = _coerce_int(data.get("organization_id"))
 
     errors = {}
+
     if not full_name:
         errors["full_name"] = ["required"]
+
     if not national_id:
         errors["national_id"] = ["required"]
+
     if not phone:
         errors["phone"] = ["required"]
+
     if not email:
         errors["email"] = ["required"]
+
     if not password:
         errors["password"] = ["required"]
+
     if not region_id:
         errors["region_id"] = ["required"]
+
     if not organization_id:
         errors["organization_id"] = ["required"]
 
@@ -113,11 +101,15 @@ def register(request):
 
     if User.objects.filter(email=email).exists():
         return JsonResponse({"detail": "البريد الإلكتروني مستخدم مسبقًا"}, status=409)
+
     if hasattr(User, "national_id") and User.objects.filter(national_id=national_id).exists():
         return JsonResponse({"detail": "رقم الهوية مستخدم مسبقًا"}, status=409)
 
     try:
+
         with transaction.atomic():
+
+            # إنشاء المستخدم
             user = User.objects.create_user(
                 email=email,
                 national_id=national_id,
@@ -129,12 +121,39 @@ def register(request):
                 is_active=False,
             )
 
-            # ✅ تعيين تلقائي لمجموعة ECRMOBIL (الحقل المهم)
+            # إضافته لمجموعة ECRMOBIL
             _assign_default_usergroup(user)
 
+            # إنشاء Responder
+            from responders.models import Responder
+            responder = Responder.objects.create(
+                user=user,
+                region_id=region_id,
+                organization_id=organization_id,
+                is_active=True
+            )
+
+            # إنشاء موقع أولي للمستجيب
+            from responders.models import ResponderLocation
+
+            ResponderLocation.objects.create(
+                responder=responder,
+                latitude=0.0,
+                longitude=0.0,
+                updated_at=timezone.now()
+            )
+
+            # سجل التحقق
             EmailVerification.objects.get_or_create(user=user)
 
-            otp_obj = EmailOTP.issue_otp(user=user, purpose="verify_email", ttl_minutes=10, length=6)
+            # إصدار OTP
+            otp_obj = EmailOTP.issue_otp(
+                user=user,
+                purpose="verify_email",
+                ttl_minutes=10,
+                length=6
+            )
+
             otp = otp_obj.code
 
             try:
@@ -142,31 +161,32 @@ def register(request):
                 detail = "تم إنشاء الحساب. تم إرسال رمز التفعيل إلى البريد الإلكتروني."
             except Exception:
                 logger.exception("Failed to send verification OTP email")
-                detail = "تم إنشاء الحساب لكن تعذر إرسال رمز التفعيل حالياً. استخدم إعادة الإرسال لاحقاً."
+                detail = "تم إنشاء الحساب لكن تعذر إرسال رمز التفعيل حالياً."
 
             return JsonResponse({"detail": detail}, status=201)
 
     except IntegrityError as e:
         logger.exception("Register failed (IntegrityError)")
         if getattr(settings, "DEBUG", False):
-            return JsonResponse({"detail": f"IntegrityError: {str(e)}"}, status=500)
-        return JsonResponse({"detail": "بيانات غير صحيحة (تأكد من المنطقة/الجهة وعدم تكرار رقم الهوية/الإيميل)"}, status=400)
+            return JsonResponse({"detail": str(e)}, status=500)
+
+        return JsonResponse(
+            {"detail": "بيانات غير صحيحة (تأكد من المنطقة والجهة وعدم تكرار البيانات)"},
+            status=400
+        )
 
     except Exception as e:
         logger.exception("Register failed (Exception)")
         if getattr(settings, "DEBUG", False):
             return JsonResponse({"detail": str(e)}, status=500)
+
         return JsonResponse({"detail": "حدث خطأ في إنشاء الحساب"}, status=500)
 
 
 @csrf_exempt
 @require_http_methods(["POST"])
 def verify_email(request):
-    """
-    Body:
-    - national_id OR email
-    - otp
-    """
+
     data = _json(request)
     if data is None:
         return JsonResponse({"detail": "Invalid JSON"}, status=400)
@@ -186,16 +206,20 @@ def verify_email(request):
     ev, _ = EmailVerification.objects.get_or_create(user=user)
 
     if ev.verified_at is not None:
+
         if not user.is_active:
             user.is_active = True
             user.save(update_fields=["is_active"])
+
         return JsonResponse({"detail": "البريد الإلكتروني مفعل بالفعل"}, status=200)
 
     ok = EmailOTP.verify_otp(user=user, code=otp, purpose="verify_email")
+
     if not ok:
         return JsonResponse({"detail": "رمز التفعيل غير صحيح أو منتهي"}, status=400)
 
     with transaction.atomic():
+
         if not user.is_active:
             user.is_active = True
             user.save(update_fields=["is_active"])
@@ -211,10 +235,7 @@ def verify_email(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def resend_verify_email(request):
-    """
-    Body:
-    - national_id OR email
-    """
+
     data = _json(request)
     if data is None:
         return JsonResponse({"detail": "Invalid JSON"}, status=400)
@@ -233,7 +254,13 @@ def resend_verify_email(request):
     if user.is_active:
         return JsonResponse({"detail": "الحساب مفعل بالفعل"}, status=200)
 
-    otp_obj = EmailOTP.issue_otp(user=user, purpose="verify_email", ttl_minutes=10, length=6)
+    otp_obj = EmailOTP.issue_otp(
+        user=user,
+        purpose="verify_email",
+        ttl_minutes=10,
+        length=6
+    )
+
     otp = otp_obj.code
 
     try:
