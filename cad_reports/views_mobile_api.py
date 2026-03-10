@@ -12,7 +12,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.authentication import JWTAuthentication
-
+from .services.fcm import send_fcm_to_tokens
 from .models import CADReport, CADReportActivity, UserDeviceToken
 
 logger = logging.getLogger(__name__)
@@ -479,7 +479,10 @@ def cad_chat(request, cad_number: str):
 
     msg = str(request.data.get("message") or "").strip()
     if not msg:
-        return Response({"ok": False, "error": "message_required"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"ok": False, "error": "message_required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     _log_activity(
         report,
@@ -488,4 +491,53 @@ def cad_chat(request, cad_number: str):
         action=CADReportActivity.Action.NOTE,
         message=msg,
     )
+
+    try:
+        target_user_ids = set()
+
+        # إذا المرسل هو المستجيب، أرسل للجهات الإدارية/المتابعة المرتبطة بالبلاغ
+        if report.assigned_responder_id == request.user.id:
+            if getattr(report, "created_by_id", None):
+                target_user_ids.add(report.created_by_id)
+
+            if getattr(report, "dispatcher_id", None):
+                target_user_ids.add(report.dispatcher_id)
+
+            if getattr(report, "updated_by_id", None):
+                target_user_ids.add(report.updated_by_id)
+
+        # إذا المرسل ليس المستجيب، أرسل للمستجيب المعيّن
+        else:
+            if report.assigned_responder_id:
+                target_user_ids.add(report.assigned_responder_id)
+
+        # لا ترسل لنفس المرسل
+        target_user_ids.discard(request.user.id)
+
+        if target_user_ids:
+            tokens = list(
+                UserDeviceToken.objects.filter(user_id__in=target_user_ids)
+                .exclude(token__isnull=True)
+                .exclude(token__exact="")
+                .values_list("token", flat=True)
+                .distinct()
+            )
+
+            if tokens:
+                sender_name = _user_display_name(request.user)
+                send_fcm_to_tokens(
+                    tokens,
+                    title=f"رسالة جديدة - البلاغ {report.cad_number}",
+                    body=f"{sender_name}: {msg[:120]}",
+                    data={
+                        "type": "chat",
+                        "report_id": report.id,
+                        "cad_number": report.cad_number,
+                        "message": msg[:250],
+                        "sender": sender_name,
+                    },
+                )
+    except Exception:
+        logger.exception("cad_chat push failed")
+
     return Response({"ok": True}, status=status.HTTP_200_OK)

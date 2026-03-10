@@ -1005,27 +1005,32 @@ def create_report(request: HttpRequest) -> JsonResponse:
         return JsonResponse({"ok": False, "error": "create_failed", "detail": str(e)}, status=400)
 
     # ✅ FCM بعد نجاح الـ commit فقط (عشان ما نرسل لو صار rollback)
-    def _send_fcm_on_commit(report_id: int, assigned_user_id: int | None, cad_no: str):
-        try:
-            if not assigned_user_id:
-                return
-            tokens = list(
-                UserDeviceToken.objects.filter(user_id=assigned_user_id)
-                .exclude(token__isnull=True)
-                .exclude(token__exact="")
-                .values_list("token", flat=True)
-                .distinct()
-            )
-            if not tokens:
-                return
-            send_fcm_to_tokens(
-                tokens,
-                title="بلاغ CAD جديد",
-                body=f"رقم البلاغ: {cad_no}",
-                data={"cad_number": cad_no, "status": "مفتوح", "report_id": report_id},
-            )
-        except Exception:
-            logger.exception("FCM push failed (non-blocking)")
+def _send_fcm_on_commit(report_id: int, assigned_user_id: int | None, cad_no: str):
+    try:
+        if not assigned_user_id:
+            return
+        tokens = list(
+            UserDeviceToken.objects.filter(user_id=assigned_user_id)
+            .exclude(token__isnull=True)
+            .exclude(token__exact="")
+            .values_list("token", flat=True)
+            .distinct()
+        )
+        if not tokens:
+            return
+        send_fcm_to_tokens(
+            tokens,
+            title="بلاغ CAD جديد",
+            body=f"رقم البلاغ: {cad_no}",
+            data={
+                "type": "report",
+                "cad_number": cad_no,
+                "status": "OPEN",
+                "report_id": report_id,
+            },
+        )
+    except Exception:
+        logger.exception("FCM push failed (non-blocking)")
 
     transaction.on_commit(lambda: _send_fcm_on_commit(r.id, getattr(r, "assigned_responder_id", None), r.cad_number))
 
@@ -1156,6 +1161,7 @@ def dispatch_report(request: HttpRequest, report_id: int) -> JsonResponse:
                         title="بلاغ CAD جديد",
                         body=f"رقم البلاغ: {r.cad_number}",
                         data={
+                            "type": "report",
                             "cad_number": r.cad_number,
                             "status": "DISPATCHED",
                             "report_id": r.id,
