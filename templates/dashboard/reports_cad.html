@@ -28,7 +28,7 @@
     --radius-sm:12px;
   }
 
-  body{ background: var(--bg); color: var(--txt); font-family: "Tajawal", system-ui, -apple-system, "Segoe UI", Arial, sans-serif; }
+  body{ background: var(--bg); color: var(--txt); }
   .wrap{ padding: 20px; max-width: 1500px; margin: 0 auto; }
 
   /* Top header */
@@ -58,7 +58,7 @@
   /* Stats */
   .stats{
     display:grid;
-    grid-template-columns: repeat(4, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 12px;
     margin-bottom: 12px;
     direction: rtl;
@@ -90,7 +90,7 @@
   }
   .filtersGrid{
     display:grid;
-    grid-template-columns: 1.1fr 1fr 1fr 0.9fr 0.9fr 1fr;
+    grid-template-columns: 1.1fr 1fr 1fr 0.9fr 0.9fr 1fr 0.9fr;
     gap: 10px;
     align-items:end;
   }
@@ -995,7 +995,7 @@
 /* آخر تحديث */
 .stat:nth-child(4){
   background:linear-gradient(135deg,#64748b,#475569);
-  color: #ffffff;
+  color: #020202;
 }
 
 /* النص */
@@ -1017,6 +1017,70 @@
   opacity:.9;
   color: #ffffff;
 }
+
+.stats{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:14px;
+}
+
+.stat{
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:18px 20px;
+  border-radius:18px;
+  background:linear-gradient(135deg,#525151 0%,#6b6b6b 100%);
+  border:1px solid #ebe5e5;
+  box-shadow:0 10px 25px rgba(15,23,42,.06);
+}
+
+.stat .k{
+  font-size:14px;
+  color:#ffffff;
+  margin-bottom:6px;
+  font-weight:700;
+}
+
+.stat .v{
+  font-size:30px;
+  font-weight:800;
+  color:#ffffff;
+  line-height:1;
+}
+
+.stat i{
+  width:54px;
+  height:54px;
+  border-radius:16px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:22px;
+  background:#ffffff;
+  color:#a19b9b;
+  flex-shrink:0;
+}
+
+/* الكرت الأزرق الجديد */
+.stat-blue{
+  background:linear-gradient(135deg,#0ea5e9 0%, #2563eb 55%, #0a319e 100%);
+  border:none;
+  box-shadow:0 14px 30px rgba(37,99,235,.28);
+}
+
+.stat-blue .k,
+.stat-blue .v{
+  color:#fff;
+}
+
+.stat-blue i{
+  background:rgba(255,255,255,.18);
+  color:#fff;
+  backdrop-filter:blur(4px);
+}
 </style>
 
 <div class="wrap">
@@ -1032,39 +1096,47 @@
     </div>
   </div>
 
-  <div class="stats">
-    <div class="stat">
-      <div>
-        <div class="k">إجمالي بلاغات النظام </div>
-        <div class="v" id="stTotal">0</div>
-      </div>
-      <i class="fa-solid fa-layer-group"></i>
+ <div class="stats">
+  <div class="stat stat-blue">
+    <div>
+      <div class="k">بلاغ مرفوض وغير مسند</div>
+      <div class="v" id="stRejectedUnassigned">0</div>
     </div>
-
-    <div class="stat">
-      <div>
-        <div class="k">مفتوحة</div>
-        <div class="v" id="stOpen">0</div>
-      </div>
-      <i class="fa-solid fa-circle-exclamation"></i>
-    </div>
-
-    <div class="stat">
-      <div>
-        <div class="k">مغلقة</div>
-        <div class="v" id="stClosed">0</div>
-      </div>
-      <i class="fa-solid fa-circle-check"></i>
-    </div>
-
-    <div class="stat">
-      <div>
-        <div class="k">آخر تحديث</div>
-        <div class="v" id="stUpdated" style="font-size:14px">—</div>
-      </div>
-      <i class="fa-regular fa-clock"></i>
-    </div>
+    <i class="fa-solid fa-user-slash"></i>
   </div>
+
+  <div class="stat">
+    <div>
+      <div class="k">إجمالي بلاغات النظام</div>
+      <div class="v" id="stTotal">0</div>
+    </div>
+    <i class="fa-solid fa-layer-group"></i>
+  </div>
+
+  <div class="stat">
+    <div>
+      <div class="k">مفتوحة</div>
+      <div class="v" id="stOpen">0</div>
+    </div>
+    <i class="fa-solid fa-circle-exclamation"></i>
+  </div>
+
+  <div class="stat">
+    <div>
+      <div class="k">مغلقة</div>
+      <div class="v" id="stClosed">0</div>
+    </div>
+    <i class="fa-solid fa-circle-check"></i>
+  </div>
+
+  <div class="stat">
+    <div>
+      <div class="k">آخر تحديث</div>
+      <div class="v" id="stUpdated" style="font-size:14px">—</div>
+    </div>
+    <i class="fa-regular fa-clock"></i>
+  </div>
+</div>
 
   <!-- Filters (فلترة محلية فقط) -->
   <div class="filters">
@@ -1088,6 +1160,22 @@
         {% endif %}
       </div>
 
+            <div class="fField">
+        <div class="fLabel"><i class="fa-solid fa-triangle-exclamation"></i> نوع الحالة</div>
+        <select id="fltType" class="fInput">
+          <option value="">الكل</option>
+        </select>
+      </div>
+
+      <div class="fField">
+        <div class="fLabel"><i class="fa-solid fa-toggle-on"></i> حالة البلاغ</div>
+        <select id="fltStatus" class="fInput">
+          <option value="open" selected>مفتوح</option>
+          <option value="closed">مغلق</option>
+          <option value="all">الكل</option>
+        </select>
+      </div>
+
       <div class="fField">
         <div class="fLabel"><i class="fa-regular fa-calendar"></i> من</div>
         <input id="fltFrom" type="date" class="fInput">
@@ -1108,12 +1196,7 @@
         <input id="fltResp" type="text" class="fInput" placeholder="اسم المستجيب">
       </div>
 
-      <div class="fField">
-        <div class="fLabel"><i class="fa-solid fa-triangle-exclamation"></i> نوع الحالة</div>
-        <select id="fltType" class="fInput">
-          <option value="">الكل</option>
-        </select>
-      </div>
+
     </div>
 
     <div class="fRowActions" style="margin-top:10px;">
@@ -1145,12 +1228,13 @@
               <th>حالة البلاغ</th>
               <th>المنطقة</th>
               <th>المستجيب</th>
+              <th>حالة الطلب</th>
               <th>وقت البلاغ</th>
               <th>مدة الحالة</th>
             </tr>
           </thead>
           <tbody id="tbody">
-            <tr><td colspan="7" style="color:var(--muted); font-weight:900;">تحميل البيانات...</td></tr>
+            <tr><td colspan="8" style="color:var(--muted); font-weight:900;">تحميل البيانات...</td></tr>
           </tbody>
         </table>
       </div>
@@ -1547,19 +1631,22 @@ const CURRENT_USER_NAME = (function(){
   const banner = document.getElementById("soundBanner");
   const btnEnableSound = document.getElementById("btnEnableSound");
   const soundToggle = document.getElementById("soundToggle");
+  
 
   const soundFiles = {
     new_report: "{% static 'sounds/cad.mp3' %}",
-    accepted:   "{% static 'sounds/accept.mp3' %}",
+    rejected:   "{% static 'sounds/cad.mp3' %}",
     arrived:    "{% static 'sounds/accept.mp3' %}",
-    location:   "{% static 'sounds/cad.mp3' %}",
+    closed:     "{% static 'sounds/accept.mp3' %}",
+    chat:       "{% static 'sounds/cad.mp3' %}",
   };
 
   const audioPool = {
     new_report: new Audio(soundFiles.new_report),
-    accepted: new Audio(soundFiles.accepted),
-    arrived: new Audio(soundFiles.arrived),
-    location: new Audio(soundFiles.location),
+    rejected:   new Audio(soundFiles.rejected),
+    arrived:    new Audio(soundFiles.arrived),
+    closed:     new Audio(soundFiles.closed),
+    chat:       new Audio(soundFiles.chat),
   };
   for(const k in audioPool){
     try{ audioPool[k].preload = "auto"; }catch(_e){}
@@ -1792,6 +1879,14 @@ const CURRENT_USER_NAME = (function(){
         const item = data.activity || data.data || data;
         if (item && (item.message != null || item.text != null)) {
           appendActivityItem(item);
+
+          const isMine = isMeActivity(item);
+          if(!isMine && currentReport){
+            const notifyKey = `chat:${currentReport.cad_number}:${item.created_at || item.timestamp || item.at || item.message || item.text}`;
+            if(notifyOnce(notifyKey, 1200)){
+              showEvent("chat", currentReport.cad_number, currentReport.responder_name || currentReport.responder || null);
+            }
+          }
         }
       };
 
@@ -1879,55 +1974,53 @@ const CURRENT_USER_NAME = (function(){
     const cad = (cadNumber == null) ? "—" : String(cadNumber);
     const resp = responderLabel(responderName);
     const k = String(kind || "").toLowerCase();
+
     const labels = {
-      new_report:"بلاغ جديد",
-      accepted:"تم قبول البلاغ",
-      arrived:"تم تسجيل الوصول",
-      location:"تم تحديث موقع المستجيب",
-      rejected:"تم رفض البلاغ"
+      new_report: "بلاغ جديد",
+      rejected:   "تم رفض البلاغ",
+      arrived:    "تم تسجيل الوصول",
+      closed:     "تم إغلاق البلاغ",
+      chat:       "رسالة جديدة",
     };
-    const title = labels[k] || "تنبيه";
-    const msg = (k === "location")
-      ? `${title} • المستجيب: ${resp}`
+
+    if(!labels[k]) return;
+
+    const title = labels[k];
+    const msg = (k === "chat")
+      ? `${title} • CAD #${cad}`
       : `${title} • CAD #${cad} • المستجيب: ${resp}`;
+
     setToast(msg, k !== "rejected");
+
     if(k === "new_report"){
       startPersistentAlarm(cad);
-    }else if(k !== "rejected"){
-      playNotifySound(k);
+      return;
     }
+
+    playNotifySound(k);
   }
 
   function detectResponderLocationEvents(list){
     const items = Array.isArray(list) ? list : [];
-    const events = [];
     const next = new Map();
 
     for(const r of items){
       const rid = String(r.id ?? r.responder_id ?? r.pk ?? r.user_id ?? "");
       if(!rid) continue;
-      const name = r.name || r.full_name || r.display_name || r.responder || r.username || "مستجيب";
+
       const lat = (r.latitude ?? r.lat);
       const lng = (r.longitude ?? r.lng);
       const hasCoords = lat != null && lng != null && !Number.isNaN(Number(lat)) && !Number.isNaN(Number(lng));
-      const curr = {
-        name,
+
+      next.set(rid, {
+        name: r.name || r.full_name || r.display_name || r.responder || r.username || "مستجيب",
         lat: hasCoords ? Number(lat) : null,
         lng: hasCoords ? Number(lng) : null,
-      };
-      const prev = prevResponderLocations.get(rid);
-      if(prev && hasCoords){
-        const wasMissing = prev.lat == null || prev.lng == null;
-        const changed = !wasMissing && (Math.abs(prev.lat - curr.lat) > 0.00005 || Math.abs(prev.lng - curr.lng) > 0.00005);
-        if(wasMissing || changed){
-          events.push({ kind: "location", responder_name: name });
-        }
-      }
-      next.set(rid, curr);
+      });
     }
 
     prevResponderLocations = next;
-    return events;
+    return [];
   }
 
   function stateKey(r){
@@ -1945,8 +2038,10 @@ const CURRENT_USER_NAME = (function(){
         prevStates.set(k, {
           cad_number: r.cad_number,
           responder_name: (r.responder_name || r.responder || null),
-          accepted_at: (r.accepted_at || null),
+          rejected_at: (r.rejected_at || null),
           arrival_time: (r.arrival_time || null),
+          closed_at: (r.closed_at || null),
+          is_closed: !!(r.is_closed || r.closed || r.closed_at),
         });
       }
       prevStatesInitialized = true;
@@ -1961,8 +2056,10 @@ const CURRENT_USER_NAME = (function(){
       const curr = {
         cad_number: r.cad_number,
         responder_name: (r.responder_name || r.responder || null),
-        accepted_at: (r.accepted_at || null),
+        rejected_at: (r.rejected_at || null),
         arrival_time: (r.arrival_time || null),
+        closed_at: (r.closed_at || null),
+        is_closed: !!(r.is_closed || r.closed || r.closed_at),
       };
 
       const prev = prevStates.get(k);
@@ -1970,11 +2067,14 @@ const CURRENT_USER_NAME = (function(){
       if(!prev){
         events.push({ kind: "new_report", cad_number: curr.cad_number, responder_name: curr.responder_name });
       }else{
-        if(!prev.accepted_at && curr.accepted_at){
-          events.push({ kind: "accepted", cad_number: curr.cad_number, responder_name: curr.responder_name });
+        if(!prev.rejected_at && curr.rejected_at){
+          events.push({ kind: "rejected", cad_number: curr.cad_number, responder_name: curr.responder_name });
         }
         if(!prev.arrival_time && curr.arrival_time){
           events.push({ kind: "arrived", cad_number: curr.cad_number, responder_name: curr.responder_name });
+        }
+        if(!prev.is_closed && curr.is_closed){
+          events.push({ kind: "closed", cad_number: curr.cad_number, responder_name: curr.responder_name });
         }
       }
 
@@ -2271,7 +2371,7 @@ document.getElementById("editLocText").value = r.location_text || "";
         zIndex: isAssigned ? 999 : 100,
       });
       const info = new google.maps.InfoWindow({
-        content: `<div dir="rtl" style="font-family:Tajawal,Arial,sans-serif;min-width:180px"><div style="font-weight:900">${escapeHtml(name)}</div><div style="margin-top:4px;color:#475569">${isAssigned ? 'المستجيب الحالي' : 'مستجيب متصل'}</div></div>`
+        content: `<div dir="rtl" style="width:180px"><div style="font-weight:900">${escapeHtml(name)}</div><div style="margin-top:4px;color:#475569">${isAssigned ? 'المستجيب الحالي' : 'مستجيب متصل'}</div></div>`
       });
       marker.addListener("click", ()=> info.open({ anchor: marker, map: modalMap }));
       modalResponderMarkers.push(marker);
@@ -2375,13 +2475,38 @@ document.getElementById("editLocText").value = r.location_text || "";
     return reportsRaw.find(x => String(x.cad_number) === String(cad)) || null;
   }
 
+  function getRequestStatusMeta(r){
+    const isClosed = !!(r.is_closed || r.closed || r.closed_at);
+    const isRejected = !!(r.rejected_at) || String(r.status || r.state || "").toLowerCase() === "rejected";
+    const hasArrived = !!(r.arrival_time || r.arrived_at);
+    const hasAccepted = !!(r.accepted_at) || String(r.status || r.state || "").toLowerCase() === "accepted";
+    const hasResponder = !!String(r.responder_name || r.responder || "").trim() && String(r.responder_name || r.responder || "").trim() !== "-";
+
+    if(isClosed){
+      return { label: "مغلق", icon: "fa-solid fa-lock", cls: "closed" };
+    }
+    if(isRejected){
+      return { label: "مرفوض", icon: "fa-solid fa-ban", cls: "closed" };
+    }
+    if(hasArrived){
+      return { label: "وصول", icon: "fa-solid fa-location-crosshairs", cls: "ready" };
+    }
+    if(hasAccepted){
+      return { label: "مقبول", icon: "fa-solid fa-check", cls: "ready" };
+    }
+    if(hasResponder){
+      return { label: "تم الترحيل", icon: "fa-solid fa-share", cls: "open" };
+    }
+    return { label: "جديد", icon: "fa-solid fa-bolt", cls: "open" };
+  }
+
   function renderTable(items){
     const tb = document.getElementById("tbody");
     tb.innerHTML = "";
     document.getElementById("tblCount").textContent = items.length;
 
     if(items.length === 0){
-      tb.innerHTML = `<tr><td colspan="7" style="color:var(--muted); font-weight:900;">لا يوجد نتائج حسب الفلاتر الحالية</td></tr>`;
+      tb.innerHTML = `<tr><td colspan="8" style="color:var(--muted); font-weight:900;">لا يوجد نتائج حسب الفلاتر الحالية</td></tr>`;
       return;
     }
 
@@ -2389,6 +2514,7 @@ document.getElementById("editLocText").value = r.location_text || "";
       const tr = document.createElement("tr");
       tr.style.cursor = "pointer";
       tr.dataset.cad = String(r.cad_number || "");
+      const requestStatus = getRequestStatusMeta(r);
       tr.innerHTML = `
         <td><button class="cad-link" type="button" data-cad="${escapeHtml(r.cad_number)}">${escapeHtml(r.cad_number)}</button></td>
         <td>${escapeHtml(r.case_type || r.type || "-")}</td>
@@ -2403,6 +2529,11 @@ document.getElementById("editLocText").value = r.location_text || "";
         </td>
         <td>${escapeHtml(r.region_name || r.region || "-")}</td>
         <td>${escapeHtml(r.responder_name || r.responder || "-")}</td>
+        <td>
+          <span class="pill ${requestStatus.cls}">
+            <i class="${requestStatus.icon}"></i> ${requestStatus.label}
+          </span>
+        </td>
         <td>${escapeHtml(r.created_at || "-")}</td>
         <td>${escapeHtml(r.response_duration || "-")}</td>
       `;
@@ -2444,6 +2575,7 @@ document.getElementById("editLocText").value = r.location_text || "";
     const fltCad = document.getElementById("fltCad");
     const fltResp = document.getElementById("fltResp");
     const fltType = document.getElementById("fltType");
+    const fltStatus = document.getElementById("fltStatus");
 
     const regionVal = fltRegion && !fltRegion.disabled ? String(fltRegion.value || "") : "";
     const fromD = parseDateOnly(fltFrom?.value || "");
@@ -2451,8 +2583,14 @@ document.getElementById("editLocText").value = r.location_text || "";
     const cadQ = normalize(fltCad?.value || "");
     const respQ = normalize(fltResp?.value || "");
     const typeVal = normalize(fltType?.value || "");
+    const statusVal = normalize(fltStatus?.value || "open");
 
     filteredReports = (Array.isArray(reportsRaw) ? reportsRaw : []).filter(r=>{
+      const isClosed = !!(r.is_closed || r.closed || r.closed_at);
+
+      if(statusVal === "open" && isClosed) return false;
+      if(statusVal === "closed" && !isClosed) return false;
+
       if(regionVal){
         const rid = String(r.region_id ?? r.region ?? "");
         const rname = normalize(r.region_name || r.region || "");
@@ -2498,6 +2636,9 @@ document.getElementById("editLocText").value = r.location_text || "";
     }
     const fltType = document.getElementById("fltType");
     if(fltType) fltType.value = "";
+
+    const fltStatus = document.getElementById("fltStatus");
+    if(fltStatus) fltStatus.value = "open";
 
     const fltRegion = document.getElementById("fltRegion");
     if(fltRegion && !fltRegion.disabled) fltRegion.value = "";
@@ -2550,18 +2691,19 @@ document.getElementById("editLocText").value = r.location_text || "";
         }
       }
 
-      const responderEvents = detectResponderLocationEvents(respondersRaw);
-      for(const ev of responderEvents){
-        const key = `${ev.kind}:${ev.responder_name}`;
-        if(notifyOnce(key, 2500)){
-          showEvent(ev.kind, null, ev.responder_name);
-        }
-      }
+      detectResponderLocationEvents(respondersRaw);
 
       const total = reportsRaw.length;
       const closed = reportsRaw.filter(r => (r.is_closed || r.closed || r.closed_at)).length;
       const open = total - closed;
+      const rejectedUnassigned = reportsRaw.filter(r => {
+        const isRejected = !!(r.rejected_at) || String(r.status || r.state || "").toLowerCase() === "rejected";
+        const responderText = String(r.responder_name || r.responder || "").trim();
+        const hasResponder = !!responderText && responderText !== "-";
+        return isRejected && !hasResponder;
+      }).length;
 
+      document.getElementById("stRejectedUnassigned").textContent = rejectedUnassigned;
       document.getElementById("stTotal").textContent = total;
       document.getElementById("stClosed").textContent = closed;
       document.getElementById("stOpen").textContent = open;
@@ -2571,8 +2713,7 @@ document.getElementById("editLocText").value = r.location_text || "";
 
       if(isInitial){
         filteredReports = reportsRaw.slice();
-        renderTable(filteredReports);
-        renderCadMarkers(filteredReports);
+        applyFilters();
       }else{
         applyFilters();
       }
@@ -2703,7 +2844,11 @@ document.getElementById("editLocText").value = r.location_text || "";
         await loadCad(false);
         const id = currentReport.id ?? currentReport.pk ?? currentReport.report_id;
         const updated = reportsRaw.find(x => String(x.id ?? x.pk ?? x.report_id) === String(id));
-        if(updated) populateModal(updated);
+        if(updated){
+          updated.accepted_at = updated.accepted_at || new Date().toISOString();
+          updated.status = "accepted";
+          populateModal(updated);
+        }
       }catch(e){
         setDetailsMsg(e.message || "تعذر حفظ تفاصيل البلاغ.", true);
         setToast("تعذر حفظ التفاصيل", false);
@@ -2723,7 +2868,7 @@ document.getElementById("btnApplyFilters")?.addEventListener("click", applyFilte
         if(e.key === "Enter"){ e.preventDefault(); applyFilters(); }
       });
     });
-    ["fltFrom","fltTo","fltRegion","fltType"].forEach(id=>{
+    ["fltFrom","fltTo","fltRegion","fltType","fltStatus"].forEach(id=>{
       const el = document.getElementById(id);
       el?.addEventListener("change", ()=> applyFilters());
     });
@@ -2842,7 +2987,11 @@ document.getElementById("btnApplyFilters")?.addEventListener("click", applyFilte
 
         await loadCad(false);
         const updated = reportsRaw.find(x => String(x.id ?? x.pk ?? x.report_id) === String(id));
-        if(updated) populateModal(updated);
+        if(updated){
+          updated.accepted_at = updated.accepted_at || new Date().toISOString();
+          updated.status = "accepted";
+          populateModal(updated);
+        }
       }catch(e){
         setMsg(e.message || "تعذر حفظ التعديل.", true);
         setToast("تعذر حفظ التعديل", false);
@@ -2911,10 +3060,13 @@ document.getElementById("btnApplyFilters")?.addEventListener("click", applyFilte
         await postAction(urlAccept(id), {});
         setToast("تم تسجيل القبول ✅", true);
         setMsg("تم تسجيل قبول البلاغ.");
-        showEvent("accepted", currentReport.cad_number, (currentReport.responder_name || currentReport.responder || modalSelectedResponderName));
         await loadCad(false);
         const updated = reportsRaw.find(x => String(x.id ?? x.pk ?? x.report_id) === String(id));
-        if(updated) populateModal(updated);
+        if(updated){
+          updated.accepted_at = updated.accepted_at || new Date().toISOString();
+          updated.status = "accepted";
+          populateModal(updated);
+        }
       }catch(e){
         setMsg(e.message || "تعذر تسجيل القبول.", true);
         setToast("تعذر القبول", false);
@@ -2940,14 +3092,17 @@ document.getElementById("btnApplyFilters")?.addEventListener("click", applyFilte
         await loadCad(false);
         const updated = reportsRaw.find(x => String(x.cad_number) === String(currentReport.cad_number)) || currentReport;
         updated.status = "rejected";
+        updated.state = "rejected";
         updated.rejected_at = new Date().toISOString();
+        updated.accepted_at = null;
+        updated.arrival_time = null;
         updated.responder_name = "-";
         updated.responder = "-";
         populateModal(updated);
         openTransferDialog();
       }catch(e){
         setMsg(e.message || "تعذر رفض البلاغ.", true);
-        setToast("تعذر الرفض", false);
+        setToast("لايمكنك رفض البلاغ كمرحل", false);
       }
     });
 
@@ -2970,7 +3125,11 @@ document.getElementById("btnApplyFilters")?.addEventListener("click", applyFilte
         showEvent("arrived", currentReport.cad_number, (currentReport.responder_name || currentReport.responder || modalSelectedResponderName));
         await loadCad(false);
         const updated = reportsRaw.find(x => String(x.id ?? x.pk ?? x.report_id) === String(id));
-        if(updated) populateModal(updated);
+        if(updated){
+          updated.accepted_at = updated.accepted_at || new Date().toISOString();
+          updated.status = "accepted";
+          populateModal(updated);
+        }
       }catch(e){
         setMsg(e.message || "تعذر تسجيل الوصول.", true);
         setToast("تعذر الوصول", false);
@@ -2984,9 +3143,14 @@ document.getElementById("btnApplyFilters")?.addEventListener("click", applyFilte
         await postAction(urlClose(id), {});
         setToast("تم إغلاق البلاغ ✅", true);
         setMsg("تم إغلاق البلاغ.");
+        showEvent("closed", currentReport.cad_number, (currentReport.responder_name || currentReport.responder || modalSelectedResponderName));
         await loadCad(false);
         const updated = reportsRaw.find(x => String(x.id ?? x.pk ?? x.report_id) === String(id));
-        if(updated) populateModal(updated);
+        if(updated){
+          updated.accepted_at = updated.accepted_at || new Date().toISOString();
+          updated.status = "accepted";
+          populateModal(updated);
+        }
       }catch(e){
         setMsg(e.message || "تعذر إغلاق البلاغ.", true);
         setToast("تعذر الإغلاق", false);

@@ -37,7 +37,7 @@ class MeView(APIView):
                 "user_group": getattr(u, "user_group_id", None),
                 "user_group_name": getattr(getattr(u, "user_group", None), "code", None),
                 "region": getattr(u, "region_id", None),
-                "region_name": getattr(getattr(u, "region", None), "name", None),
+                "region_name": getattr(getattr(u, "region", None), "name_ar", None),
             },
             status=status.HTTP_200_OK,
         )
@@ -93,7 +93,7 @@ class MeView(APIView):
                 "email": u.email,
                 "phone": getattr(u, "phone", ""),
                 "region": getattr(u, "region_id", None),
-                "region_name": getattr(getattr(u, "region", None), "name", None),
+                "region_name": getattr(getattr(u, "region", None), "name_ar", None),
             },
             status=status.HTTP_200_OK,
         )

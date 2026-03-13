@@ -378,7 +378,7 @@ class MobileHomeSummaryAPI(APIView):
         ).count()
 
         if region_id:
-            region_ecr_total = MobileReport.objects.filter(region_id=region_id).count()
+            region_ecr_total = MobileReport.objects.filter(created_by__region_id=region_id).count()
             region_cad_total = CADReport.objects.filter(region_id=region_id).count()
             region_responders_total = User.objects.filter(
                 is_active=True,

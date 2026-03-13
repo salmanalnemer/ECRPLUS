@@ -1,7 +1,8 @@
 {% extends "portal/base_portal.html" %}
 {% load static %}
 {% block content %}
-<title>بلاغ  CAD  جديد</title>
+<title>بلاغ CAD جديد</title>
+
 <style>
   .page-wrapper {
     display: flex;
@@ -11,23 +12,21 @@
     height: calc(100vh - 100px);
   }
 
-  /* عامود النموذج - واسع ومنظم */
   .form-column {
     flex: 1.1;
     background: #fff;
     border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.10);
     display: flex;
     flex-direction: column;
     overflow: hidden;
   }
 
-  /* عامود الخريطة - أوسع كما طلبت */
   .map-column {
     flex: 1;
     background: #fff;
     border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.10);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -37,28 +36,68 @@
     background: #1e293b;
     color: #fff;
     padding: 12px 18px;
-    font-weight: bold;
+    font-weight: 700;
     display: flex;
     justify-content: space-between;
     align-items: center;
   }
 
-  .scroll-content { padding: 20px; overflow-y: auto; flex: 1; }
-  #map-canvas { width: 100%; flex: 1; }
+  .scroll-content {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+  }
 
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-  .field-group { display: flex; flex-direction: column; gap: 5px; }
-  .field-group label { font-size: 0.8rem; font-weight: 700; color: #475569; }
+  #map-canvas {
+    width: 100%;
+    flex: 1;
+    min-height: 500px;
+  }
 
-  input, select, textarea {
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .field-group label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #475569;
+  }
+
+  input,
+  select,
+  textarea {
     padding: 10px;
     border: 1px solid #cbd5e1;
     border-radius: 8px;
     font-size: 0.85rem;
     font-family: 'Tajawal';
+    background: #fff;
   }
 
-  .input-readonly { background: #f8fafc; color: #e31e24; font-weight: bold; border-color: #fca5a5; }
+  input:focus,
+  select:focus,
+  textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
+  }
+
+  .input-readonly {
+    background: #f8fafc;
+    color: #e31e24;
+    font-weight: 700;
+    border-color: #fca5a5;
+  }
 
   .btn-submit {
     background: #24bb70;
@@ -66,17 +105,25 @@
     font-family: 'Tajawal';
     padding: 14px;
     border-radius: 8px;
-    font-weight: bold;
+    font-weight: 700;
     width: 15%;
+    min-width: 120px;
     border: none;
     cursor: pointer;
     font-size: 1rem;
-    transition: 0.3s;
+    transition: 0.2s ease;
     margin-right: auto;
     display: block;
   }
 
-  .btn-submit:hover { background: #1a8650; }
+  .btn-submit:hover {
+    background: #1a8650;
+  }
+
+  .btn-submit:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
 
   .map-toolbar {
     padding: 8px;
@@ -137,12 +184,11 @@
     font-size: 0.8rem;
   }
 
-  .btn-clear:hover { background: #0f172a; }
+  .btn-clear:hover {
+    background: #0f172a;
+  }
 
-  /* =========================
-     Toast (Notifications)
-     ========================= */
-  .toast-wrap{
+  .toast-wrap {
     position: fixed;
     top: 16px;
     left: 16px;
@@ -154,7 +200,7 @@
     max-width: 360px;
   }
 
-  .toast{
+  .toast {
     pointer-events: auto;
     background: #0f172a;
     color: #fff;
@@ -170,7 +216,7 @@
     direction: rtl;
   }
 
-  .toast .icon{
+  .toast .icon {
     width: 26px;
     height: 26px;
     border-radius: 999px;
@@ -182,14 +228,14 @@
     margin-top: 1px;
   }
 
-  .toast .body{
+  .toast .body {
     display: flex;
     flex-direction: column;
     gap: 2px;
     min-width: 0;
   }
 
-  .toast .title{
+  .toast .title {
     font-weight: 900;
     font-size: 0.9rem;
     line-height: 1.1;
@@ -198,14 +244,14 @@
     text-overflow: ellipsis;
   }
 
-  .toast .msg{
+  .toast .msg {
     font-size: 0.82rem;
-    color: rgba(255,255,255,0.9);
+    color: rgba(255,255,255,0.90);
     line-height: 1.35;
     word-break: break-word;
   }
 
-  .toast .close{
+  .toast .close {
     margin-inline-start: auto;
     background: transparent;
     color: rgba(255,255,255,0.8);
@@ -216,44 +262,43 @@
     padding: 0 4px;
   }
 
-/* إشعار نجاح (أخضر) */
-.toast.success{
-  background: #49b45b; /* لون خلفية التوست عند نجاح العملية */
-}
-.toast.success .icon{
-  background: rgba(255,255,255,0.14); /* خلفية أيقونة النجاح (شفافة قليلاً) */
-}
-/* إشعار خطأ (أحمر داكن) */
-.toast.error{
-  background: #be3434; /* لون خلفية إشعار الخطأ */
-}
-.toast.error .icon{
-  background: rgba(255,255,255,0.14); /* خلفية الأيقونة */
-}
-/* إشعار تحذير (برتقالي/بني) */
-.toast.warning{
-  background: #d65e13; /* لون خلفية التحذير */
-}
-.toast.warning .icon{
-  background: rgba(255,255,255,0.14); /* خلفية أيقونة التحذير */
-}
-/* إشعار معلومات (غامق محايد) */
-.toast.info{
-  background: #2046a0; /* لون إشعارات المعلومات العامة */
-}
-.toast.info .icon{
-  background: rgba(255,255,255,0.14); /* خلفية أيقونة المعلومات */
-}
+  .toast.success { background: #49b45b; }
+  .toast.success .icon { background: rgba(255,255,255,0.14); }
+
+  .toast.error { background: #be3434; }
+  .toast.error .icon { background: rgba(255,255,255,0.14); }
+
+  .toast.warning { background: #d65e13; }
+  .toast.warning .icon { background: rgba(255,255,255,0.14); }
+
+  .toast.info { background: #2046a0; }
+  .toast.info .icon { background: rgba(255,255,255,0.14); }
 
   @keyframes toastIn {
     to { transform: translateY(0); opacity: 1; }
   }
+
   @keyframes toastOut {
     to { transform: translateY(-8px); opacity: 0; }
   }
+
+  @media (max-width: 1200px) {
+    .page-wrapper {
+      flex-direction: column;
+      height: auto;
+    }
+
+    .form-column,
+    .map-column {
+      min-height: 420px;
+    }
+
+    .btn-submit {
+      width: 100%;
+    }
+  }
 </style>
 
-<!-- Toast container -->
 <div class="toast-wrap" id="toastWrap" aria-live="polite" aria-atomic="true"></div>
 
 <div class="page-wrapper">
@@ -267,8 +312,8 @@
       <form id="createReportForm" onsubmit="submitCreateReport(event)">
         {% csrf_token %}
 
-        <!-- ✅ المستجيب المختار من الخريطة (يتم تعبئته عند الضغط على Marker) -->
         <input type="hidden" id="responder_id" name="responder_id" value="">
+
         <div class="responder-chip" id="selectedResponder" style="display:none;">
           <div class="meta">
             <div class="name">
@@ -282,6 +327,7 @@
               <span id="sel_last">—</span>
             </div>
           </div>
+
           <button type="button" class="btn-clear" onclick="clearSelectedResponder()">
             إلغاء الاختيار
           </button>
@@ -289,10 +335,19 @@
 
         <div class="grid-2">
           <div class="field-group">
-            <label>رقم البلاغ في نظام  CAD</label>
-            <input id="cad_number" name="cad_number" type="number" step="1" min="1" required placeholder="مثال: 1325"
-                   oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+            <label>رقم البلاغ في نظام CAD</label>
+            <input
+              id="cad_number"
+              name="cad_number"
+              type="number"
+              step="1"
+              min="1"
+              required
+              placeholder="مثال: 1325"
+              oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+            >
           </div>
+
           <div class="field-group">
             <label>وقت استقبال البلاغ</label>
             <input id="cad_received_time" name="cad_received_time" type="time" step="1" required>
@@ -309,6 +364,7 @@
               <option value="simple">بسيطة</option>
             </select>
           </div>
+
           <div class="field-group">
             <label>حالة الوعي</label>
             <select id="awareness" name="awareness" required>
@@ -329,77 +385,84 @@
               {% endfor %}
             </select>
           </div>
+
           <div class="field-group">
             <label>عدد المصابين</label>
             <input id="injured_count" name="injured_count" type="number" min="0" required value="1">
           </div>
+
           <div class="field-group">
             <label>العمر</label>
             <input id="age" name="age" type="number" min="0" required value="">
           </div>
+
           <div class="field-group">
-          <label>المنطقة</label>
+            <label>المنطقة</label>
 
-          {% if user_group_code in privileged_group_codes %}
-            <select id="region" name="region" required>
-              <option value="">— اختر المنطقة —</option>
-              {% for r in all_regions %}
-                <option value="{{ r.id }}"
-                  {% if request.user.region and request.user.region.id == r.id %}
-                    selected
-                  {% endif %}
-                >
-                  {{ r.name_ar }}
-                </option>
-              {% endfor %}
-            </select>
-          {% else %}
-            <input type="hidden" name="region" value="{{ request.user.region.id }}">
-            <input type="text"
-                  value="{% if request.user.region %}{{ request.user.region.name_ar }}{% else %}— لم يتم تحديد المنطقة —{% endif %}"
-                  readonly
-                  class="input-readonly"
-                  style="color:#64748b; border-color:#e2e8f0;">
-          {% endif %}
-
+            {% if user_group_code in privileged_group_codes %}
+              <select id="region" name="region" required>
+                <option value="">— اختر المنطقة —</option>
+                {% for r in all_regions %}
+                  <option value="{{ r.id }}"
+                    {% if request.user.region and request.user.region.id == r.id %}
+                      selected
+                    {% endif %}
+                  >
+                    {{ r.name_ar }}
+                  </option>
+                {% endfor %}
+              </select>
+            {% else %}
+              <input type="hidden" name="region" value="{{ request.user.region.id }}">
+              <input
+                type="text"
+                value="{% if request.user.region %}{{ request.user.region.name_ar }}{% else %}— لم يتم تحديد المنطقة —{% endif %}"
+                readonly
+                class="input-readonly"
+                style="color:#64748b; border-color:#e2e8f0;"
+              >
+            {% endif %}
+          </div>
         </div>
-        </div>
 
-        
         <div class="field-group" style="margin-top:5px;">
           <label>وصف الموقع</label>
           <input id="location_description" name="location_description" type="text" placeholder="بجوار المسجد / الطريق السريع...">
         </div>
-        
+
         <div class="field-group" style="margin-top:12px;">
           <label>تفاصيل البلاغ</label>
-          <textarea id="details" name="details" rows="3" required placeholder=" يجب كتابة تفاصيل البلاغ هنا..."></textarea>
+          <textarea id="details" name="details" rows="3" required placeholder="يجب كتابة تفاصيل البلاغ هنا..."></textarea>
         </div>
-        
+
         <div class="grid-2">
           <div class="field-group">
             <label>خط العرض (Latitude)</label>
             <input id="latitude" name="latitude" type="text" readonly class="input-readonly" placeholder="سيتم التحديد من الخريطة">
           </div>
+
           <div class="field-group">
             <label>خط الطول (Longitude)</label>
             <input id="longitude" name="longitude" type="text" readonly class="input-readonly" placeholder="سيتم التحديد من الخريطة">
           </div>
         </div>
-        <button type="submit" class="btn-submit" style="margin-top:15px;">
-         ترحيل
+
+        <button type="submit" class="btn-submit" id="submitBtn" style="margin-top:15px;">
+          ترحيل
         </button>
       </form>
     </div>
   </div>
 
   <div class="map-column">
-    <div class="column-header" style="background: #334155;">
+    <div class="column-header" style="background:#334155;">
       <span><i class="fas fa-map-marked-alt"></i> تحديد موقع البلاغ</span>
     </div>
+
     <div class="map-toolbar" id="geo-status">
       <i class="fas fa-spinner fa-spin"></i> تحميل خريطة المنطقة من النظام...
     </div>
+
     <div id="map-canvas"></div>
   </div>
 
@@ -408,34 +471,36 @@
 {{ map_config|json_script:"map-config" }}
 
 <script>
-  let map, marker;
-  let responderMarkers = new Map(); // id -> google.maps.Marker
-  let responderCache = new Map();   // id -> responder object
-  let respondersTimer = null;
+  let map = null;
+  let marker = null;
   let infoWindow = null;
+  let respondersTimer = null;
 
-  /* =========================
-     Toast helpers
-     ========================= */
-  function escapeHtml(s){
+  const responderMarkers = new Map();
+  const responderCache = new Map();
+
+  function escapeHtml(s) {
     return String(s ?? "")
-      .replaceAll("&","&amp;")
-      .replaceAll("<","&lt;")
-      .replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;")
-      .replaceAll("'","&#039;");
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
   }
 
-  function showToast(type, title, message, opts = {}){
+  function showToast(type, title, message, opts = {}) {
     const wrap = document.getElementById("toastWrap");
-    if(!wrap) return;
+    if (!wrap) return;
 
     const t = (type || "info").toLowerCase();
     const ttl = escapeHtml(title || "");
     const msg = escapeHtml(message || "");
     const duration = Number.isFinite(opts.duration) ? opts.duration : 3500;
 
-    const iconChar = (t === "success") ? "✓" : (t === "error") ? "!" : (t === "warning") ? "⚠" : "i";
+    const iconChar =
+      t === "success" ? "✓" :
+      t === "error" ? "!" :
+      t === "warning" ? "⚠" : "i";
 
     const el = document.createElement("div");
     el.className = `toast ${t}`;
@@ -449,6 +514,7 @@
     `;
 
     const closeBtn = el.querySelector(".close");
+
     const remove = () => {
       el.style.animation = "toastOut 180ms ease-in forwards";
       setTimeout(() => el.remove(), 190);
@@ -457,19 +523,160 @@
     closeBtn.addEventListener("click", remove);
     wrap.appendChild(el);
 
-    if(duration > 0){
+    if (duration > 0) {
       setTimeout(() => {
-        if(document.body.contains(el)) remove();
+        if (document.body.contains(el)) remove();
       }, duration);
     }
   }
 
+  function csrfToken() {
+    const el = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    return el ? el.value : "";
+  }
+
+  function formatISO(iso) {
+    if (!iso) return "—";
+    try {
+      const d = new Date(iso);
+      return d.toLocaleString("ar-SA");
+    } catch (e) {
+      return iso;
+    }
+  }
+
+  function setNowToReceivedTime() {
+    const t = document.getElementById("cad_received_time");
+    if (!t) return;
+
+    const now = new Date();
+    t.value =
+      now.getHours().toString().padStart(2, "0") + ":" +
+      now.getMinutes().toString().padStart(2, "0") + ":" +
+      now.getSeconds().toString().padStart(2, "0");
+  }
+
+  function clearSelectedResponder() {
+    const responderIdEl = document.getElementById("responder_id");
+    const selectedResponderEl = document.getElementById("selectedResponder");
+
+    if (responderIdEl) responderIdEl.value = "";
+    if (selectedResponderEl) selectedResponderEl.style.display = "none";
+  }
+
+  function clearCreateReportFieldsKeepLocation() {
+    const setVal = (id, value) => {
+      const el = document.getElementById(id);
+      if (el) el.value = value;
+    };
+
+    setVal("cad_number", "");
+    setVal("severity", "");
+    setVal("awareness", "");
+    setVal("case_type", "");
+    setVal("injured_count", "1");
+    setVal("age", "");
+    setVal("location_description", "");
+    setVal("details", "");
+
+    setNowToReceivedTime();
+    clearSelectedResponder();
+  }
+
+  function selectResponderById(responderId) {
+    const r = responderCache.get(Number(responderId));
+
+    if (!r) {
+      showToast("error", "تعذر تحديد المستجيب", "المستجيب غير متصل أو لم يتم تحميل بياناته بعد.");
+      return;
+    }
+
+    document.getElementById("responder_id").value = String(r.id);
+    document.getElementById("sel_name").innerText = r.full_name || "—";
+    document.getElementById("sel_phone").innerText = r.phone ? `📞 ${r.phone}` : "—";
+    document.getElementById("sel_last").innerText = r.last_seen ? `آخر تحديث: ${formatISO(r.last_seen)}` : "—";
+
+    const hpEl = document.getElementById("sel_hp");
+    if (r.is_health_practitioner) {
+      hpEl.style.display = "inline-block";
+    } else {
+      hpEl.style.display = "none";
+    }
+
+    document.getElementById("selectedResponder").style.display = "flex";
+
+    if (infoWindow) {
+      infoWindow.close();
+    }
+
+    showToast("success", "تم اختيار المستجيب", (r.full_name || "تم تحديد المستجيب بنجاح") + " ✅", {
+      duration: 2200
+    });
+  }
+
+  function responderInfoHtml(r) {
+    const hp = r.is_health_practitioner
+      ? '<span style="display:inline-block;background:#dcfce7;color:#166534;font-weight:800;border-radius:999px;padding:2px 8px;font-size:12px;margin-inline-start:6px;">ممارس صحي</span>'
+      : '';
+
+    const phone = r.phone
+      ? `<div style="margin-top:6px;font-size:13px;"><b>الجوال:</b> <a href="tel:${escapeHtml(r.phone)}" style="color:#0f766e;text-decoration:none">${escapeHtml(r.phone)}</a></div>`
+      : '';
+
+    const last = r.last_seen
+      ? `<div style="margin-top:6px;font-size:12px;color:#64748b;">آخر تحديث: ${escapeHtml(formatISO(r.last_seen))}</div>`
+      : '';
+
+    return `
+      <div style="min-width:240px; font-family:Tajawal;">
+        <div style="font-weight:900;color:#0f172a;font-size:14px;">
+          ${escapeHtml(r.full_name || "مستجيب")} ${hp}
+        </div>
+        ${phone}
+        ${last}
+        <div style="margin-top:10px; display:flex; gap:8px;">
+          <button
+            type="button"
+            onclick="selectResponderById(${Number(r.id)})"
+            style="background:#e31e24;color:#fff;border:none;border-radius:8px;padding:8px 10px;cursor:pointer;font-weight:800;"
+          >
+            اختيار المستجيب
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  function updateLocationFields(location) {
+    const lat = typeof location.lat === "function" ? location.lat() : location.lat;
+    const lng = typeof location.lng === "function" ? location.lng() : location.lng;
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+    document.getElementById("latitude").value = Number(lat).toFixed(6);
+    document.getElementById("longitude").value = Number(lng).toFixed(6);
+
+    if (marker) {
+      marker.setMap(null);
+    }
+
+    marker = new google.maps.Marker({
+      position: { lat: Number(lat), lng: Number(lng) },
+      map: map,
+      animation: google.maps.Animation.DROP,
+      icon: { url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png" },
+    });
+
+    const t = document.getElementById("cad_received_time");
+    if (t && !t.value) {
+      setNowToReceivedTime();
+    }
+  }
+
   function initMap() {
-    // ✅ إعدادات الخريطة من Django كـ JSON (تجنب مشاكل تعريب الأرقام)
     const cfgEl = document.getElementById("map-config");
     const cfg = cfgEl ? JSON.parse(cfgEl.textContent) : {};
 
-    // ✅ مركز المملكة (Fallback)
     const KSA_CENTER = { lat: 23.885942, lng: 45.079162 };
     const KSA_ZOOM = 6;
 
@@ -478,20 +685,19 @@
     const cfgZoom = Number(cfg.zoom);
     const regionName = (cfg.regionName || "").trim();
 
-    // ✅ اعتبر (0,0) غير صالح لأنه يوديك للمحيط (Null Island)
     const isNullIsland =
-      Number.isFinite(cfgLat) && Number.isFinite(cfgLng) &&
-      Math.abs(cfgLat) < 0.0001 && Math.abs(cfgLng) < 0.0001;
+      Number.isFinite(cfgLat) &&
+      Number.isFinite(cfgLng) &&
+      Math.abs(cfgLat) < 0.0001 &&
+      Math.abs(cfgLng) < 0.0001;
 
     const hasValidCenter =
-      Number.isFinite(cfgLat) && Number.isFinite(cfgLng) && !isNullIsland;
+      Number.isFinite(cfgLat) &&
+      Number.isFinite(cfgLng) &&
+      !isNullIsland;
 
-    // ✅ center النهائي
     const center = hasValidCenter ? { lat: cfgLat, lng: cfgLng } : KSA_CENTER;
 
-    // ✅ zoom النهائي:
-    // - إذا عنده منطقة: نسمح بـ cfg.zoom (مع حماية)
-    // - إذا ما عنده منطقة/إحداثيات: نجبر زووم المملكة
     let safeZoom = KSA_ZOOM;
     if (hasValidCenter) {
       safeZoom = (Number.isFinite(cfgZoom) && cfgZoom >= 3 && cfgZoom <= 20) ? cfgZoom : 13;
@@ -504,151 +710,65 @@
       gestureHandling: "greedy",
     });
 
-    // ✅ نافذة معلومات عامة (سنستخدمها عند الضغط على Marker للمستجيب)
     infoWindow = new google.maps.InfoWindow();
 
-    // ✅ شريط الحالة أعلى الخريطة
     const geoStatus = document.getElementById("geo-status");
     geoStatus.innerHTML =
       (hasValidCenter && regionName)
-        ? `<i class="fas fa-map-pin" style="color:#0f766e"></i> المنطقة الحالية: <b>${regionName}</b> • <span style="color:#0f172a;font-weight:700">المستجيبين المتصلين</span> يظهرون على الخريطة`
+        ? `<i class="fas fa-map-pin" style="color:#0f766e"></i> المنطقة الحالية: <b>${escapeHtml(regionName)}</b> • <span style="color:#0f172a;font-weight:700">المستجيبين المتصلين</span> يظهرون على الخريطة`
         : `<i class="fas fa-map" style="color:#0f766e"></i> لم يتم تحديد منطقة للمستخدم • تم عرض <b>خريطة المملكة</b> • اختر موقع البلاغ بالنقر على الخريطة`;
 
-    // ✅ ضع المؤشر على مركز (المنطقة أو المملكة) وعبّي الحقول
     updateLocationFields(center);
 
-    // ✅ المستخدم يحدد مكان البلاغ بالنقر على الخريطة
     map.addListener("click", (e) => {
       updateLocationFields(e.latLng);
     });
 
-    // ✅ ابدأ سحب المستجيبين المتصلين كل 10 ثواني (تحريك/تحديث markers)
     startRespondersPolling();
   }
 
-  function updateLocationFields(location) {
-    const lat = typeof location.lat === "function" ? location.lat() : location.lat;
-    const lng = typeof location.lng === "function" ? location.lng() : location.lng;
+  async function fetchOnlineResponders() {
+    try {
+      const resp = await fetch("/api/responders/online/", {
+        method: "GET",
+        headers: {
+          "X-Requested-With": "XMLHttpRequest"
+        },
+        credentials: "same-origin"
+      });
 
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-
-    document.getElementById("latitude").value = Number(lat).toFixed(6);
-    document.getElementById("longitude").value = Number(lng).toFixed(6);
-
-    if (marker) marker.setMap(null);
-    marker = new google.maps.Marker({
-      position: { lat: Number(lat), lng: Number(lng) },
-      map: map,
-      animation: google.maps.Animation.DROP,
-      icon: { url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png" },
-    });
-
-    const t = document.getElementById("cad_received_time");
-    if (t && !t.value) {
-      const now = new Date();
-      t.value =
-        now.getHours().toString().padStart(2, "0") + ":" +
-        now.getMinutes().toString().padStart(2, "0") + ":" +
-        now.getSeconds().toString().padStart(2, "0");
-    }
-  }
-
-  function csrfToken(){
-    const el = document.querySelector('input[name="csrfmiddlewaretoken"]');
-    return el ? el.value : "";
-  }
-
-  function formatISO(iso){
-    if(!iso) return "—";
-    try{
-      const d = new Date(iso);
-      return d.toLocaleString('ar-SA');
-    }catch(e){ return iso; }
-  }
-
-  function clearSelectedResponder(){
-    document.getElementById("responder_id").value = "";
-    document.getElementById("selectedResponder").style.display = "none";
-  }
-
-  function selectResponderById(responderId){
-    const r = responderCache.get(Number(responderId));
-    if(!r){
-      showToast("error", "تعذر تحديد المستجيب", "المستجيب غير متصل أو لم يتم تحميل بياناته بعد.");
-      return;
-    }
-    document.getElementById("responder_id").value = String(r.id);
-
-    document.getElementById("sel_name").innerText = r.full_name || "—";
-    document.getElementById("sel_phone").innerText = r.phone ? `📞 ${r.phone}` : "—";
-    document.getElementById("sel_last").innerText = r.last_seen ? `آخر تحديث: ${formatISO(r.last_seen)}` : "—";
-
-    const hpEl = document.getElementById("sel_hp");
-    if(r.is_health_practitioner){
-      hpEl.style.display = "inline-block";
-    }else{
-      hpEl.style.display = "none";
-    }
-
-    document.getElementById("selectedResponder").style.display = "flex";
-    if(infoWindow){ infoWindow.close(); }
-    showToast("success", "تم اختيار المستجيب", (r.full_name || "تم تحديد المستجيب بنجاح") + " ✅", { duration: 2200 });
-  }
-
-  function responderInfoHtml(r){
-    const hp = r.is_health_practitioner
-      ? '<span style="display:inline-block;background:#dcfce7;color:#166534;font-weight:800;border-radius:999px;padding:2px 8px;font-size:12px;margin-inline-start:6px;">ممارس صحي</span>'
-      : '';
-    const phone = r.phone
-      ? `<div style="margin-top:6px;font-size:13px;"><b>الجوال:</b> <a href="tel:${r.phone}" style="color:#0f766e;text-decoration:none">${r.phone}</a></div>`
-      : '';
-    const last = r.last_seen
-      ? `<div style="margin-top:6px;font-size:12px;color:#64748b;">آخر تحديث: ${formatISO(r.last_seen)}</div>`
-      : '';
-    return `
-      <div style="min-width:240px; font-family:Tajawal;">
-        <div style="font-weight:900;color:#0f172a;font-size:14px;">
-          ${r.full_name || 'مستجيب'} ${hp}
-        </div>
-        ${phone}
-        ${last}
-        <div style="margin-top:10px; display:flex; gap:8px;">
-          <button type="button" onclick="selectResponderById(${r.id})" style="background:#e31e24;color:#fff;border:none;border-radius:8px;padding:8px 10px;cursor:pointer;font-weight:800;">اختيار المستجيب</button>
-        </div>
-      </div>
-    `;
-  }
-
-  async function fetchOnlineResponders(){
-    try{
-      const resp = await fetch("/api/responders/online/", { method: "GET" });
-      if(!resp.ok) return;
+      if (!resp.ok) return;
 
       const data = await resp.json();
-      const list = (data && data.results) ? data.results : [];
+      const list = Array.isArray(data?.results) ? data.results : [];
 
       const incomingIds = new Set();
-      for(const r of list){
-        incomingIds.add(Number(r.id));
-        responderCache.set(Number(r.id), r);
+
+      for (const r of list) {
+        const id = Number(r.id);
+        incomingIds.add(id);
+        responderCache.set(id, r);
       }
 
-      for(const [id, mk] of responderMarkers.entries()){
-        if(!incomingIds.has(Number(id))){
+      for (const [id, mk] of responderMarkers.entries()) {
+        if (!incomingIds.has(Number(id))) {
           mk.setMap(null);
           responderMarkers.delete(id);
           responderCache.delete(id);
         }
       }
 
-      for(const r of list){
+      for (const r of list) {
         const id = Number(r.id);
         const pos = { lat: Number(r.lat), lng: Number(r.lng) };
-        if(!Number.isFinite(pos.lat) || !Number.isFinite(pos.lng)) continue;
 
-        if(responderMarkers.has(id)){
+        if (!Number.isFinite(pos.lat) || !Number.isFinite(pos.lng)) {
+          continue;
+        }
+
+        if (responderMarkers.has(id)) {
           responderMarkers.get(id).setPosition(pos);
-        }else{
+        } else {
           const mk = new google.maps.Marker({
             position: pos,
             map: map,
@@ -670,109 +790,104 @@
         }
       }
 
-      if (list.length === 1) {
-        const only = list[0];
-        const p = { lat: Number(only.lat), lng: Number(only.lng) };
-        if (Number.isFinite(p.lat) && Number.isFinite(p.lng)) {
-          console.log("Responder visible without moving map:", p);
-        }
-      }
-
-    }catch(e){
-      // تجاهل لتجنب إزعاج المستخدم
+      /*
+        مهم:
+        هنا لا يوجد أي:
+        - showToast
+        - play sound
+        - alert
+        - console notify
+        حتى يبقى تحديث موقع المستجيب صامتًا 100%
+      */
+    } catch (e) {
+      /*
+        تجاهل الخطأ عمدًا حتى لا نزعج المستخدم أثناء التحديث الصامت.
+        ويمكنك لاحقًا تسجيله في Sentry أو backend logging بدل الواجهة.
+      */
     }
   }
 
-  function startRespondersPolling(){
+  function startRespondersPolling() {
     fetchOnlineResponders();
-    if(respondersTimer) clearInterval(respondersTimer);
-    respondersTimer = setInterval(fetchOnlineResponders, 10000);
-  }
 
-  function setNowToReceivedTime(){
-    const t = document.getElementById("cad_received_time");
-    if(!t) return;
-    const now = new Date();
-    t.value =
-      now.getHours().toString().padStart(2, "0") + ":" +
-      now.getMinutes().toString().padStart(2, "0") + ":" +
-      now.getSeconds().toString().padStart(2, "0");
-  }
+    if (respondersTimer) {
+      clearInterval(respondersTimer);
+    }
 
-  function clearCreateReportFieldsKeepLocation(){
-    // ✅ مسح الحقول بعد نجاح الإنشاء مع الإبقاء على (lat/lng) كما هي
-    const form = document.getElementById("createReportForm");
-    if(!form) return;
-
-    const setVal = (id, v) => { const el = document.getElementById(id); if(el) el.value = v; };
-
-    setVal("cad_number", "");
-    setVal("severity", "");
-    setVal("awareness", "");
-    setVal("case_type", "");
-    setVal("injured_count", "1");
-    setVal("age", "");
-    setVal("location_description", "");
-    setVal("details", "");
-
-    // وقت الاستقبال نعيده لوقت الآن لتسهيل الإدخال
-    setNowToReceivedTime();
-
-    // ✅ إلغاء اختيار المستجيب (مطلوب بعد إنشاء بلاغ صحيح)
-    clearSelectedResponder();
+    respondersTimer = setInterval(() => {
+      fetchOnlineResponders();
+    }, 10000);
   }
 
   async function submitCreateReport(ev) {
     ev.preventDefault();
 
+    const submitBtn = document.getElementById("submitBtn");
     const responderId = document.getElementById("responder_id").value;
-    if(!responderId){
-      showToast("warning", "تنبيه", "اختر مستجيب من الخريطة أولاً (المؤشر الأخضر).");
+
+    if (!responderId) {
+      showToast("warning", "تنبيه", "اختر مستجيب من الخريطة أولًا (المؤشر الأخضر).");
       return;
     }
 
     const fd = new FormData(ev.target);
 
-    // helper: safely parse JSON, otherwise return null + text snippet
-    async function safeReadJson(resp){
+    async function safeReadJson(resp) {
       const ct = (resp.headers.get("content-type") || "").toLowerCase();
-      if(ct.includes("application/json")){
-        try { return { json: await resp.json(), text: "" }; } catch(_){ return { json: null, text: "" }; }
+
+      if (ct.includes("application/json")) {
+        try {
+          return { json: await resp.json(), text: "" };
+        } catch (_) {
+          return { json: null, text: "" };
+        }
       }
-      // non-json (HTML/empty)
+
       try {
         const t = await resp.text();
         return { json: null, text: (t || "").slice(0, 500) };
-      } catch(_) {
+      } catch (_) {
         return { json: null, text: "" };
       }
     }
 
-    // Build dispatch "when" from input time (cad_received_time) using today's date
-    function buildWhenIsoFromTimeInput(){
+    function buildWhenIsoFromTimeInput() {
       const t = (document.getElementById("cad_received_time")?.value || "").trim();
-      if(!t) return "";
+      if (!t) return "";
+
       const now = new Date();
-      const yyyy = now.getFullYear().toString().padStart(4,"0");
-      const mm = (now.getMonth()+1).toString().padStart(2,"0");
-      const dd = now.getDate().toString().padStart(2,"0");
-      // t is "HH:MM" or "HH:MM:SS"
+      const yyyy = now.getFullYear().toString().padStart(4, "0");
+      const mm = (now.getMonth() + 1).toString().padStart(2, "0");
+      const dd = now.getDate().toString().padStart(2, "0");
+
       return `${yyyy}-${mm}-${dd}T${t}`;
     }
 
     try {
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "جارٍ الترحيل...";
+      }
+
       const resp = await fetch("/cad/create/", {
         method: "POST",
         body: fd,
-        headers: { "X-CSRFToken": csrfToken() }
+        headers: {
+          "X-CSRFToken": csrfToken(),
+          "X-Requested-With": "XMLHttpRequest"
+        },
+        credentials: "same-origin"
       });
 
       const r1 = await safeReadJson(resp);
       const data = r1.json;
 
       if (!(resp.ok && data && data.ok)) {
-        const msg = (data && (data.details || data.detail || data.error)) ? (data.details || data.detail || data.error)
-                   : (r1.text ? "فشل إنشاء البلاغ: " + r1.text : "حدث خطأ أثناء إنشاء البلاغ");
+        const msg =
+          (data && (data.details || data.detail || data.error))
+            ? (data.details || data.detail || data.error)
+            : (r1.text ? "فشل إنشاء البلاغ: " + r1.text : "حدث خطأ أثناء إنشاء البلاغ");
+
         showToast("error", "فشل إنشاء البلاغ", msg);
         return;
       }
@@ -782,14 +897,19 @@
       const fd2 = new FormData();
       fd2.append("responder_id", responderId);
 
-      // ✅ send when so dispatched_at gets saved deterministically
       const whenIso = buildWhenIsoFromTimeInput();
-      if(whenIso) fd2.append("when", whenIso);
+      if (whenIso) {
+        fd2.append("when", whenIso);
+      }
 
       const resp2 = await fetch(`/cad/${reportId}/dispatch/`, {
         method: "POST",
         body: fd2,
-        headers: { "X-CSRFToken": csrfToken() }
+        headers: {
+          "X-CSRFToken": csrfToken(),
+          "X-Requested-With": "XMLHttpRequest"
+        },
+        credentials: "same-origin"
       });
 
       const r2 = await safeReadJson(resp2);
@@ -797,19 +917,31 @@
 
       if (resp2.ok && data2 && data2.ok) {
         showToast("success", "تم بنجاح", "تم إنشاء البلاغ وترحيله للمستجيب ✅");
-        // ✅ مسح الحقول بعد نجاح كامل
         clearCreateReportFieldsKeepLocation();
       } else {
-        const msg2 = (data2 && (data2.detail || data2.details || data2.error)) ? (data2.detail || data2.details || data2.error)
-                    : (r2.text ? "تم إنشاء البلاغ ✅ لكن تعذر الترحيل: " + r2.text : "تم إنشاء البلاغ ✅ لكن تعذر الترحيل.");
-        // ✅ إنشاء صحيح = نمسح الحقول أيضًا حسب طلبك (حتى لو فشل الترحيل)
+        const msg2 =
+          (data2 && (data2.detail || data2.details || data2.error))
+            ? (data2.detail || data2.details || data2.error)
+            : (r2.text ? "تم إنشاء البلاغ ✅ لكن تعذر الترحيل: " + r2.text : "تم إنشاء البلاغ ✅ لكن تعذر الترحيل.");
+
         showToast("warning", "تم إنشاء البلاغ", msg2);
         clearCreateReportFieldsKeepLocation();
       }
     } catch (e) {
       showToast("error", "فشل الاتصال", "تعذر الاتصال بالخادم. تحقق من الشبكة ثم أعد المحاولة.");
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "ترحيل";
+      }
     }
   }
+
+  window.addEventListener("beforeunload", () => {
+    if (respondersTimer) {
+      clearInterval(respondersTimer);
+    }
+  });
 </script>
 
 <script async defer src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap"></script>
