@@ -131,8 +131,44 @@ def _safe_str(value):
     return "-" if value is None else str(value)
 
 
-def _serialize_report(report: CADReport) -> dict:
+def _report_chat_summary(report: CADReport, user) -> dict:
+    qs = (
+        CADReportActivity.objects.filter(report=report, kind=CADReportActivity.Kind.MESSAGE)
+        .select_related("user")
+        .order_by("-created_at")
+    )
+
+    latest = qs.first()
+    chat_count = qs.count()
+
+    latest_preview = ""
+    latest_sender_name = ""
+    has_unread_chat = False
+    unread_chat_count = 0
+
+    if latest is not None:
+        latest_preview = (latest.message or "").strip()
+        latest_sender_name = _user_display_name(latest.user) if latest.user_id else "النظام"
+        has_unread_chat = bool(latest.user_id and latest.user_id != getattr(user, "id", None))
+
+        if has_unread_chat:
+            for activity in qs:
+                if not activity.user_id or activity.user_id == getattr(user, "id", None):
+                    break
+                unread_chat_count += 1
+
     return {
+        "chat_count": chat_count,
+        "unread_chat_count": unread_chat_count,
+        "has_unread_chat": has_unread_chat,
+        "latest_chat_preview": latest_preview,
+        "latest_chat_sender": latest_sender_name,
+        "latest_chat_at": latest.created_at.isoformat() if latest and latest.created_at else None,
+    }
+
+
+def _serialize_report(report: CADReport, user=None) -> dict:
+    data = {
         "id": report.id,
         "cad_number": report.cad_number,
         "case_type": getattr(report.case_type, "name", None)
@@ -186,6 +222,11 @@ def _serialize_report(report: CADReport) -> dict:
         if hasattr(report, "response_duration") else None,
     }
 
+    if user is not None:
+        data.update(_report_chat_summary(report, user))
+
+    return data
+
 
 @api_view(["GET"])
 @authentication_classes([JWTAuthentication])
@@ -217,7 +258,7 @@ def cad_assigned_reports(request):
 
     qs = qs.order_by("-created_at").distinct()
 
-    results = [_serialize_report(report) for report in qs[:250]]
+    results = [_serialize_report(report, request.user) for report in qs[:250]]
 
     return Response(
         {"ok": True, "count": len(results), "results": results},
