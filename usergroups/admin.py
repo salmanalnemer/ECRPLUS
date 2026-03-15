@@ -5,10 +5,10 @@ from .models import UserGroup
 
 
 # ✅ نخفي Django auth.Group الافتراضي من الأدمن حتى ما يظهر عندك "المجموعات" مرتين
-try:
-    admin.site.unregister(Group)
-except admin.sites.NotRegistered:
-    pass
+#try:
+    #admin.site.unregister(Group)
+#except admin.sites.NotRegistered:
+   # pass
 
 
 @admin.register(UserGroup)
