@@ -1,4 +1,3 @@
-# accounts/admin.py
 from django.contrib import admin
 from django.utils import timezone
 
@@ -18,13 +17,13 @@ class UserAdmin(admin.ModelAdmin):
         "user_group",
         "is_active",
         "is_staff",
+        "is_superuser",
     )
     search_fields = ("full_name", "national_id", "email", "phone")
-    list_filter = ("is_active", "is_staff", "organization", "region", "user_group")
+    list_filter = ("is_active", "is_staff", "is_superuser", "organization", "region", "user_group")
     ordering = ("-id",)
 
-    # ✅ نخفي حقول Django الافتراضية اللي تسبب لك التكرار (المجموعات/الصلاحيات)
-    exclude = ("groups", "user_permissions")
+    filter_horizontal = ("groups", "user_permissions")
 
 
 @admin.register(EmailOTP)
