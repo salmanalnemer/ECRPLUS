@@ -466,57 +466,40 @@ def cad_my_reports(request):
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def cad_chat(request, cad_number: str):
-    """Chat/Notes for mobile app (JWT) using CADReportActivity."""
-    report = _get_report_by_cad_for_user(cad_number, request.user, allow_unassigned=True)
+    report = _get_report_by_cad_for_user(cad_number, request.user, allow_unassigned=False)
 
     if request.method == "GET":
-        limit = request.GET.get("limit", "120")
-        try:
-            limit_i = int(limit)
-        except Exception:
-            limit_i = 120
-        limit_i = max(1, min(limit_i, 300))
-
-        qs = (
-            CADReportActivity.objects.filter(report=report)
+        activities = (
+            CADReportActivity.objects.filter(
+                report=report,
+                kind=CADReportActivity.Kind.MESSAGE,
+            )
             .select_related("user")
-            .order_by("-created_at")[:limit_i]
+            .order_by("created_at")
         )
 
-        def _actor_name(user):
-            if not user:
-                return "النظام"
-
-            try:
-                full_name = user.get_full_name()
-                if full_name and full_name.strip():
-                    return full_name.strip()
-            except Exception:
-                pass
-
-            for field in ("full_name", "name", "first_name", "username"):
-                try:
-                    value = getattr(user, field, None)
-                    if value and str(value).strip():
-                        return str(value).strip()
-                except Exception:
-                    continue
-
-            return "مستخدم"
-
         items = []
-        for activity in reversed(list(qs)):
+        for a in activities:
             items.append(
                 {
-                    "id": activity.id,
-                    "kind": activity.kind,
-                    "action": activity.action,
-                    "text": activity.message or "",
-                    "created_at": activity.created_at.isoformat(),
-                    "sender": _actor_name(activity.user) if activity.user_id else "النظام",
+                    "id": a.id,
+                    "message": a.message or "",
+                    "created_at": a.created_at.isoformat() if a.created_at else None,
+                    "user_id": a.user_id,
+                    "sender_name": _user_display_name(a.user) if a.user_id else "النظام",
+                    "is_me": bool(a.user_id == getattr(request.user, "id", None)),
                 }
             )
-        return Response({"ok": True, "items": items}, status=status.HTTP_200_OK)
+
+        return Response(
+            {
+                "ok": True,
+                "cad_number": report.cad_number,
+                "report_id": report.id,
+                "items": items,
+            },
+            status=status.HTTP_200_OK,
+        )
 
     msg = str(request.data.get("message") or "").strip()
     if not msg:
@@ -536,7 +519,7 @@ def cad_chat(request, cad_number: str):
     try:
         target_user_ids = set()
 
-        # إذا المرسل هو المستجيب، أرسل للجهات الإدارية/المتابعة المرتبطة بالبلاغ
+        # إذا المرسل هو المستجيب، أرسل للجهات الإدارية المرتبطة بالبلاغ
         if report.assigned_responder_id == request.user.id:
             if getattr(report, "created_by_id", None):
                 target_user_ids.add(report.created_by_id)
@@ -547,7 +530,7 @@ def cad_chat(request, cad_number: str):
             if getattr(report, "updated_by_id", None):
                 target_user_ids.add(report.updated_by_id)
 
-        # إذا المرسل ليس المستجيب، أرسل للمستجيب المعيّن
+        # إذا المرسل إداري/مستخدم آخر، أرسل للمستجيب المعيّن
         else:
             if report.assigned_responder_id:
                 target_user_ids.add(report.assigned_responder_id)
@@ -566,15 +549,17 @@ def cad_chat(request, cad_number: str):
 
             if tokens:
                 sender_name = _user_display_name(request.user)
+                short_msg = msg[:250]
+
                 send_fcm_to_tokens(
                     tokens,
                     title=f"رسالة جديدة - البلاغ {report.cad_number}",
                     body=f"{sender_name}: {msg[:120]}",
                     data={
                         "type": "chat",
-                        "report_id": report.id,
-                        "cad_number": report.cad_number,
-                        "message": msg[:250],
+                        "report_id": str(report.id),
+                        "cad_number": str(report.cad_number),
+                        "message": short_msg,
                         "sender": sender_name,
                     },
                 )
