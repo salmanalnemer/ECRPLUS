@@ -1005,6 +1005,17 @@ def create_report(request: HttpRequest) -> JsonResponse:
         return JsonResponse({"ok": False, "error": "create_failed", "detail": str(e)}, status=400)
 
     # ✅ FCM بعد نجاح الـ commit فقط (عشان ما نرسل لو صار rollback)
+    transaction.on_commit(
+        lambda: _send_fcm_on_commit(
+            r.id,
+            getattr(r, "assigned_responder_id", None),
+            r.cad_number,
+        )
+    )
+
+    return JsonResponse({"ok": True, "report": _report_to_dict(r)}, status=201)
+
+
 def _send_fcm_on_commit(report_id: int, assigned_user_id: int | None, cad_no: str):
     try:
         if not assigned_user_id:
@@ -1031,10 +1042,6 @@ def _send_fcm_on_commit(report_id: int, assigned_user_id: int | None, cad_no: st
         )
     except Exception:
         logger.exception("FCM push failed (non-blocking)")
-
-    transaction.on_commit(lambda: _send_fcm_on_commit(r.id, getattr(r, "assigned_responder_id", None), r.cad_number))
-
-    return JsonResponse({"ok": True, "report": _report_to_dict(r)}, status=201)
 
 
 @login_required
