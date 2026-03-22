@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.contrib.auth import get_user_model, logout
 from django.db import transaction
 
-from rest_framework import status
+from rest_framework import status, permissions
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -13,9 +13,6 @@ from rest_framework_simplejwt.exceptions import TokenError
 
 from responders.models import ResponderLocation
 from regions.models import Region
-
-User = get_user_model()
-
 
 User = get_user_model()
 
@@ -175,6 +172,48 @@ class LocationSharingView(APIView):
             )
 
         return Response({"enabled": enabled_bool}, status=status.HTTP_200_OK)
+
+
+class NotificationSettingsView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        return Response(
+            {"enabled": bool(getattr(request.user, "notification_enabled", True))},
+            status=status.HTTP_200_OK,
+        )
+
+    def post(self, request):
+        enabled = request.data.get("enabled", None)
+
+        if enabled is None:
+            return Response(
+                {"detail": "الحقل enabled مطلوب."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if isinstance(enabled, str):
+            enabled = enabled.strip().lower() in ("1", "true", "yes", "on")
+        else:
+            enabled = bool(enabled)
+
+        if not hasattr(request.user, "notification_enabled"):
+            return Response(
+                {"detail": "حقل notification_enabled غير موجود في نموذج المستخدم."},
+                status=status.HTTP_501_NOT_IMPLEMENTED,
+            )
+
+        request.user.notification_enabled = enabled
+        request.user.save(update_fields=["notification_enabled"])
+
+        return Response(
+            {
+                "ok": True,
+                "enabled": request.user.notification_enabled,
+                "message": "تم تحديث حالة الإشعارات بنجاح.",
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class LogoutAPIView(APIView):

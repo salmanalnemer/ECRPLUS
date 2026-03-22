@@ -85,6 +85,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     # ✅ تحكم مشاركة الموقع (يتم تحديثه من التطبيق)
     location_sharing_enabled = models.BooleanField("مشاركة الموقع", default=True, db_index=True)
 
+    # ✅ تحكم الإشعارات (يتم تحديثه من التطبيق)
+    notification_enabled = models.BooleanField("الإشعارات", default=True, db_index=True)
+
     # حقول نظامية
     # ملاحظة: لسيناريو التفعيل عبر OTP، اجعل المستخدم الجديد is_active=False عند التسجيل.
     is_active = models.BooleanField("مفعّل", default=True)
